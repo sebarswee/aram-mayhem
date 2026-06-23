@@ -19,7 +19,7 @@ export interface ProjectileConfig {
   range: number;
   isFromPlayer: boolean;
   color: number;
-  creationTime: number;  // 创建时间，用于碰撞保护
+  creationTime?: number;  // 创建时间，用于碰撞保护（可选，会在构造函数中设置）
   // 连锁信息
   chainRemaining?: number;      // 剩余连锁次数
   chainRange?: number;          // 连锁范围
