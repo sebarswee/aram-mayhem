@@ -94,8 +94,15 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
   fire(angle: number): void {
     const velocityX = Math.cos(angle) * this.config.speed;
     const velocityY = Math.sin(angle) * this.config.speed;
+
+    // 调试：检查物理体状态
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    console.log(`[Projectile] fire - body enable: ${body?.enable}, static: ${body?.static}, moves: ${body?.moves}, velocity before: (${body?.velocity.x}, ${body?.velocity.y})`);
+
     this.setVelocity(velocityX, velocityY);
     this.setRotation(angle);
+
+    console.log(`[Projectile] fire - velocity after: (${body?.velocity.x}, ${body?.velocity.y}), pos: (${this.x}, ${this.y})`);
   }
 
   update(_time: number): void {
