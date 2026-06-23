@@ -122,7 +122,7 @@ export class HUD {
     const iconSize = Math.min(48, width * 0.1);
     const spacing = Math.min(10, width * 0.02);
     const startX = width / 2 - ((skills.length - 1) * (iconSize + spacing)) / 2;
-    const y = height - iconSize - 20;
+    const y = height - iconSize - 40; // 给技能名称留出空间
 
     skills.forEach((skill, index) => {
       const x = startX + index * (iconSize + spacing);
@@ -170,30 +170,27 @@ export class HUD {
       cooldownText.setDepth(101);
       container.add(cooldownText);
 
-      // 技能名称（显示在图标上方）
-      const nameText = this.scene.add.text(0, -iconSize / 2 - 12, skill.name, {
-        fontSize: `${Math.min(12, width / 50)}px`,
+      // 技能名称（显示在图标下方）
+      const nameText = this.scene.add.text(0, iconSize / 2 + 8, skill.name, {
+        fontSize: `${Math.min(11, width / 55)}px`,
         color: isUltimate ? '#ffcc00' : '#ffffff',
       });
-      nameText.setOrigin(0.5, 0.5);
+      nameText.setOrigin(0.5, 0);
       nameText.setScrollFactor(0);
       nameText.setDepth(101);
-      nameText.setVisible(false); // 默认隐藏，悬停时显示
       container.add(nameText);
 
-      // 交互区域
+      // 交互区域（悬停放大效果）
       const hitArea = this.scene.add.rectangle(0, 0, iconSize, iconSize, 0x000000, 0);
       hitArea.setInteractive({ useHandCursor: true });
       hitArea.setScrollFactor(0);
       hitArea.setDepth(102);
 
-      // 悬停显示技能名称
+      // 悬停放大效果
       hitArea.on('pointerover', () => {
-        nameText.setVisible(true);
         container.setScale(1.1);
       });
       hitArea.on('pointerout', () => {
-        nameText.setVisible(false);
         container.setScale(1);
       });
       container.add(hitArea);

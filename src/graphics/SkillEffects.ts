@@ -410,7 +410,7 @@ export class SkillEffects {
     const cloud = this.scene.add.circle(x, y, radius, 0x333355, 0.4);
     cloud.setDepth(20);
 
-    // 随机雷击
+    // 随机雷击（只负责视觉效果）
     let strikeCount = 0;
     const maxStrikes = 8;
     const strikeInterval = this.scene.time.addEvent({

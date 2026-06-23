@@ -197,23 +197,119 @@ export class SkillSystem {
     // 使用新的效果系统
     this.skillEffects.createAreaEffect(skill, this.player.x, this.player.y);
 
-    // 对范围内敌人造成伤害
-    const bodies = this.scene.physics.overlapCirc(
-      this.player.x,
-      this.player.y,
-      skill.rangeValue
-    ) as Phaser.Physics.Arcade.Body[];
+    // 根据技能类型处理伤害
+    if (skill.id === 'blizzard') {
+      // 暴风雪：持续伤害
+      this.castBlizzard(skill, damage);
+    } else if (skill.id === 'thunder_storm') {
+      // 雷霆风暴：随机雷击
+      this.castThunderStorm(skill, damage);
+    } else {
+      // 其他范围技能：立即造成伤害
+      const bodies = this.scene.physics.overlapCirc(
+        this.player.x,
+        this.player.y,
+        skill.rangeValue
+      ) as Phaser.Physics.Arcade.Body[];
 
-    for (const body of bodies) {
-      const enemy = body.gameObject as Enemy;
-      // 确保是敌人对象且拥有 config 属性
-      if (enemy && enemy.active && enemy.config && enemy.takeDamage) {
-        enemy.takeDamage(damage);
-        this.applyEffects(enemy, skill.effects);
-        // 触发生命偷取
-        this.applyLifesteal(damage);
+      for (const body of bodies) {
+        const enemy = body.gameObject as Enemy;
+        // 确保是敌人对象且拥有 config 属性
+        if (enemy && enemy.active && enemy.config && enemy.takeDamage) {
+          enemy.takeDamage(damage);
+          this.applyEffects(enemy, skill.effects);
+          // 触发生命偷取
+          this.applyLifesteal(damage);
+        }
       }
     }
+  }
+
+  /**
+   * 释放暴风雪 - 持续范围伤害
+   */
+  private castBlizzard(skill: Skill, damage: number): void {
+    const centerX = this.player.x;
+    const centerY = this.player.y;
+    const radius = skill.rangeValue;
+    const duration = 3000; // 3秒
+    const tickInterval = 500; // 每0.5秒伤害一次
+    let elapsed = 0;
+
+    const damageTimer = this.scene.time.addEvent({
+      delay: tickInterval,
+      callback: () => {
+        elapsed += tickInterval;
+        if (elapsed >= duration) {
+          damageTimer.destroy();
+          return;
+        }
+
+        // 检测范围内敌人
+        const bodies = this.scene.physics.overlapCirc(
+          centerX,
+          centerY,
+          radius
+        ) as Phaser.Physics.Arcade.Body[];
+
+        for (const body of bodies) {
+          const enemy = body.gameObject as Enemy;
+          if (enemy && enemy.active && enemy.config && enemy.takeDamage) {
+            const tickDamage = Math.floor(damage * 0.3); // 每次造成30%伤害
+            enemy.takeDamage(tickDamage);
+            this.applyEffects(enemy, skill.effects);
+            this.applyLifesteal(tickDamage);
+          }
+        }
+      },
+      repeat: Math.floor(duration / tickInterval) - 1,
+    });
+  }
+
+  /**
+   * 释放雷霆风暴 - 随机雷击
+   */
+  private castThunderStorm(skill: Skill, damage: number): void {
+    const centerX = this.player.x;
+    const centerY = this.player.y;
+    const radius = skill.rangeValue;
+    const strikeCount = 8;
+    const strikeInterval = 300;
+    let currentStrike = 0;
+
+    const strikeTimer = this.scene.time.addEvent({
+      delay: strikeInterval,
+      callback: () => {
+        currentStrike++;
+        if (currentStrike > strikeCount) {
+          strikeTimer.destroy();
+          return;
+        }
+
+        // 随机位置雷击
+        const angle = Math.random() * Math.PI * 2;
+        const dist = Math.random() * radius * 0.8;
+        const strikeX = centerX + Math.cos(angle) * dist;
+        const strikeY = centerY + Math.sin(angle) * dist;
+
+        // 检测雷击位置的敌人
+        const bodies = this.scene.physics.overlapCirc(
+          strikeX,
+          strikeY,
+          50 // 雷击半径
+        ) as Phaser.Physics.Arcade.Body[];
+
+        for (const body of bodies) {
+          const enemy = body.gameObject as Enemy;
+          if (enemy && enemy.active && enemy.config && enemy.takeDamage) {
+            enemy.takeDamage(damage);
+            this.applyEffects(enemy, skill.effects);
+            this.applyLifesteal(damage);
+          }
+        }
+      },
+      repeat: strikeCount - 1,
+    });
   }
 
   private castDash(skill: Skill, target: Enemy): void {
