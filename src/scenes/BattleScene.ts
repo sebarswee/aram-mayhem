@@ -297,6 +297,12 @@ export class BattleScene extends Phaser.Scene {
     // 更新技能系统
     this.skillSystem.update(delta, this.enemySystem.getEnemies());
 
+    // 调试：检查投射物数量
+    const projectileCount = this.skillSystem.getProjectiles().getLength();
+    if (projectileCount > 0) {
+      console.log(`[BattleScene] Active projectiles: ${projectileCount}`);
+    }
+
     // 更新HUD
     this.hud.update();
 

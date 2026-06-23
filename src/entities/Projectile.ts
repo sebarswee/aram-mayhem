@@ -95,6 +95,11 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
   }
 
   update(delta: number): void {
+    // 调试：确认 update 被调用
+    if (this.lifetime > 4000) {
+      console.log(`[Projectile] update called, pos: (${this.x.toFixed(0)}, ${this.y.toFixed(0)}), active: ${this.active}`);
+    }
+
     // 更新尾迹粒子位置
     if (this.trailParticles) {
       this.trailParticles.setPosition(this.x, this.y);
