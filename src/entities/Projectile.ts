@@ -45,11 +45,6 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     const element = config.skill.elements[0] || 'fire';
     const textureKey = ELEMENT_TEXTURE_MAP[element] || 'projectile_fire';
 
-    // 检查纹理是否存在
-    if (!scene.textures.exists(textureKey)) {
-      console.warn(`[Projectile] Texture ${textureKey} not found! Available:`, scene.textures.getTextureKeys());
-    }
-
     super(scene, x, y, textureKey);
 
     this.config = config;
@@ -97,15 +92,9 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     const velocityY = Math.sin(angle) * this.config.speed;
     this.setVelocity(velocityX, velocityY);
     this.setRotation(angle);
-
-    // 调试：输出位置和速度
-    console.log(`[Projectile] Fire at angle ${(angle * 180 / Math.PI).toFixed(0)}°, pos: (${this.x.toFixed(0)}, ${this.y.toFixed(0)}), velocity: (${velocityX.toFixed(0)}, ${velocityY.toFixed(0)})`);
   }
 
   update(delta: number): void {
-    // 调试：输出位置
-    console.log(`[Projectile] Update: pos (${this.x.toFixed(0)}, ${this.y.toFixed(0)}), active: ${this.active}, lifetime: ${this.lifetime.toFixed(0)}`);
-
     // 更新尾迹粒子位置
     if (this.trailParticles) {
       this.trailParticles.setPosition(this.x, this.y);
@@ -114,7 +103,6 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     // 检查存活时间
     this.lifetime -= delta;
     if (this.lifetime <= 0) {
-      console.log(`[Projectile] Destroyed by lifetime`);
       this.destroy();
       return;
     }
@@ -127,7 +115,6 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
       this.y
     );
     if (distance > this.config.range) {
-      console.log(`[Projectile] Destroyed by range: ${distance.toFixed(0)} > ${this.config.range}`);
       this.destroy();
     }
   }

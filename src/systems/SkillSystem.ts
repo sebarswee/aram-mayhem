@@ -231,9 +231,6 @@ export class SkillSystem {
 
       projectile.fire(angle);
       this.projectiles.add(projectile);
-
-      // 调试：确认投射物被创建
-      console.log(`[SkillSystem] Created projectile for skill ${skill.id}, active: ${projectile.active}`);
     }
   }
 

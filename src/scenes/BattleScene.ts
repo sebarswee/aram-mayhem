@@ -69,8 +69,8 @@ export class BattleScene extends Phaser.Scene {
       graphicsFactory.generateSkillIcons();
     }
 
-    // 初始化游戏状态
-    this.gameState = this.registry.get('gameState') || this.createDefaultGameState();
+    // 初始化游戏状态 - 每次开始都创建新状态，避免旧状态污染
+    this.gameState = this.createDefaultGameState();
 
     // 计算游戏边界（保持一定边距）
     const padding = 20;
@@ -283,9 +283,6 @@ export class BattleScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
-    // 调试：确认update在运行
-    console.log(`[BattleScene] update running, delta: ${delta}, isDead: ${this.gameState.isDead}, isUpgrading: ${this.gameState.isUpgrading}, isSelectingSkill: ${this.gameState.isSelectingSkill}`);
-
     if (this.gameState.isDead || this.gameState.isUpgrading || this.gameState.isSelectingSkill) return;
 
     // 处理输入
