@@ -288,6 +288,9 @@ export class CollisionSystem {
    * 冰冻效果 - 减速
    */
   private applyFreeze(enemy: Enemy, slowAmount: number, duration: number): void {
+    // 确保敌人和 config 存在
+    if (!enemy || !enemy.config) return;
+
     const originalSpeed = enemy.config.speed;
     enemy.config.speed *= (1 - slowAmount);
 
@@ -295,7 +298,7 @@ export class CollisionSystem {
     enemy.setTint(0x88ddff);
 
     this.scene.time.delayedCall(duration, () => {
-      if (enemy.active) {
+      if (enemy.active && enemy.config) {
         enemy.config.speed = originalSpeed;
         enemy.clearTint();
       }
@@ -306,6 +309,9 @@ export class CollisionSystem {
    * 眩晕效果 - 完全停止
    */
   private applyStun(enemy: Enemy, duration: number): void {
+    // 确保敌人和 config 存在
+    if (!enemy || !enemy.config) return;
+
     const originalSpeed = enemy.config.speed;
     enemy.config.speed = 0;
 
@@ -317,7 +323,7 @@ export class CollisionSystem {
       yoyo: true,
       repeat: Math.floor(duration / 200),
       onComplete: () => {
-        if (enemy.active) {
+        if (enemy.active && enemy.config) {
           enemy.config.speed = originalSpeed;
           enemy.setAlpha(1);
         }

@@ -183,7 +183,8 @@ export class SkillSystem {
 
     for (const body of bodies) {
       const enemy = body.gameObject as Enemy;
-      if (enemy && enemy.active && enemy.takeDamage) {
+      // 确保是敌人对象且拥有 config 属性
+      if (enemy && enemy.active && enemy.config && enemy.takeDamage) {
         enemy.takeDamage(damage);
         this.applyEffects(enemy, skill.effects);
       }
@@ -232,7 +233,8 @@ export class SkillSystem {
     const bodies = this.scene.physics.overlapCirc(x, y, 50) as Phaser.Physics.Arcade.Body[];
     for (const body of bodies) {
       const enemy = body.gameObject as Enemy;
-      if (enemy && enemy.active && enemy.takeDamage) {
+      // 确保是敌人对象且拥有 config 属性
+      if (enemy && enemy.active && enemy.config && enemy.takeDamage) {
         enemy.takeDamage(damage);
       }
     }
@@ -269,11 +271,14 @@ export class SkillSystem {
   }
 
   private applyFreeze(enemy: Enemy, duration: number): void {
+    // 确保敌人和 config 存在
+    if (!enemy || !enemy.config) return;
+
     const originalSpeed = enemy.config.speed;
     enemy.config.speed *= 0.3;
 
     this.scene.time.delayedCall(duration, () => {
-      if (enemy.active) {
+      if (enemy.active && enemy.config) {
         enemy.config.speed = originalSpeed;
       }
     });
