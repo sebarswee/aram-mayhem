@@ -24,6 +24,13 @@ export class GraphicsFactory {
   }
 
   /**
+   * 只生成技能图标
+   */
+  generateSkillIcons(): void {
+    this.createSkillIcons();
+  }
+
+  /**
    * 创建玩家精灵 - 像素风格角色
    */
   private createPlayerSprite(): void {
@@ -568,15 +575,15 @@ export class GraphicsFactory {
 
     // 背景 - 圆角矩形
     graphics.fillStyle(0x222233, 1);
-    this.fillRoundedRect(graphics, 2, 2, size - 4, size - 4, 6);
+    graphics.fillRoundedRect(2, 2, size - 4, size - 4, 6);
 
     // 边框
     graphics.lineStyle(2, color, 0.8);
-    this.strokeRoundedRect(graphics, 2, 2, size - 4, size - 4, 6);
+    graphics.strokeRoundedRect(2, 2, size - 4, size - 4, 6);
 
     // 内部发光
     graphics.fillStyle(color, 0.3);
-    this.fillRoundedRect(graphics, 6, 6, size - 12, size - 12, 4);
+    graphics.fillRoundedRect(6, 6, size - 12, size - 12, 4);
 
     // 中心图标区域
     graphics.fillStyle(color, 0.6);
@@ -588,46 +595,6 @@ export class GraphicsFactory {
 
     graphics.generateTexture(key, size, size);
     graphics.destroy();
-  }
-
-  /**
-   * 绘制圆角矩形（填充）
-   */
-  private fillRoundedRect(
-    graphics: Phaser.GameObjects.Graphics,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    radius: number
-  ): void {
-    graphics.fillRect(x + radius, y, width - radius * 2, height);
-    graphics.fillRect(x, y + radius, width, height - radius * 2);
-    graphics.fillCircle(x + radius, y + radius, radius);
-    graphics.fillCircle(x + width - radius, y + radius, radius);
-    graphics.fillCircle(x + radius, y + height - radius, radius);
-    graphics.fillCircle(x + width - radius, y + height - radius, radius);
-  }
-
-  /**
-   * 绘制圆角矩形（描边）
-   */
-  private strokeRoundedRect(
-    graphics: Phaser.GameObjects.Graphics,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    radius: number
-  ): void {
-    graphics.lineBetween(x + radius, y, x + width - radius, y);
-    graphics.lineBetween(x + radius, y + height, x + width - radius, y + height);
-    graphics.lineBetween(x, y + radius, x, y + height - radius);
-    graphics.lineBetween(x + width, y + radius, x + width, y + height - radius);
-    graphics.arc(x + radius, y + radius, radius, Math.PI, Math.PI * 1.5, false);
-    graphics.arc(x + width - radius, y + radius, radius, Math.PI * 1.5, 0, false);
-    graphics.arc(x + radius, y + height - radius, radius, Math.PI * 0.5, Math.PI, false);
-    graphics.arc(x + width - radius, y + height - radius, radius, 0, Math.PI * 0.5, false);
   }
 
   /**

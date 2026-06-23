@@ -149,7 +149,9 @@ export class HUD {
 
       // 技能图标
       const iconKey = `skill_${skill.id}`;
-      const icon = this.scene.add.image(0, 0, iconKey);
+      // 检查纹理是否存在，如果不存在则使用默认图标
+      const textureExists = this.scene.textures.exists(iconKey);
+      const icon = this.scene.add.image(0, 0, textureExists ? iconKey : 'player');
       icon.setDisplaySize(iconSize - 8, iconSize - 8);
       container.add(icon);
 

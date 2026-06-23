@@ -60,6 +60,13 @@ export class BattleScene extends Phaser.Scene {
       graphicsFactory.generateAll();
     }
 
+    // 确保技能图标纹理存在
+    if (!this.textures.exists('skill_fireball')) {
+      console.log('Generating skill icons...');
+      const graphicsFactory = new GraphicsFactory(this);
+      graphicsFactory.generateSkillIcons();
+    }
+
     // 初始化游戏状态
     this.gameState = this.registry.get('gameState') || this.createDefaultGameState();
 
