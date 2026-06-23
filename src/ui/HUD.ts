@@ -225,7 +225,45 @@ export class HUD {
     this.updateHpBar();
     this.updateExpBar();
     this.updateTexts();
+    this.updateSkillUIs();
     this.updateSkillCooldowns();
+  }
+
+  /**
+   * 更新技能UI（检测技能变化）
+   */
+  private updateSkillUIs(): void {
+    const currentSkills = this.player.skills;
+
+    // 检查技能数量是否变化
+    if (currentSkills.length !== this.skillUIs.length) {
+      this.rebuildSkillUIs();
+      return;
+    }
+
+    // 检查技能ID是否变化
+    for (let i = 0; i < currentSkills.length; i++) {
+      if (currentSkills[i].id !== this.skillUIs[i].skill.id) {
+        this.rebuildSkillUIs();
+        return;
+      }
+    }
+  }
+
+  /**
+   * 重新构建技能UI
+   */
+  private rebuildSkillUIs(): void {
+    // 清理旧的技能UI
+    this.skillUIs.forEach((skillUI) => {
+      skillUI.container.destroy();
+    });
+    this.skillUIs = [];
+
+    // 创建新的技能UI
+    const width = this.scene.scale.width;
+    const height = this.scene.scale.height;
+    this.createSkillUI(width, height);
   }
 
   /**
