@@ -279,5 +279,12 @@ export class BattleScene extends Phaser.Scene {
     // 移除事件
     this.events.off('enemyKilled');
     this.events.off('levelUp');
+    this.scale.off('resize', this.handleResize, this);
+
+    // 停止所有 tweens
+    this.tweens.killAll();
+
+    // 清理所有计时器
+    this.time.removeAllEvents();
   }
 }

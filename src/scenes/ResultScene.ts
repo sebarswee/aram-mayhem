@@ -122,12 +122,12 @@ export class ResultScene extends Phaser.Scene {
     // 重置游戏状态
     this.registry.set('gameState', this.createDefaultGameState());
 
-    // 返回 BootScene 重新加载资源
-    this.scene.start('BootScene');
+    // 直接跳转到 BattleScene（纹理已经存在，不需要重新加载）
+    this.scene.start('BattleScene');
   }
 
   private backToMenu(): void {
-    // 返回主菜单
+    // 返回主菜单需要重新加载（清理所有状态）
     this.registry.set('gameState', this.createDefaultGameState());
     this.scene.start('BootScene');
   }

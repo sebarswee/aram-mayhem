@@ -110,11 +110,14 @@ export class BootScene extends Phaser.Scene {
       // 更新百分比文字
       this.percentText.setText(`${Math.floor(progress * 100)}%`);
 
-      // 在进度50%时生成纹理
+      // 在进度50%时生成纹理（如果不存在）
       if (i === 5) {
         this.loadingText.setText('正在生成像素素材...');
-        const graphicsFactory = new GraphicsFactory(this);
-        graphicsFactory.generateAll();
+        // 检查纹理是否已存在，避免重复生成
+        if (!this.textures.exists('player')) {
+          const graphicsFactory = new GraphicsFactory(this);
+          graphicsFactory.generateAll();
+        }
       }
 
       // 在进度80%时初始化状态
