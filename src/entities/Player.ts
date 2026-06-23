@@ -7,9 +7,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   public skills: Skill[] = [];
   public skillCooldowns: Map<string, number> = new Map();
   private lastDamageTime: number = 0;
+  private glowSprite: Phaser.GameObjects.Sprite | null = null;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
-    super(scene, x, y, '__DEFAULT'); // 使用默认纹理
+    super(scene, x, y, 'player');
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -25,17 +26,20 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // 设置碰撞体大小
     this.body?.setSize(32, 32);
 
-    // 绘制占位符图形(绿色方块)
-    this.drawPlaceholder();
+    // 设置深度
+    this.setDepth(50);
+
+    // 创建发光效果
+    this.createGlowEffect();
   }
 
-  private drawPlaceholder(): void {
-    const graphics = this.scene.add.graphics();
-    graphics.fillStyle(0x00ff00, 1);
-    graphics.fillRect(-16, -16, 32, 32);
-    graphics.generateTexture('player', 32, 32);
-    graphics.destroy();
-    this.setTexture('player');
+  private createGlowEffect(): void {
+    // 玩家周围的光环效果
+    this.glowSprite = this.scene.add.sprite(this.x, this.y, 'player');
+    this.glowSprite.setAlpha(0.3);
+    this.glowSprite.setTint(0x66ccff);
+    this.glowSprite.setScale(1.3);
+    this.glowSprite.setDepth(49);
   }
 
   move(velocityX: number, velocityY: number): void {
@@ -101,5 +105,19 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.skillCooldowns.set(skillId, Math.max(0, cooldown - delta));
       }
     });
+
+    // 更新发光效果位置
+    if (this.glowSprite) {
+      this.glowSprite.setPosition(this.x, this.y);
+      // 轻微的脉动效果
+      this.glowSprite.setAlpha(0.2 + Math.sin(Date.now() / 300) * 0.1);
+    }
+  }
+
+  destroy(): void {
+    if (this.glowSprite) {
+      this.glowSprite.destroy();
+    }
+    super.destroy();
   }
 }

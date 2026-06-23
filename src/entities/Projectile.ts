@@ -2,6 +2,16 @@ import Phaser from 'phaser';
 import { Skill, SkillEffect } from '@/types';
 import { PROJECTILE_LIFETIME } from '@/config/balance.config';
 
+// 元素到投射物纹理的映射
+const ELEMENT_TEXTURE_MAP: Record<string, string> = {
+  fire: 'projectile_fire',
+  ice: 'projectile_ice',
+  lightning: 'projectile_lightning',
+  shadow: 'projectile_shadow',
+  holy: 'projectile_holy',
+  physical: 'projectile_holy',
+};
+
 export interface ProjectileConfig {
   skill: Skill;
   damage: number;
@@ -15,6 +25,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
   public config: ProjectileConfig;
   private lifetime: number = 0;
   private startXY: { x: number; y: number };
+  private trailParticles: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
 
   constructor(
     scene: Phaser.Scene,
@@ -22,7 +33,11 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     y: number,
     config: ProjectileConfig
   ) {
-    super(scene, x, y, '__DEFAULT');
+    // 根据元素选择纹理
+    const element = config.skill.elements[0] || 'fire';
+    const textureKey = ELEMENT_TEXTURE_MAP[element] || 'projectile_fire';
+
+    super(scene, x, y, textureKey);
 
     this.config = config;
     this.startXY = { x, y };
@@ -33,23 +48,31 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     // 设置碰撞体
     this.body?.setSize(16, 16);
 
-    // 绘制占位符
-    this.drawPlaceholder(config.color);
+    // 设置深度
+    this.setDepth(40);
 
     // 设置存活时间
     this.lifetime = PROJECTILE_LIFETIME;
+
+    // 创建尾迹粒子
+    this.createTrailParticles(element);
   }
 
-  private drawPlaceholder(color: number): void {
-    const key = `projectile_${color}`;
-    if (!this.scene.textures.exists(key)) {
-      const graphics = this.scene.add.graphics();
-      graphics.fillStyle(color, 1);
-      graphics.fillCircle(8, 8, 8);
-      graphics.generateTexture(key, 16, 16);
-      graphics.destroy();
-    }
-    this.setTexture(key);
+  private createTrailParticles(element: string): void {
+    // 根据元素选择粒子纹理
+    const particleTexture = `particle_${element}` as string;
+    const texture = this.scene.textures.exists(particleTexture) ? particleTexture : 'particle_glow';
+
+    this.trailParticles = this.scene.add.particles(this.x, this.y, texture, {
+      speed: 20,
+      scale: { start: 0.4, end: 0 },
+      alpha: { start: 0.6, end: 0 },
+      tint: this.config.color,
+      lifespan: 200,
+      frequency: 30,
+      quantity: 1,
+    });
+    this.trailParticles.setDepth(39);
   }
 
   fire(angle: number): void {
@@ -60,6 +83,11 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
   }
 
   update(delta: number): void {
+    // 更新尾迹粒子位置
+    if (this.trailParticles) {
+      this.trailParticles.setPosition(this.x, this.y);
+    }
+
     // 检查存活时间
     this.lifetime -= delta;
     if (this.lifetime <= 0) {
@@ -89,5 +117,12 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
 
   isPlayerProjectile(): boolean {
     return this.config.isFromPlayer;
+  }
+
+  destroy(): void {
+    if (this.trailParticles) {
+      this.trailParticles.destroy();
+    }
+    super.destroy();
   }
 }
