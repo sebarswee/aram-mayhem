@@ -7,76 +7,42 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload(): void {
-    // 显示加载进度
+    // 背景
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
 
-    // 背景
     const bg = this.add.graphics();
     bg.fillStyle(0x1a1a2e, 1);
     bg.fillRect(0, 0, width, height);
 
-    const progressBox = this.add.graphics();
-    const progressBar = this.add.graphics();
-
-    const loadingText = this.add.text(width / 2, height / 2 - 50, '🎮 技能乱斗', {
-      font: 'bold 28px Arial',
+    // 标题
+    const titleText = this.add.text(width / 2, height / 2 - 80, '🎮 技能乱斗', {
+      font: 'bold 48px Arial',
       color: '#66ccff',
+      stroke: '#000000',
+      strokeThickness: 4,
     });
-    loadingText.setOrigin(0.5, 0.5);
+    titleText.setOrigin(0.5, 0.5);
 
-    const subText = this.add.text(width / 2, height / 2, '生成像素素材...', {
-      font: '16px Arial',
+    // 副标题
+    const subtitleText = this.add.text(width / 2, height / 2 - 30, 'Skill Brawl', {
+      font: '24px Arial',
       color: '#aaaaaa',
     });
-    subText.setOrigin(0.5, 0.5);
+    subtitleText.setOrigin(0.5, 0.5);
 
-    const percentText = this.add.text(width / 2, height / 2 + 50, '0%', {
-      font: '18px Arial',
-      color: '#ffffff',
+    // 生成素材进度文字
+    const loadingText = this.add.text(width / 2, height / 2 + 40, '生成像素素材...', {
+      font: '16px Arial',
+      color: '#888888',
     });
-    percentText.setOrigin(0.5, 0.5);
-
-    progressBox.fillStyle(0x333355, 0.8);
-    progressBox.fillRect(width / 2 - 160, height / 2 + 70, 320, 30);
-
-    // 模拟加载进度（生成素材需要时间）
-    let progress = 0;
-    const progressInterval = this.time.addEvent({
-      delay: 50,
-      callback: () => {
-        progress += 0.05;
-        if (progress > 1) progress = 1;
-        percentText.setText(Math.floor(progress * 100) + '%');
-        progressBar.clear();
-        progressBar.fillStyle(0x66ccff, 1);
-        progressBar.fillRect(width / 2 - 155, height / 2 + 75, 310 * progress, 20);
-      },
-      repeat: 19,
-    });
-
-    // 加载进度事件
-    this.load.on('progress', (value: number) => {
-      percentText.setText(Math.floor(value * 100) + '%');
-      progressBar.clear();
-      progressBar.fillStyle(0x66ccff, 1);
-      progressBar.fillRect(width / 2 - 155, height / 2 + 75, 310 * value, 20);
-    });
-
-    this.load.on('complete', () => {
-      progressBar.destroy();
-      progressBox.destroy();
-      loadingText.destroy();
-      subText.destroy();
-      percentText.destroy();
-      progressInterval.destroy();
-    });
-
-    // 加载占位符资源(使用Phaser内置图形)
-    // 后续替换为实际资源
+    loadingText.setOrigin(0.5, 0.5);
   }
 
   create(): void {
+    const width = this.cameras.main.width;
+    const height = this.cameras.main.height;
+
     // 生成所有像素风格视觉素材
     const graphicsFactory = new GraphicsFactory(this);
     graphicsFactory.generateAll();
@@ -84,8 +50,69 @@ export class BootScene extends Phaser.Scene {
     // 初始化全局游戏状态
     this.registry.set('gameState', this.createInitialState());
 
-    // 跳转到战斗场景
-    this.scene.start('BattleScene');
+    // 创建开始按钮
+    this.createStartButton(width, height);
+  }
+
+  private createStartButton(width: number, height: number): void {
+    // 按钮背景
+    const buttonBg = this.add.graphics();
+    buttonBg.fillStyle(0x4a7db8, 1);
+    buttonBg.fillRoundedRect(width / 2 - 100, height / 2 + 60, 200, 50, 10);
+    buttonBg.lineStyle(3, 0x66ccff, 1);
+    buttonBg.strokeRoundedRect(width / 2 - 100, height / 2 + 60, 200, 50, 10);
+
+    // 按钮文字
+    const buttonText = this.add.text(width / 2, height / 2 + 85, '开始游戏', {
+      font: 'bold 24px Arial',
+      color: '#ffffff',
+    });
+    buttonText.setOrigin(0.5, 0.5);
+
+    // 按钮交互区域
+    const hitArea = this.add.rectangle(width / 2, height / 2 + 85, 200, 50, 0x000000, 0);
+    hitArea.setInteractive({ useHandCursor: true });
+
+    // 悬停效果
+    hitArea.on('pointerover', () => {
+      buttonBg.clear();
+      buttonBg.fillStyle(0x5a8dc8, 1);
+      buttonBg.fillRoundedRect(width / 2 - 100, height / 2 + 60, 200, 50, 10);
+      buttonBg.lineStyle(3, 0x88ddff, 1);
+      buttonBg.strokeRoundedRect(width / 2 - 100, height / 2 + 60, 200, 50, 10);
+    });
+
+    hitArea.on('pointerout', () => {
+      buttonBg.clear();
+      buttonBg.fillStyle(0x4a7db8, 1);
+      buttonBg.fillRoundedRect(width / 2 - 100, height / 2 + 60, 200, 50, 10);
+      buttonBg.lineStyle(3, 0x66ccff, 1);
+      buttonBg.strokeRoundedRect(width / 2 - 100, height / 2 + 60, 200, 50, 10);
+    });
+
+    // 点击开始游戏
+    hitArea.on('pointerdown', () => {
+      // 点击动画
+      this.cameras.main.fadeOut(300, 0, 0, 0);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start('BattleScene');
+      });
+    });
+
+    // 提示文字
+    const tipText = this.add.text(width / 2, height - 50, 'WASD / 方向键 移动 | 点击任意位置开始', {
+      font: '14px Arial',
+      color: '#666666',
+    });
+    tipText.setOrigin(0.5, 0.5);
+
+    // 键盘也可以开始
+    this.input.keyboard?.once('keydown', () => {
+      this.cameras.main.fadeOut(300, 0, 0, 0);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start('BattleScene');
+      });
+    });
   }
 
   private createInitialState() {
