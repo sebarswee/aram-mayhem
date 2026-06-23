@@ -4,6 +4,7 @@ import { Enemy } from '@/entities/Enemy';
 import { Projectile, ProjectileConfig } from '@/entities/Projectile';
 import { Skill } from '@/types';
 import { GAME_WIDTH, GAME_HEIGHT } from '@/config/game.config';
+import { SkillEffects } from '@/graphics/SkillEffects';
 
 // 元素颜色映射
 const ELEMENT_COLORS: Record<string, number> = {
@@ -15,23 +16,16 @@ const ELEMENT_COLORS: Record<string, number> = {
   holy: 0xffcc00,
 };
 
-// 元素到效果纹理的映射
-const ELEMENT_RING_MAP: Record<string, string> = {
-  fire: 'effect_ring_fire',
-  ice: 'effect_ring_ice',
-  lightning: 'effect_ring_lightning',
-  shadow: 'effect_ring_shadow',
-  holy: 'effect_ring_holy',
-};
-
 export class SkillSystem {
   private scene: Phaser.Scene;
   private player: Player;
   private projectiles: Phaser.Physics.Arcade.Group;
+  private skillEffects: SkillEffects;
 
   constructor(scene: Phaser.Scene, player: Player) {
     this.scene = scene;
     this.player = player;
+    this.skillEffects = new SkillEffects(scene);
 
     // 创建投射物组
     this.projectiles = scene.physics.add.group({
@@ -171,11 +165,9 @@ export class SkillSystem {
 
   private castArea(skill: Skill): void {
     const damage = skill.damage + this.player.stats.attack;
-    const element = skill.elements[0] || 'fire';
-    const color = ELEMENT_COLORS[element] || 0xffffff;
 
-    // 使用纹理创建范围效果
-    this.createAreaEffect(this.player.x, this.player.y, skill.rangeValue, element, color);
+    // 使用新的效果系统
+    this.skillEffects.createAreaEffect(skill, this.player.x, this.player.y);
 
     // 对范围内敌人造成伤害
     const bodies = this.scene.physics.overlapCirc(
@@ -208,13 +200,25 @@ export class SkillSystem {
     const clampedX = Phaser.Math.Clamp(newX, 20, GAME_WIDTH - 20);
     const clampedY = Phaser.Math.Clamp(newY, 20, GAME_HEIGHT - 20);
 
+    // 创建冲刺轨迹
+    const element = skill.elements[0] || 'physical';
+    this.skillEffects.createDashTrail(this.player.x, this.player.y, element);
+
     this.scene.tweens.add({
       targets: this.player,
       x: clampedX,
       y: clampedY,
       duration: 150,
+      onUpdate: () => {
+        // 冲刺过程中创建轨迹
+        this.skillEffects.createDashTrail(this.player.x, this.player.y, element);
+      },
       onComplete: () => {
         this.damageEnemiesInArea(clampedX, clampedY, skill.damage);
+        // 暗影步额外效果
+        if (skill.categories.includes('area')) {
+          this.skillEffects.createAreaEffect(skill, clampedX, clampedY);
+        }
       },
     });
   }
@@ -227,65 +231,6 @@ export class SkillSystem {
         enemy.takeDamage(damage);
       }
     }
-  }
-
-  private createAreaEffect(x: number, y: number, radius: number, element: string, color: number): void {
-    // 创建多层效果
-    const ringKey = ELEMENT_RING_MAP[element] || 'effect_ring_fire';
-
-    // 外层光圈
-    const ring = this.scene.add.sprite(x, y, ringKey);
-    ring.setScale(radius / 100);
-    ring.setAlpha(0.8);
-    ring.setDepth(20);
-
-    // 内层核心
-    const core = this.scene.add.circle(x, y, radius * 0.3, color, 0.6);
-    core.setDepth(21);
-
-    // 粒子爆发效果
-    const particleTexture = `particle_${element}` as string;
-    const texture = this.scene.textures.exists(particleTexture) ? particleTexture : 'particle_glow';
-
-    const burst = this.scene.add.particles(x, y, texture, {
-      speed: { min: 100, max: 300 },
-      scale: { start: 0.5, end: 0 },
-      alpha: { start: 0.8, end: 0 },
-      tint: color,
-      lifespan: 500,
-      quantity: 16,
-      emitting: false,
-    });
-    burst.explode();
-    burst.setDepth(22);
-
-    // 动画效果
-    this.scene.tweens.add({
-      targets: [ring, core],
-      alpha: 0,
-      scale: ring.scale * 1.5,
-      duration: 400,
-      ease: 'Power2',
-      onComplete: () => {
-        ring.destroy();
-        core.destroy();
-        burst.destroy();
-      },
-    });
-  }
-
-  private drawAreaEffect(x: number, y: number, radius: number, color: number): void {
-    // 保留旧方法作为备用
-    const circle = this.scene.add.circle(x, y, radius, color, 0.3);
-    circle.setDepth(10);
-
-    this.scene.tweens.add({
-      targets: circle,
-      alpha: 0,
-      scale: 1.5,
-      duration: 300,
-      onComplete: () => circle.destroy(),
-    });
   }
 
   private applyEffects(enemy: Enemy, effects: Skill['effects']): void {
