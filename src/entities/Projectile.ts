@@ -73,6 +73,10 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     // 检查是否被添加到显示列表
     console.log(`[Projectile] In display list: ${scene.children.exists(this)}, parent: ${this.parentContainer?.name || 'none'}, depth: ${this.depth}`);
 
+    // 检查摄像机
+    const cam = scene.cameras.main;
+    console.log(`[Projectile] Camera scroll: (${cam.scrollX}, ${cam.scrollY}), zoom: ${cam.zoom}, visible: ${this.willRender(cam)}`);
+
     // 确保物理体被正确激活
     const body = this.body as Phaser.Physics.Arcade.Body;
     if (body) {
