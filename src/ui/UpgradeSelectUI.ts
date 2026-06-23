@@ -43,9 +43,10 @@ export class UpgradeSelectUI {
     bg.setOrigin(0, 0);
     this.container.add(bg);
 
-    // 标题
-    const title = this.scene.add.text(width / 2, 50, '升级！', {
-      fontSize: '32px',
+    // 标题 - 响应式字体
+    const titleFontSize = Math.min(32, width / 18);
+    const title = this.scene.add.text(width / 2, height * 0.08, '升级！', {
+      fontSize: `${titleFontSize}px`,
       color: '#ffcc00',
       fontStyle: 'bold',
     });
@@ -53,24 +54,35 @@ export class UpgradeSelectUI {
     this.container.add(title);
 
     // 副标题
-    const subtitle = this.scene.add.text(width / 2, 90, '选择一项强化', {
-      fontSize: '16px',
+    const subtitleFontSize = Math.min(16, width / 35);
+    const subtitle = this.scene.add.text(width / 2, height * 0.14, '选择一项强化', {
+      fontSize: `${subtitleFontSize}px`,
       color: '#aaaaaa',
     });
     subtitle.setOrigin(0.5);
     this.container.add(subtitle);
 
-    // 选项卡片
-    const cardWidth = Math.min(200, (width - 80) / 3);
-    const cardHeight = 280;
-    const gap = 20;
-    const totalWidth = cardWidth * this.options.length + gap * (this.options.length - 1);
+    // 选项卡片 - 响应式布局
+    const isSmallScreen = width < 500;
+    const columns = Math.min(this.options.length, isSmallScreen ? 1 : 3);
+    const rows = Math.ceil(this.options.length / columns);
+
+    const padding = 20;
+    const gap = 15;
+    const cardWidth = Math.min(180, (width - padding * 2 - gap * (columns - 1)) / columns);
+    const cardHeight = isSmallScreen ? 160 : 220;
+
+    const totalWidth = cardWidth * columns + gap * (columns - 1);
+    const totalHeight = cardHeight * rows + gap * (rows - 1);
     const startX = (width - totalWidth) / 2 + cardWidth / 2;
-    const cardY = height / 2;
+    const startY = height / 2 - totalHeight / 2 + cardHeight / 2;
 
     this.options.forEach((option, index) => {
-      const cardX = startX + index * (cardWidth + gap);
-      this.createOptionCard(option, index, cardX, cardY, cardWidth, cardHeight);
+      const col = index % columns;
+      const row = Math.floor(index / columns);
+      const cardX = startX + col * (cardWidth + gap);
+      const cardY = startY + row * (cardHeight + gap);
+      this.createOptionCard(option, index, cardX, cardY, cardWidth, cardHeight, isSmallScreen);
     });
   }
 
@@ -130,11 +142,12 @@ export class UpgradeSelectUI {
    */
   private createOptionCard(
     option: UpgradeOption,
-    index: number,
+    _index: number,
     x: number,
     y: number,
     width: number,
-    height: number
+    height: number,
+    isSmallScreen: boolean
   ): void {
     const card = this.scene.add.container(x, y);
 
@@ -187,39 +200,48 @@ export class UpgradeSelectUI {
     bg.setStrokeStyle(3, color, 1);
     card.add(bg);
 
+    // 响应式字体大小
+    const rarityFontSize = Math.min(11, width / 14);
+    const iconFontSize = Math.min(40, width / 4);
+    const titleFontSize = Math.min(16, width / 10);
+    const descFontSize = Math.min(11, width / 14);
+
     // 稀有度标签
-    const rarityLabel = this.scene.add.text(0, -height / 2 + 20, rarityText, {
-      fontSize: '12px',
+    const rarityLabel = this.scene.add.text(0, -height / 2 + 15, rarityText, {
+      fontSize: `${rarityFontSize}px`,
       color: `#${color.toString(16).padStart(6, '0')}`,
     });
     rarityLabel.setOrigin(0.5);
     card.add(rarityLabel);
 
     // 图标
-    const iconText = this.scene.add.text(0, -30, icon, {
-      fontSize: '48px',
+    const iconText = this.scene.add.text(0, isSmallScreen ? -height / 2 + 40 : -20, icon, {
+      fontSize: `${iconFontSize}px`,
     });
     iconText.setOrigin(0.5);
     card.add(iconText);
 
     // 标题
-    const titleText = this.scene.add.text(0, 40, title, {
-      fontSize: '18px',
+    const titleText = this.scene.add.text(0, isSmallScreen ? -height / 2 + 70 : 30, title, {
+      fontSize: `${titleFontSize}px`,
       color: '#ffffff',
       fontStyle: 'bold',
     });
     titleText.setOrigin(0.5);
     card.add(titleText);
 
-    // 描述
-    const descText = this.scene.add.text(0, 75, description, {
-      fontSize: '12px',
+    // 描述 - 截断长文本
+    const descMaxWidth = width - 15;
+    const descText = this.truncateText(description, descMaxWidth, descFontSize, isSmallScreen ? 2 : 3);
+    const desc = this.scene.add.text(0, isSmallScreen ? -height / 2 + 95 : 60, descText, {
+      fontSize: `${descFontSize}px`,
       color: '#cccccc',
-      wordWrap: { width: width - 20 },
+      wordWrap: { width: descMaxWidth },
       align: 'center',
+      lineSpacing: 2,
     });
-    descText.setOrigin(0.5, 0);
-    card.add(descText);
+    desc.setOrigin(0.5, 0);
+    card.add(desc);
 
     // 交互
     bg.setInteractive({ useHandCursor: true });
@@ -239,6 +261,21 @@ export class UpgradeSelectUI {
     });
 
     this.container.add(card);
+  }
+
+  /**
+   * 截断文本，超出显示省略号
+   */
+  private truncateText(text: string, maxWidth: number, fontSize: number, maxLines: number): string {
+    // 简单估算：中文字符约等于 fontSize 像素宽
+    const charsPerLine = Math.floor(maxWidth / fontSize);
+    const maxChars = charsPerLine * maxLines;
+
+    if (text.length <= maxChars) {
+      return text;
+    }
+
+    return text.substring(0, maxChars - 1) + '…';
   }
 
   /**

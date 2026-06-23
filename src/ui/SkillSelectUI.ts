@@ -40,9 +40,10 @@ export class SkillSelectUI {
     bg.setOrigin(0, 0);
     this.container.add(bg);
 
-    // 标题
-    const title = this.scene.add.text(width / 2, 60, '选择初始技能', {
-      fontSize: '32px',
+    // 标题 - 响应式字体大小
+    const titleFontSize = Math.min(32, width / 20);
+    const title = this.scene.add.text(width / 2, height * 0.08, '选择初始技能', {
+      fontSize: `${titleFontSize}px`,
       color: '#ffffff',
       fontStyle: 'bold',
     });
@@ -50,28 +51,40 @@ export class SkillSelectUI {
     this.container.add(title);
 
     // 副标题
+    const subtitleFontSize = Math.min(16, width / 40);
     const subtitle = this.scene.add.text(
       width / 2,
-      100,
+      height * 0.13,
       '选择一个技能开始你的冒险',
       {
-        fontSize: '16px',
+        fontSize: `${subtitleFontSize}px`,
         color: '#aaaaaa',
       }
     );
     subtitle.setOrigin(0.5);
     this.container.add(subtitle);
 
-    // 技能卡片
-    const cardWidth = Math.min(160, (width - 100) / 4);
-    const cardHeight = 220;
-    const gap = 20;
-    const totalWidth = cardWidth * 4 + gap * 3;
+    // 技能卡片 - 响应式布局
+    // 在小屏幕上使用2行2列，大屏幕使用1行4列
+    const isSmallScreen = width < 500;
+    const columns = isSmallScreen ? 2 : 4;
+    const rows = isSmallScreen ? 2 : 1;
+
+    const padding = 20;
+    const gap = 15;
+    const cardWidth = Math.min(150, (width - padding * 2 - gap * (columns - 1)) / columns);
+    const cardHeight = isSmallScreen ? 180 : 200;
+
+    const totalWidth = cardWidth * columns + gap * (columns - 1);
+    const totalHeight = cardHeight * rows + gap * (rows - 1);
     const startX = (width - totalWidth) / 2 + cardWidth / 2;
-    const cardY = height / 2;
+    const startY = height / 2 - totalHeight / 2 + cardHeight / 2;
 
     skills.forEach((skill, index) => {
-      const cardX = startX + index * (cardWidth + gap);
+      const col = index % columns;
+      const row = Math.floor(index / columns);
+      const cardX = startX + col * (cardWidth + gap);
+      const cardY = startY + row * (cardHeight + gap);
       this.createSkillCard(skill, cardX, cardY, cardWidth, cardHeight);
     });
   }
@@ -105,20 +118,26 @@ export class SkillSelectUI {
     bg.setStrokeStyle(3, color, 1);
     card.add(bg);
 
+    // 响应式字体大小
+    const iconFontSize = Math.min(36, width / 4);
+    const nameFontSize = Math.min(16, width / 9);
+    const typeFontSize = Math.min(11, width / 13);
+    const descFontSize = Math.min(10, width / 15);
+
     // 技能图标区域
-    const iconBg = this.scene.add.rectangle(0, -50, width - 20, 80, color, 0.3);
+    const iconBg = this.scene.add.rectangle(0, -height / 2 + 35, width - 10, 50, color, 0.3);
     card.add(iconBg);
 
     // 技能图标（使用文字代替）
-    const iconText = this.scene.add.text(0, -50, this.getSkillIcon(skill), {
-      fontSize: '40px',
+    const iconText = this.scene.add.text(0, -height / 2 + 35, this.getSkillIcon(skill), {
+      fontSize: `${iconFontSize}px`,
     });
     iconText.setOrigin(0.5);
     card.add(iconText);
 
     // 技能名称
-    const name = this.scene.add.text(0, 20, skill.name, {
-      fontSize: '18px',
+    const name = this.scene.add.text(0, -height / 2 + 70, skill.name, {
+      fontSize: `${nameFontSize}px`,
       color: '#ffffff',
       fontStyle: 'bold',
     });
@@ -126,19 +145,22 @@ export class SkillSelectUI {
     card.add(name);
 
     // 技能类型
-    const typeText = this.scene.add.text(0, 45, this.getSkillTypeText(skill), {
-      fontSize: '12px',
+    const typeText = this.scene.add.text(0, -height / 2 + 88, this.getSkillTypeText(skill), {
+      fontSize: `${typeFontSize}px`,
       color: '#888888',
     });
     typeText.setOrigin(0.5);
     card.add(typeText);
 
-    // 技能描述
-    const desc = this.scene.add.text(0, 75, skill.description, {
-      fontSize: '11px',
+    // 技能描述 - 限制最大行数，超出显示省略号
+    const descMaxWidth = width - 15;
+    const descText = this.truncateText(skill.description, descMaxWidth, descFontSize, 3);
+    const desc = this.scene.add.text(0, -height / 2 + 105, descText, {
+      fontSize: `${descFontSize}px`,
       color: '#cccccc',
-      wordWrap: { width: width - 20 },
+      wordWrap: { width: descMaxWidth },
       align: 'center',
+      lineSpacing: 2,
     });
     desc.setOrigin(0.5, 0);
     card.add(desc);
@@ -161,6 +183,21 @@ export class SkillSelectUI {
     });
 
     this.container.add(card);
+  }
+
+  /**
+   * 截断文本，超出显示省略号
+   */
+  private truncateText(text: string, maxWidth: number, fontSize: number, maxLines: number): string {
+    // 简单估算：中文字符约等于 fontSize 像素宽
+    const charsPerLine = Math.floor(maxWidth / fontSize);
+    const maxChars = charsPerLine * maxLines;
+
+    if (text.length <= maxChars) {
+      return text;
+    }
+
+    return text.substring(0, maxChars - 1) + '…';
   }
 
   /**
