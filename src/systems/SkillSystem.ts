@@ -235,8 +235,13 @@ export class SkillSystem {
       projectile.fire(angle);
       this.projectiles.add(projectile);
 
-      // 调试：检查 add 后的状态
-      console.log(`[SkillSystem] After add to group - displayList: ${this.scene.children.exists(projectile)}, depth: ${projectile.depth}, visible: ${projectile.visible}`);
+      // 调试：创建一个简单的测试精灵在相同位置
+      const testSprite = this.scene.add.sprite(this.player.x, this.player.y, 'player');
+      testSprite.setTint(0xff0000);
+      testSprite.setScale(2);
+      testSprite.setDepth(100);
+      this.scene.time.delayedCall(500, () => testSprite.destroy());
+      console.log(`[SkillSystem] Created test sprite at (${this.player.x}, ${this.player.y}), visible: ${testSprite.visible}`);
     }
   }
 
