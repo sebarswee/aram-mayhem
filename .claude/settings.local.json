@@ -3,7 +3,8 @@
     "allow": [
       "Bash(git init *)",
       "Bash(git add *)",
-      "Bash(git commit -m 'Add game design document *)"
+      "Bash(git commit -m 'Add game design document *)",
+      "Bash(git commit -m 'docs: add MVP Phase 1 implementation plan *)"
     ]
   }
 }
