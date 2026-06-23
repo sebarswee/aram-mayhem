@@ -76,6 +76,12 @@ export class CollisionSystem {
 
     if (!ply.active || !enem.active) return;
 
+    // 计算实际距离，确保真正碰撞
+    const distance = Phaser.Math.Distance.Between(ply.x, ply.y, enem.x, enem.y);
+    const collisionDistance = 30; // 合理的碰撞距离
+
+    if (distance > collisionDistance) return;
+
     // 敌人碰撞伤害
     ply.takeDamage(enem.config.damage);
 

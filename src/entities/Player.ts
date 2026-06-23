@@ -8,6 +8,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   public skillCooldowns: Map<string, number> = new Map();
   private lastDamageTime: number = 0;
   private glowSprite: Phaser.GameObjects.Sprite | null = null;
+  public isInvincible: boolean = false; // 无敌状态
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, 'player');
@@ -20,7 +21,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     // 设置物理体
     this.setCollideWorldBounds(true);
-    this.setDrag(500);
+    this.setDrag(0); // 禁用惯性漂移
     this.setBounce(0);
 
     // 设置碰撞体大小
@@ -48,6 +49,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   takeDamage(amount: number): boolean {
     const now = Date.now();
+
+    // 无敌状态不受伤
+    if (this.isInvincible) {
+      return false;
+    }
 
     // 碰撞伤害间隔限制
     if (now - this.lastDamageTime < 500) {

@@ -124,6 +124,9 @@ export class BattleScene extends Phaser.Scene {
   private pauseForUpgrade(): void {
     this.gameState.isUpgrading = true;
 
+    // 玩家无敌，防止被杀
+    this.player.isInvincible = true;
+
     // 暂停所有系统
     this.physics.pause();
     this.enemySystem.pause();
@@ -134,6 +137,9 @@ export class BattleScene extends Phaser.Scene {
 
   private resumeGame(): void {
     this.gameState.isUpgrading = false;
+
+    // 取消玩家无敌
+    this.player.isInvincible = false;
 
     // 恢复所有系统
     this.physics.resume();
