@@ -31,6 +31,9 @@ export class SkillSystem {
       classType: Projectile,
       runChildUpdate: true,
     });
+
+    // 调试：确认 runChildUpdate 生效
+    console.log(`[SkillSystem] Group runChildUpdate: ${(this.projectiles as any).runChildUpdate}`);
   }
 
   /**
