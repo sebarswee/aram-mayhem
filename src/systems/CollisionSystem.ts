@@ -66,6 +66,9 @@ export class CollisionSystem {
     const damage = proj.getDamage();
     const killed = enem.takeDamage(damage);
 
+    // 触发生命偷取
+    this.applyLifesteal(damage);
+
     // 应用技能效果（冰冻、减速、灼烧等）
     const effects = proj.getEffects();
     this.applyEffects(enem, effects);
@@ -94,6 +97,17 @@ export class CollisionSystem {
     // 如果击杀敌人，发出事件
     if (killed) {
       this.scene.events.emit('enemyKilled', enem);
+    }
+  }
+
+  /**
+   * 触发生命偷取
+   */
+  private applyLifesteal(damage: number): void {
+    const lifestealPercent = this.player.stats.lifesteal || 0;
+    if (lifestealPercent > 0) {
+      const healAmount = Math.floor(damage * lifestealPercent);
+      this.player.heal(healAmount);
     }
   }
 
@@ -138,6 +152,9 @@ export class CollisionSystem {
       const chainDamage = Math.floor(currentDamage * chainDecay);
       const killed = nextTarget.takeDamage(chainDamage);
       this.applyEffects(nextTarget, effects);
+
+      // 触发生命偷取
+      this.applyLifesteal(chainDamage);
 
       if (killed) {
         this.scene.events.emit('enemyKilled', nextTarget);

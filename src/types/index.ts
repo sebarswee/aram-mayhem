@@ -91,6 +91,10 @@ export interface PlayerStats {
   speed: number;
   critRate: number;
   critDamage: number;
+  // 符文加成属性
+  skillDamageBonus?: number;  // 技能伤害加成百分比
+  cooldownReduction?: number; // 冷却减少百分比
+  lifesteal?: number;         // 生命偷取百分比
 }
 
 // ==================== 游戏状态 ====================

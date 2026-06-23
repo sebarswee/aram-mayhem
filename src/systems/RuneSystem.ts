@@ -7,19 +7,26 @@ export class RuneSystem {
   private player: Player;
   private acquiredRunes: Map<string, Rune> = new Map();
   private exclusiveGroups: Map<string, string> = new Map();
-  private baseStats: Record<string, number>;
+
+  // 基础属性
+  private baseStats: Record<string, number> = {
+    maxHp: 100,
+    attack: 10,
+    defense: 5,
+    speed: 200,
+    critRate: 5,        // 百分比形式 (5 = 5%)
+    critDamage: 150,    // 百分比形式 (150 = 150%)
+    skillDamageBonus: 0,
+    cooldownReduction: 0,
+    lifesteal: 0,
+  };
+
+  // 保存技能原始冷却
+  private baseCooldowns: Map<string, number> = new Map();
 
   constructor(scene: Phaser.Scene, player: Player) {
     this._scene = scene;
     this.player = player;
-    this.baseStats = {
-      maxHp: 100,
-      attack: 10,
-      defense: 5,
-      speed: 200,
-      critRate: 5,
-      critDamage: 150,
-    };
   }
 
   canAcquire(rune: Rune): boolean {
@@ -82,6 +89,12 @@ export class RuneSystem {
     this.player.stats.speed = Math.floor(stats.speed);
     this.player.stats.critRate = stats.critRate / 100; // 转为小数
     this.player.stats.critDamage = stats.critDamage / 100;
+    this.player.stats.skillDamageBonus = stats.skillDamageBonus / 100;
+    this.player.stats.cooldownReduction = stats.cooldownReduction / 100;
+    this.player.stats.lifesteal = stats.lifesteal / 100;
+
+    // 应用冷却减少
+    this.applyCooldownReduction(stats.cooldownReduction);
   }
 
   private applyRuneEffects(rune: Rune, stats: Record<string, number>): void {
@@ -90,31 +103,60 @@ export class RuneSystem {
       const scaledValue = effect.value * levelMultiplier;
 
       if (effect.type === 'stat_boost' && effect.stat) {
-        if (effect.isPercent) {
-          if (effect.stat === 'critRate') {
-            stats[effect.stat] += scaledValue;
-          } else if (stats[effect.stat] !== undefined) {
-            stats[effect.stat] *= 1 + scaledValue / 100;
-          }
-        } else {
-          if (stats[effect.stat] !== undefined) {
-            stats[effect.stat] += scaledValue;
-          }
-        }
-      }
-
-      // 急速效果
-      if (effect.type === 'skill_enhance' && rune.id === 'skill_cooldown_down') {
-        this.applyCooldownReduction(scaledValue);
+        this.applyStatBoost(effect.stat, scaledValue, effect.isPercent, stats);
+      } else if (effect.type === 'skill_enhance') {
+        this.applySkillEnhance(rune.id, scaledValue, stats);
+      } else if (effect.type === 'passive' && effect.stat) {
+        this.applyPassive(effect.stat, scaledValue, stats);
       }
     }
   }
 
-  private applyCooldownReduction(percent: number): void {
-    // 更新所有技能冷却
+  private applyStatBoost(stat: string, value: number, isPercent: boolean, stats: Record<string, number>): void {
+    if (stats[stat] === undefined) return;
+
+    if (isPercent) {
+      // 百分比加成（暴击率直接加，其他乘算）
+      if (stat === 'critRate') {
+        stats[stat] += value;
+      } else {
+        stats[stat] *= 1 + value / 100;
+      }
+    } else {
+      // 固定值加成
+      stats[stat] += value;
+    }
+  }
+
+  private applySkillEnhance(runeId: string, value: number, stats: Record<string, number>): void {
+    if (runeId === 'skill_damage_up') {
+      // 技能伤害加成
+      stats.skillDamageBonus += value;
+    } else if (runeId === 'skill_cooldown_down') {
+      // 冷却减少
+      stats.cooldownReduction += value;
+    }
+  }
+
+  private applyPassive(stat: string, value: number, stats: Record<string, number>): void {
+    if (stat === 'lifesteal') {
+      stats.lifesteal += value;
+    }
+  }
+
+  private applyCooldownReduction(totalReduction: number): void {
+    // 保存原始冷却（首次）
+    if (this.baseCooldowns.size === 0) {
+      for (const skill of this.player.skills) {
+        this.baseCooldowns.set(skill.id, skill.cooldown);
+      }
+    }
+
+    // 基于原始冷却计算最终冷却
+    const reduction = Math.min(totalReduction, 50) / 100; // 最多50%冷却减少
     for (const skill of this.player.skills) {
-      const baseCooldown = skill.cooldown;
-      skill.cooldown = Math.floor(baseCooldown * (1 - percent / 100));
+      const baseCooldown = this.baseCooldowns.get(skill.id) || skill.cooldown;
+      skill.cooldown = Math.floor(baseCooldown * (1 - reduction));
     }
   }
 

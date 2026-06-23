@@ -34,6 +34,23 @@ export class SkillSystem {
     });
   }
 
+  /**
+   * 计算最终伤害（含暴击和技能加成）
+   */
+  private calculateDamage(baseDamage: number): { damage: number; isCrit: boolean } {
+    // 技能伤害加成
+    const skillBonus = this.player.stats.skillDamageBonus || 0;
+    let damage = baseDamage * (1 + skillBonus);
+
+    // 暴击判定
+    const isCrit = Math.random() < (this.player.stats.critRate || 0.05);
+    if (isCrit) {
+      damage *= this.player.stats.critDamage || 1.5;
+    }
+
+    return { damage: Math.floor(damage), isCrit };
+  }
+
   update(delta: number, enemies: Phaser.Physics.Arcade.Group): void {
     if (!this.player.active || enemies.countActive(true) === 0) return;
 
@@ -143,9 +160,13 @@ export class SkillSystem {
 
     const color = ELEMENT_COLORS[skill.elements[0]] || 0xffffff;
 
+    // 计算最终伤害（含技能加成和暴击）
+    const baseDamage = skill.damage + this.player.stats.attack;
+    const { damage } = this.calculateDamage(baseDamage);
+
     const config: ProjectileConfig = {
       skill,
-      damage: skill.damage + this.player.stats.attack,
+      damage,
       speed: skill.speed || 300,
       range: skill.rangeValue,
       isFromPlayer: true,
@@ -169,7 +190,9 @@ export class SkillSystem {
   }
 
   private castArea(skill: Skill): void {
-    const damage = skill.damage + this.player.stats.attack;
+    // 计算最终伤害（含技能加成和暴击）
+    const baseDamage = skill.damage + this.player.stats.attack;
+    const { damage } = this.calculateDamage(baseDamage);
 
     // 使用新的效果系统
     this.skillEffects.createAreaEffect(skill, this.player.x, this.player.y);
@@ -187,6 +210,8 @@ export class SkillSystem {
       if (enemy && enemy.active && enemy.config && enemy.takeDamage) {
         enemy.takeDamage(damage);
         this.applyEffects(enemy, skill.effects);
+        // 触发生命偷取
+        this.applyLifesteal(damage);
       }
     }
   }
@@ -206,6 +231,10 @@ export class SkillSystem {
     const clampedX = Phaser.Math.Clamp(newX, 20, GAME_WIDTH - 20);
     const clampedY = Phaser.Math.Clamp(newY, 20, GAME_HEIGHT - 20);
 
+    // 计算最终伤害
+    const baseDamage = skill.damage + this.player.stats.attack;
+    const { damage } = this.calculateDamage(baseDamage);
+
     // 创建冲刺轨迹
     const element = skill.elements[0] || 'physical';
     this.skillEffects.createDashTrail(this.player.x, this.player.y, element);
@@ -220,7 +249,7 @@ export class SkillSystem {
         this.skillEffects.createDashTrail(this.player.x, this.player.y, element);
       },
       onComplete: () => {
-        this.damageEnemiesInArea(clampedX, clampedY, skill.damage);
+        this.damageEnemiesInArea(clampedX, clampedY, damage, skill);
         // 暗影步额外效果
         if (skill.categories.includes('area')) {
           this.skillEffects.createAreaEffect(skill, clampedX, clampedY);
@@ -229,14 +258,30 @@ export class SkillSystem {
     });
   }
 
-  private damageEnemiesInArea(x: number, y: number, damage: number): void {
+  private damageEnemiesInArea(x: number, y: number, damage: number, skill?: Skill): void {
     const bodies = this.scene.physics.overlapCirc(x, y, 50) as Phaser.Physics.Arcade.Body[];
     for (const body of bodies) {
       const enemy = body.gameObject as Enemy;
       // 确保是敌人对象且拥有 config 属性
       if (enemy && enemy.active && enemy.config && enemy.takeDamage) {
         enemy.takeDamage(damage);
+        // 触发生命偷取
+        this.applyLifesteal(damage);
+        if (skill) {
+          this.applyEffects(enemy, skill.effects);
+        }
       }
+    }
+  }
+
+  /**
+   * 触发生命偷取
+   */
+  private applyLifesteal(damage: number): void {
+    const lifestealPercent = this.player.stats.lifesteal || 0;
+    if (lifestealPercent > 0) {
+      const healAmount = Math.floor(damage * lifestealPercent);
+      this.player.heal(healAmount);
     }
   }
 

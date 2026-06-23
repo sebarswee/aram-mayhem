@@ -13,6 +13,10 @@ export const INITIAL_PLAYER_STATS: PlayerStats = {
   speed: 200,
   critRate: 0.05,
   critDamage: 1.5,
+  // 符文加成属性（初始为0）
+  skillDamageBonus: 0,
+  cooldownReduction: 0,
+  lifesteal: 0,
 };
 
 // 技能冷却倍率(受符文影响)
