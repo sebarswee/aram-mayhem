@@ -20,6 +20,7 @@ export class GraphicsFactory {
     this.createProjectileSprites();
     this.createEffectSprites();
     this.createParticles();
+    this.createSkillIcons();
   }
 
   /**
@@ -530,6 +531,103 @@ export class GraphicsFactory {
         }
       }
     }
+  }
+
+  /**
+   * 创建技能图标
+   */
+  private createSkillIcons(): void {
+    // 火球术
+    this.createSkillIcon('skill_fireball', 0xff4400, '🔥');
+    // 冰刺
+    this.createSkillIcon('skill_ice_shard', 0x44ccff, '❄️');
+    // 闪电箭
+    this.createSkillIcon('skill_lightning_bolt', 0xffff00, '⚡');
+    // 烈焰环
+    this.createSkillIcon('skill_flame_circle', 0xff8800, '🔥');
+    // 冰霜新星
+    this.createSkillIcon('skill_frost_nova', 0x88ddff, '❄️');
+    // 闪避冲刺
+    this.createSkillIcon('skill_dash', 0xffffff, '💨');
+    // 暗影步
+    this.createSkillIcon('skill_shadow_step', 0x8800ff, '👤');
+    // 陨石
+    this.createSkillIcon('skill_meteor', 0xff6600, '☄️');
+    // 暴风雪
+    this.createSkillIcon('skill_blizzard', 0x66ccff, '🌨️');
+    // 雷霆风暴
+    this.createSkillIcon('skill_thunder_storm', 0xffff44, '🌩️');
+  }
+
+  /**
+   * 创建单个技能图标
+   */
+  private createSkillIcon(key: string, color: number, _emoji: string): void {
+    const size = 48;
+    const graphics = this.scene.add.graphics();
+
+    // 背景 - 圆角矩形
+    graphics.fillStyle(0x222233, 1);
+    this.fillRoundedRect(graphics, 2, 2, size - 4, size - 4, 6);
+
+    // 边框
+    graphics.lineStyle(2, color, 0.8);
+    this.strokeRoundedRect(graphics, 2, 2, size - 4, size - 4, 6);
+
+    // 内部发光
+    graphics.fillStyle(color, 0.3);
+    this.fillRoundedRect(graphics, 6, 6, size - 12, size - 12, 4);
+
+    // 中心图标区域
+    graphics.fillStyle(color, 0.6);
+    graphics.fillCircle(size / 2, size / 2, 14);
+
+    // 高光
+    graphics.fillStyle(0xffffff, 0.4);
+    graphics.fillCircle(size / 2 - 4, size / 2 - 4, 6);
+
+    graphics.generateTexture(key, size, size);
+    graphics.destroy();
+  }
+
+  /**
+   * 绘制圆角矩形（填充）
+   */
+  private fillRoundedRect(
+    graphics: Phaser.GameObjects.Graphics,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    radius: number
+  ): void {
+    graphics.fillRect(x + radius, y, width - radius * 2, height);
+    graphics.fillRect(x, y + radius, width, height - radius * 2);
+    graphics.fillCircle(x + radius, y + radius, radius);
+    graphics.fillCircle(x + width - radius, y + radius, radius);
+    graphics.fillCircle(x + radius, y + height - radius, radius);
+    graphics.fillCircle(x + width - radius, y + height - radius, radius);
+  }
+
+  /**
+   * 绘制圆角矩形（描边）
+   */
+  private strokeRoundedRect(
+    graphics: Phaser.GameObjects.Graphics,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    radius: number
+  ): void {
+    graphics.lineBetween(x + radius, y, x + width - radius, y);
+    graphics.lineBetween(x + radius, y + height, x + width - radius, y + height);
+    graphics.lineBetween(x, y + radius, x, y + height - radius);
+    graphics.lineBetween(x + width, y + radius, x + width, y + height - radius);
+    graphics.arc(x + radius, y + radius, radius, Math.PI, Math.PI * 1.5, false);
+    graphics.arc(x + width - radius, y + radius, radius, Math.PI * 1.5, 0, false);
+    graphics.arc(x + radius, y + height - radius, radius, Math.PI * 0.5, Math.PI, false);
+    graphics.arc(x + width - radius, y + height - radius, radius, 0, Math.PI * 0.5, false);
   }
 
   /**

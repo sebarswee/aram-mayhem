@@ -1,8 +1,17 @@
 import Phaser from 'phaser';
 import { Player } from '@/entities/Player';
-import { GameState } from '@/types';
+import { GameState, Skill } from '@/types';
 import { ExpSystem } from '@/systems/ExpSystem';
 import { GAME_WIDTH } from '@/config/game.config';
+
+interface SkillUI {
+  container: Phaser.GameObjects.Container;
+  icon: Phaser.GameObjects.Image;
+  cooldownOverlay: Phaser.GameObjects.Graphics;
+  cooldownText: Phaser.GameObjects.Text;
+  nameText: Phaser.GameObjects.Text;
+  skill: Skill;
+}
 
 export class HUD {
   private scene: Phaser.Scene;
@@ -17,6 +26,9 @@ export class HUD {
   private levelText!: Phaser.GameObjects.Text;
   private waveText!: Phaser.GameObjects.Text;
   private killsText!: Phaser.GameObjects.Text;
+
+  // 技能UI
+  private skillUIs: SkillUI[] = [];
 
   constructor(
     scene: Phaser.Scene,
@@ -95,12 +107,162 @@ export class HUD {
     this.killsText.setOrigin(1, 0);
     this.killsText.setScrollFactor(0);
     this.killsText.setDepth(101);
+
+    // 创建技能显示
+    this.createSkillUI(width, height);
+  }
+
+  /**
+   * 创建技能UI显示
+   */
+  private createSkillUI(width: number, height: number): void {
+    const skills = this.player.skills;
+    if (!skills || skills.length === 0) return;
+
+    const iconSize = Math.min(48, width * 0.1);
+    const spacing = Math.min(10, width * 0.02);
+    const startX = width / 2 - ((skills.length - 1) * (iconSize + spacing)) / 2;
+    const y = height - iconSize - 20;
+
+    skills.forEach((skill, index) => {
+      const x = startX + index * (iconSize + spacing);
+      const isUltimate = skill.type === 'ultimate';
+
+      // 创建容器
+      const container = this.scene.add.container(x, y);
+      container.setScrollFactor(0);
+      container.setDepth(100);
+
+      // 技能图标背景
+      const bg = this.scene.add.graphics();
+      bg.fillStyle(0x222233, 1);
+      bg.fillRoundedRect(-iconSize / 2, -iconSize / 2, iconSize, iconSize, 6);
+
+      // 大招金色边框
+      if (isUltimate) {
+        bg.lineStyle(3, 0xffcc00, 1);
+      } else {
+        bg.lineStyle(2, this.getSkillColor(skill), 0.8);
+      }
+      bg.strokeRoundedRect(-iconSize / 2, -iconSize / 2, iconSize, iconSize, 6);
+      container.add(bg);
+
+      // 技能图标
+      const iconKey = `skill_${skill.id}`;
+      const icon = this.scene.add.image(0, 0, iconKey);
+      icon.setDisplaySize(iconSize - 8, iconSize - 8);
+      container.add(icon);
+
+      // 冷却遮罩
+      const cooldownOverlay = this.scene.add.graphics();
+      cooldownOverlay.fillStyle(0x000000, 0.7);
+      container.add(cooldownOverlay);
+
+      // 冷却文字
+      const cooldownText = this.scene.add.text(0, 0, '', {
+        fontSize: `${Math.min(16, iconSize * 0.35)}px`,
+        color: '#ffffff',
+        fontStyle: 'bold',
+      });
+      cooldownText.setOrigin(0.5, 0.5);
+      cooldownText.setDepth(101);
+      container.add(cooldownText);
+
+      // 技能名称（显示在图标上方）
+      const nameText = this.scene.add.text(0, -iconSize / 2 - 12, skill.name, {
+        fontSize: `${Math.min(12, width / 50)}px`,
+        color: isUltimate ? '#ffcc00' : '#ffffff',
+      });
+      nameText.setOrigin(0.5, 0.5);
+      nameText.setScrollFactor(0);
+      nameText.setDepth(101);
+      nameText.setVisible(false); // 默认隐藏，悬停时显示
+      container.add(nameText);
+
+      // 交互区域
+      const hitArea = this.scene.add.rectangle(0, 0, iconSize, iconSize, 0x000000, 0);
+      hitArea.setInteractive({ useHandCursor: true });
+      hitArea.setScrollFactor(0);
+      hitArea.setDepth(102);
+
+      // 悬停显示技能名称
+      hitArea.on('pointerover', () => {
+        nameText.setVisible(true);
+        container.setScale(1.1);
+      });
+      hitArea.on('pointerout', () => {
+        nameText.setVisible(false);
+        container.setScale(1);
+      });
+      container.add(hitArea);
+
+      this.skillUIs.push({
+        container,
+        icon,
+        cooldownOverlay,
+        cooldownText,
+        nameText,
+        skill,
+      });
+    });
+  }
+
+  /**
+   * 获取技能对应颜色
+   */
+  private getSkillColor(skill: Skill): number {
+    const colors: Record<string, number> = {
+      fire: 0xff4400,
+      ice: 0x44ccff,
+      lightning: 0xffff00,
+      shadow: 0x8800ff,
+      holy: 0xffcc00,
+      physical: 0xffffff,
+    };
+    return colors[skill.elements[0]] || 0xffffff;
   }
 
   update(): void {
     this.updateHpBar();
     this.updateExpBar();
     this.updateTexts();
+    this.updateSkillCooldowns();
+  }
+
+  /**
+   * 更新技能冷却显示
+   */
+  private updateSkillCooldowns(): void {
+    const iconSize = Math.min(48, this.scene.scale.width * 0.1);
+
+    this.skillUIs.forEach((skillUI) => {
+      const cooldown = this.player.skillCooldowns.get(skillUI.skill.id) || 0;
+      const maxCooldown = skillUI.skill.cooldown;
+      const cooldownPercent = cooldown / maxCooldown;
+
+      // 更新冷却遮罩
+      skillUI.cooldownOverlay.clear();
+      if (cooldownPercent > 0) {
+        // 绘制扇形冷却遮罩
+        skillUI.cooldownOverlay.fillStyle(0x000000, 0.7);
+        skillUI.cooldownOverlay.slice(
+          0,
+          0,
+          iconSize / 2,
+          Phaser.Math.DegToRad(-90),
+          Phaser.Math.DegToRad(-90 + 360 * cooldownPercent),
+          true
+        );
+        skillUI.cooldownOverlay.fillPath();
+
+        // 显示冷却秒数
+        const seconds = Math.ceil(cooldown / 1000);
+        skillUI.cooldownText.setText(`${seconds}`);
+        skillUI.cooldownText.setVisible(true);
+      } else {
+        skillUI.cooldownText.setVisible(false);
+      }
+    });
   }
 
   private updateHpBar(): void {
@@ -178,5 +340,11 @@ export class HUD {
     this.levelText.destroy();
     this.waveText.destroy();
     this.killsText.destroy();
+
+    // 清理技能UI
+    this.skillUIs.forEach((skillUI) => {
+      skillUI.container.destroy();
+    });
+    this.skillUIs = [];
   }
 }
