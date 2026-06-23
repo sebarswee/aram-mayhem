@@ -63,6 +63,13 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
+    // 强制设置可见性
+    this.setVisible(true);
+    this.setAlpha(1);
+    this.setTint(0xffffff);  // 清除任何 tint
+
+    console.log(`[Projectile] After creation - visible: ${this.visible}, alpha: ${this.alpha}, tint: 0x${this.tintTopLeft?.toString(16)}`);
+
     // 确保物理体被正确激活
     const body = this.body as Phaser.Physics.Arcade.Body;
     if (body) {
