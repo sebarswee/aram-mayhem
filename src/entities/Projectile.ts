@@ -65,6 +65,11 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     // 设置深度
     this.setDepth(40);
 
+    // 调试：绘制一个明显的红色圆圈标记投射物位置
+    const debugCircle = scene.add.circle(x, y, 20, 0xff0000, 0.5);
+    debugCircle.setDepth(100);
+    scene.time.delayedCall(200, () => debugCircle.destroy());
+
     // 设置存活时间
     this.lifetime = PROJECTILE_LIFETIME;
 
