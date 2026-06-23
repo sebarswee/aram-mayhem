@@ -9,6 +9,7 @@ export class VirtualJoystick {
   private baseX: number;
   private baseY: number;
   private radius: number = 50;
+  private touchRadius: number = 80; // 触摸响应区域半径
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     this.scene = scene;
@@ -19,6 +20,7 @@ export class VirtualJoystick {
     this.base = scene.add.circle(x, y, this.radius + 10, 0x444444, 0.5);
     this.base.setScrollFactor(0);
     this.base.setDepth(1000);
+    this.base.setInteractive(new Phaser.Geom.Circle(x, y, this.touchRadius), Phaser.Geom.Circle.Contains);
 
     // 绘制摇杆头
     this.thumb = scene.add.circle(x, y, 30, 0x888888, 0.8);
@@ -29,14 +31,10 @@ export class VirtualJoystick {
   }
 
   private setupEvents(): void {
-    // 触摸/点击区域 - 左半屏
-    const touchZone = this.scene.add
-      .zone(0, 0, this.scene.cameras.main.width / 2, this.scene.cameras.main.height)
-      .setOrigin(0, 0)
-      .setInteractive();
-
-    touchZone.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+    // 只在摇杆区域内响应触摸
+    this.base.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       this.pointer = pointer;
+      // 将摇杆头移动到触摸位置
       this.updatePosition(pointer.x, pointer.y);
     });
 
