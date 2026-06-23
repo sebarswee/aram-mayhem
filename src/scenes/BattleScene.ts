@@ -283,6 +283,9 @@ export class BattleScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
+    // 调试：确认update在运行
+    console.log(`[BattleScene] update running, delta: ${delta}, isDead: ${this.gameState.isDead}, isUpgrading: ${this.gameState.isUpgrading}, isSelectingSkill: ${this.gameState.isSelectingSkill}`);
+
     if (this.gameState.isDead || this.gameState.isUpgrading || this.gameState.isSelectingSkill) return;
 
     // 处理输入
