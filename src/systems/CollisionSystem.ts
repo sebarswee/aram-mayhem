@@ -55,14 +55,11 @@ export class CollisionSystem {
     const proj = projectile as Projectile;
     const enem = enemy as Enemy;
 
-    console.log(`[CollisionSystem] handleProjectileHitEnemy triggered! proj.active: ${proj.active}, enemy.active: ${enem.active}`);
-
     // 碰撞保护：投射物创建后 50ms 内不触发碰撞
     // 这是为了防止投射物在玩家位置创建时立即与附近的敌人碰撞
     const creationTime = proj.config.creationTime || 0;
     const age = Date.now() - creationTime;
     if (age < 50) {
-      console.log(`[CollisionSystem] Projectile too young, skip collision`);
       return;
     }
 
@@ -90,7 +87,6 @@ export class CollisionSystem {
 
     // 应用技能效果（冰冻、减速、灼烧等）
     const effects = proj.getEffects();
-    console.log(`[CollisionSystem] Applying effects:`, effects.map(e => e.type));
     this.applyEffects(enem, effects);
 
     // 检查是否可以连锁
@@ -294,9 +290,7 @@ export class CollisionSystem {
    * 应用技能效果到敌人
    */
   private applyEffects(enemy: Enemy, effects: { type: string; value?: number; duration?: number }[]): void {
-    console.log(`[CollisionSystem] applyEffects called, effects count: ${effects.length}`);
     for (const effect of effects) {
-      console.log(`[CollisionSystem] Processing effect: ${effect.type}, value: ${effect.value}, duration: ${effect.duration}`);
       if (effect.type === 'burn' && effect.value && effect.duration) {
         this.applyBurn(enemy, effect.value, effect.duration);
       } else if (effect.type === 'freeze' && effect.duration) {
@@ -338,31 +332,42 @@ export class CollisionSystem {
   private applyFreeze(enemy: Enemy, slowAmount: number, duration: number): void {
     // 确保敌人和 config 存在
     if (!enemy || !enemy.config) {
-      console.log(`[CollisionSystem] applyFreeze failed: enemy or config is null`);
       return;
     }
-
-    console.log(`[CollisionSystem] applyFreeze: slowAmount=${slowAmount}, duration=${duration}, currentSpeed=${enemy.config.speed}`);
 
     const originalSpeed = enemy.config.speed;
     enemy.config.speed *= (1 - slowAmount);
 
-    console.log(`[CollisionSystem] Speed reduced: ${originalSpeed} -> ${enemy.config.speed}`);
-
-    // 视觉效果 - 变蓝
+    // 视觉效果 - 变蓝（使用白色tint，对于有色纹理效果减弱但仍可见）
     enemy.setTint(0x88ddff);
-    console.log(`[CollisionSystem] Tint set to blue, current tint: 0x${enemy.tintTopLeft.toString(16)}`);
 
-    // 验证 tint 是否生效
-    this.scene.time.delayedCall(100, () => {
-      console.log(`[CollisionSystem] After 100ms, tint: 0x${enemy.tintTopLeft.toString(16)}, active: ${enemy.active}`);
+    // 添加冰冻光环效果
+    const freezeRing = this.scene.add.graphics();
+    freezeRing.lineStyle(3, 0x88ddff, 0.8);
+    freezeRing.strokeCircle(0, 0, 25);
+    freezeRing.setPosition(enemy.x, enemy.y);
+    freezeRing.setDepth(31);
+
+    // 光环跟随敌人
+    const followEvent = this.scene.time.addEvent({
+      delay: 50,
+      callback: () => {
+        if (!enemy.active) {
+          followEvent.destroy();
+          freezeRing.destroy();
+          return;
+        }
+        freezeRing.setPosition(enemy.x, enemy.y);
+      },
+      repeat: -1,
     });
 
     this.scene.time.delayedCall(duration, () => {
+      followEvent.destroy();
+      freezeRing.destroy();
       if (enemy.active && enemy.config) {
         enemy.config.speed = originalSpeed;
         enemy.clearTint();
-        console.log(`[CollisionSystem] Freeze ended, speed restored to ${originalSpeed}`);
       }
     });
   }
@@ -374,10 +379,42 @@ export class CollisionSystem {
     // 确保敌人和 config 存在
     if (!enemy || !enemy.config) return;
 
-    console.log(`[CollisionSystem] applyStun: duration=${duration}`);
-
     const originalSpeed = enemy.config.speed;
     enemy.config.speed = 0;
+
+    // 添加眩晕星星效果
+    const stunStars = this.scene.add.graphics();
+    stunStars.fillStyle(0xffff00, 1);
+    for (let i = 0; i < 3; i++) {
+      const angle = (i * 120 + Date.now() / 50) * Math.PI / 180;
+      const x = Math.cos(angle) * 20;
+      const y = Math.sin(angle) * 20 - 15;
+      this.drawStar(stunStars, x, y, 5, 4, 2);
+    }
+    stunStars.setPosition(enemy.x, enemy.y);
+    stunStars.setDepth(31);
+
+    // 星星旋转动画
+    const rotateEvent = this.scene.time.addEvent({
+      delay: 50,
+      callback: () => {
+        if (!enemy.active) {
+          rotateEvent.destroy();
+          stunStars.destroy();
+          return;
+        }
+        stunStars.setPosition(enemy.x, enemy.y);
+        stunStars.clear();
+        stunStars.fillStyle(0xffff00, 1);
+        for (let i = 0; i < 3; i++) {
+          const angle = (i * 120 + Date.now() / 50) * Math.PI / 180;
+          const x = Math.cos(angle) * 20;
+          const y = Math.sin(angle) * 20 - 15;
+          this.drawStar(stunStars, x, y, 5, 4, 2);
+        }
+      },
+      repeat: -1,
+    });
 
     // 视觉效果 - 闪烁
     this.scene.tweens.add({
@@ -387,6 +424,8 @@ export class CollisionSystem {
       yoyo: true,
       repeat: Math.floor(duration / 200),
       onComplete: () => {
+        rotateEvent.destroy();
+        stunStars.destroy();
         if (enemy.active && enemy.config) {
           enemy.config.speed = originalSpeed;
           enemy.setAlpha(1);
@@ -396,18 +435,61 @@ export class CollisionSystem {
   }
 
   /**
+   * 绘制星星
+   */
+  private drawStar(graphics: Phaser.GameObjects.Graphics, x: number, y: number, points: number, outerRadius: number, innerRadius: number): void {
+    const step = Math.PI / points;
+    graphics.beginPath();
+    for (let i = 0; i < 2 * points; i++) {
+      const radius = i % 2 === 0 ? outerRadius : innerRadius;
+      const angle = i * step - Math.PI / 2;
+      const px = x + Math.cos(angle) * radius;
+      const py = y + Math.sin(angle) * radius;
+      if (i === 0) {
+        graphics.moveTo(px, py);
+      } else {
+        graphics.lineTo(px, py);
+      }
+    }
+    graphics.closePath();
+    graphics.fillPath();
+  }
+
+  /**
    * 毒效果 - 持续伤害 + 变绿
    */
   private applyPoison(enemy: Enemy, damagePerSec: number, duration: number): void {
     if (!enemy || !enemy.config) return;
 
-    console.log(`[CollisionSystem] applyPoison: damagePerSec=${damagePerSec}, duration=${duration}`);
-
     const tickDamage = damagePerSec;
     const ticks = Math.floor(duration / 1000);
 
-    // 视觉效果 - 变绿
+    // 视觉效果 - 绿色光环
     enemy.setTint(0x44ff44);
+
+    // 毒雾效果
+    const poisonCloud = this.scene.add.graphics();
+    poisonCloud.fillStyle(0x44ff44, 0.3);
+    poisonCloud.fillCircle(0, 0, 20);
+    poisonCloud.setPosition(enemy.x, enemy.y);
+    poisonCloud.setDepth(31);
+
+    // 光环跟随敌人
+    const followEvent = this.scene.time.addEvent({
+      delay: 50,
+      callback: () => {
+        if (!enemy.active) {
+          followEvent.destroy();
+          poisonCloud.destroy();
+          return;
+        }
+        poisonCloud.setPosition(enemy.x, enemy.y);
+        // 脉动效果
+        const scale = 1 + Math.sin(Date.now() / 200) * 0.2;
+        poisonCloud.setScale(scale);
+      },
+      repeat: -1,
+    });
 
     let ticksRemaining = ticks;
     const poisonTimer = this.scene.time.addEvent({
@@ -419,6 +501,8 @@ export class CollisionSystem {
         ticksRemaining--;
         if (ticksRemaining <= 0) {
           poisonTimer.destroy();
+          followEvent.destroy();
+          poisonCloud.destroy();
           if (enemy.active) {
             enemy.clearTint();
           }
