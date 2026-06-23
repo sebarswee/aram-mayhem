@@ -141,6 +141,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
 
   destroy(): void {
     console.log(`[Projectile] destroy called, skill: ${this.config.skill.id}`);
+    console.trace('destroy stack trace');
 
     // 火球术爆炸效果
     if (this.config.skill.id === 'fireball') {

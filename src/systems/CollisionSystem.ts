@@ -55,6 +55,8 @@ export class CollisionSystem {
     const proj = projectile as Projectile;
     const enem = enemy as Enemy;
 
+    console.log(`[CollisionSystem] handleProjectileHitEnemy called, proj.active: ${proj.active}, enemy.active: ${enem.active}`);
+
     if (!proj.active || !enem.active) return;
 
     // 检查是否已经命中过这个敌人（穿透时避免重复）
