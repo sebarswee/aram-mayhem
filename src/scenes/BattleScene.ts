@@ -12,6 +12,14 @@ import { RuneSelectUI } from '@/ui/RuneSelectUI';
 import { getRandomSkillSet } from '@/data/skills';
 import { GAME_WIDTH, GAME_HEIGHT } from '@/config/game.config';
 
+declare global {
+  interface Window {
+    gameSettings: {
+      joystickMode: 'fixed' | 'follow';
+    };
+  }
+}
+
 export class BattleScene extends Phaser.Scene {
   // 游戏对象
   private player!: Player;
@@ -47,8 +55,9 @@ export class BattleScene extends Phaser.Scene {
     // 初始化技能
     this.initPlayerSkills();
 
-    // 初始化系统
-    this.inputSystem = new InputSystem(this);
+    // 初始化系统 - 读取摇杆设置
+    const joystickMode = window.gameSettings?.joystickMode || 'follow';
+    this.inputSystem = new InputSystem(this, joystickMode);
     this.enemySystem = new EnemySystem(this, this.player);
     this.skillSystem = new SkillSystem(this, this.player);
     this.collisionSystem = new CollisionSystem(this, this.player, this.enemySystem, this.skillSystem);

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { InputState } from '@/types';
-import { VirtualJoystick } from '@/ui/VirtualJoystick';
+import { VirtualJoystick, JoystickMode } from '@/ui/VirtualJoystick';
 import { GAME_HEIGHT } from '@/config/game.config';
 
 export class InputSystem {
@@ -17,11 +17,11 @@ export class InputSystem {
     RIGHT: Phaser.Input.Keyboard.Key;
   };
 
-  constructor(scene: Phaser.Scene) {
+  constructor(scene: Phaser.Scene, joystickMode: JoystickMode = 'follow') {
     this._scene = scene;
 
-    // 创建虚拟摇杆
-    this.joystick = new VirtualJoystick(scene, 150, GAME_HEIGHT - 150);
+    // 创建虚拟摇杆 - 根据模式选择配置
+    this.joystick = new VirtualJoystick(scene, { mode: joystickMode });
 
     // 创建键盘输入
     this.keys = {
@@ -64,6 +64,10 @@ export class InputSystem {
       moveY,
       isMoving: moveX !== 0 || moveY !== 0,
     };
+  }
+
+  setJoystickMode(mode: JoystickMode): void {
+    this.joystick.setMode(mode);
   }
 
   destroy(): void {

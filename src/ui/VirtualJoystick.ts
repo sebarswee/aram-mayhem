@@ -1,5 +1,13 @@
 import Phaser from 'phaser';
 
+export type JoystickMode = 'fixed' | 'follow';
+
+export interface JoystickConfig {
+  mode: JoystickMode;
+  fixedX?: number;
+  fixedY?: number;
+}
+
 export class VirtualJoystick {
   private scene: Phaser.Scene;
   private base: Phaser.GameObjects.Arc;
@@ -9,21 +17,26 @@ export class VirtualJoystick {
   private baseX: number;
   private baseY: number;
   private radius: number = 50;
-  private touchRadius: number = 80; // 触摸响应区域半径
+  private touchRadius: number = 80;
+  private mode: JoystickMode;
+  private isVisible: boolean = true;
 
-  constructor(scene: Phaser.Scene, x: number, y: number) {
+  constructor(scene: Phaser.Scene, config: JoystickConfig = { mode: 'fixed' }) {
     this.scene = scene;
-    this.baseX = x;
-    this.baseY = y;
+    this.mode = config.mode;
+
+    // 计算固定位置（默认左下角，距离边缘有足够空间）
+    const padding = 100; // 距离边缘的距离
+    this.baseX = config.fixedX ?? padding;
+    this.baseY = config.fixedY ?? scene.cameras.main.height - padding;
 
     // 绘制摇杆底座
-    this.base = scene.add.circle(x, y, this.radius + 10, 0x444444, 0.5);
+    this.base = scene.add.circle(this.baseX, this.baseY, this.radius + 10, 0x444444, 0.5);
     this.base.setScrollFactor(0);
     this.base.setDepth(1000);
-    this.base.setInteractive(new Phaser.Geom.Circle(x, y, this.touchRadius), Phaser.Geom.Circle.Contains);
 
     // 绘制摇杆头
-    this.thumb = scene.add.circle(x, y, 30, 0x888888, 0.8);
+    this.thumb = scene.add.circle(this.baseX, this.baseY, 30, 0x888888, 0.8);
     this.thumb.setScrollFactor(0);
     this.thumb.setDepth(1001);
 
@@ -31,12 +44,34 @@ export class VirtualJoystick {
   }
 
   private setupEvents(): void {
-    // 只在摇杆区域内响应触摸
-    this.base.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      this.pointer = pointer;
-      // 将摇杆头移动到触摸位置
-      this.updatePosition(pointer.x, pointer.y);
-    });
+    if (this.mode === 'fixed') {
+      // 固定模式：只在摇杆区域内响应
+      this.base.setInteractive(
+        new Phaser.Geom.Circle(this.baseX, this.baseY, this.touchRadius),
+        Phaser.Geom.Circle.Contains
+      );
+
+      this.base.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+        this.pointer = pointer;
+        this.updatePosition(pointer.x, pointer.y);
+      });
+    } else {
+      // 跟随模式：触摸左半屏任意位置，摇杆出现在手指位置
+      const touchZone = this.scene.add
+        .zone(0, 0, this.scene.cameras.main.width / 2, this.scene.cameras.main.height)
+        .setOrigin(0, 0)
+        .setInteractive();
+
+      touchZone.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+        this.pointer = pointer;
+        // 摇杆出现在手指位置
+        this.baseX = pointer.x;
+        this.baseY = pointer.y;
+        this.base.setPosition(this.baseX, this.baseY);
+        this.thumb.setPosition(this.baseX, this.baseY);
+        this.updatePosition(pointer.x, pointer.y);
+      });
+    }
 
     this.scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       if (this.pointer === pointer) {
@@ -73,6 +108,14 @@ export class VirtualJoystick {
     this.pointer = null;
     this.thumb.setPosition(this.baseX, this.baseY);
     this.vector.set(0, 0);
+
+    // 跟随模式下，重置到默认位置（隐藏状态）
+    if (this.mode === 'follow') {
+      const padding = 100;
+      this.baseX = padding;
+      this.baseY = this.scene.cameras.main.height - padding;
+      this.base.setPosition(this.baseX, this.baseY);
+    }
   }
 
   getVector(): Phaser.Math.Vector2 {
@@ -80,8 +123,15 @@ export class VirtualJoystick {
   }
 
   setVisible(visible: boolean): void {
+    this.isVisible = visible;
     this.base.setVisible(visible);
     this.thumb.setVisible(visible);
+  }
+
+  setMode(mode: JoystickMode): void {
+    this.mode = mode;
+    // 重置位置
+    this.reset();
   }
 
   destroy(): void {
