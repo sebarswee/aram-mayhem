@@ -21,7 +21,10 @@
       "Bash(git commit -m 'feat: add skill data, projectile, skill system, collision and exp systems *)",
       "Bash(git commit -m 'fix: resolve build errors and move index.html *)",
       "Bash(git commit -m 'chore: add dist to gitignore *)",
-      "Bash(git remote *)"
+      "Bash(git remote *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git config *)"
     ]
   }
 }
