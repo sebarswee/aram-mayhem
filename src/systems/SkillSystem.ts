@@ -234,6 +234,9 @@ export class SkillSystem {
 
       projectile.fire(angle);
       this.projectiles.add(projectile);
+
+      // 调试：检查 add 后的状态
+      console.log(`[SkillSystem] After add to group - displayList: ${this.scene.children.exists(projectile)}, depth: ${projectile.depth}, visible: ${projectile.visible}`);
     }
   }
 
