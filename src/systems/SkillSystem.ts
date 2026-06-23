@@ -229,8 +229,9 @@ export class SkillSystem {
         config
       );
 
-      projectile.fire(angle);
+      // 先添加到组，再设置速度（避免被重置）
       this.projectiles.add(projectile);
+      projectile.fire(angle);
     }
   }
 
