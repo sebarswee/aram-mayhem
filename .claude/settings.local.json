@@ -11,7 +11,13 @@
       "Bash(npm run *)",
       "Bash(curl -s http://localhost:3000)",
       "Bash(pkill -f \"vite\")",
-      "Bash(git commit -m 'chore: initialize project with Phaser 3 + TypeScript + Vite *)"
+      "Bash(git commit -m 'chore: initialize project with Phaser 3 + TypeScript + Vite *)",
+      "Bash(git commit -m 'chore: add node_modules to gitignore *)",
+      "Bash(git commit -m 'feat: add core type definitions *)",
+      "Bash(git commit -m 'feat: add balance configuration *)",
+      "Bash(git commit -m 'feat: add Player entity with movement and damage *)",
+      "Bash(git commit -m 'feat: add BootScene for resource loading *)",
+      "Bash(git commit -m 'feat: add InputSystem, Enemy, and EnemySystem *)"
     ]
   }
 }
