@@ -63,14 +63,15 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    // 调试：强制使用 'player' 纹理（已知可见）替代投射物纹理
+    // 调试：使用 player 纹理
     this.setTexture('player');
     this.setTint(0x00ff00);  // 绿色
     this.setScale(1.5);
     this.setVisible(true);
     this.setAlpha(1);
 
-    console.log(`[Projectile] Using player texture, visible: ${this.visible}, pos: (${x}, ${y})`);
+    // 检查是否被添加到显示列表
+    console.log(`[Projectile] In display list: ${scene.children.exists(this)}, parent: ${this.parentContainer?.name || 'none'}, depth: ${this.depth}`);
 
     // 确保物理体被正确激活
     const body = this.body as Phaser.Physics.Arcade.Body;
