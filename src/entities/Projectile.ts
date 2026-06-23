@@ -45,6 +45,11 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     const element = config.skill.elements[0] || 'fire';
     const textureKey = ELEMENT_TEXTURE_MAP[element] || 'projectile_fire';
 
+    // 检查纹理是否存在
+    if (!scene.textures.exists(textureKey)) {
+      console.warn(`[Projectile] Texture ${textureKey} not found! Available:`, scene.textures.getTextureKeys());
+    }
+
     super(scene, x, y, textureKey);
 
     this.config = config;
