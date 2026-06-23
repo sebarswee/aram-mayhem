@@ -153,9 +153,19 @@ export const RUNES: Record<string, Rune> = {
 
 // 根据稀有度权重随机选择符文
 export function getRandomRunes(count: number, excludeIds: string[] = []): Rune[] {
-  const availableRunes = Object.values(RUNES).filter(
-    (r) => !excludeIds.includes(r.id)
-  );
+  // 过滤出可获得的符文（未满级的）
+  const availableRunes = Object.values(RUNES).filter((r) => {
+    // 排除已满级的
+    const maxLevel = r.maxLevel || 3;
+    // 从 excludeIds 中找到同名符文，检查其等级
+    const excludedRune = excludeIds.find(id => id === r.id);
+    if (excludedRune) {
+      // 已经获取过，检查是否满级
+      // 这里我们需要另一种方式：传入已获得符文的等级
+      return true; // 暂时保留，后续在 RuneSystem 中过滤
+    }
+    return true;
+  });
 
   const selected: Rune[] = [];
 
@@ -166,7 +176,44 @@ export function getRandomRunes(count: number, excludeIds: string[] = []): Rune[]
     }
   }
 
+  // 如果没有可选的符文，返回空数组
   return selected;
+}
+
+/**
+ * 检查是否还有可获得的符文
+ */
+export function hasAvailableRunes(acquiredRunes: Map<string, Rune>): boolean {
+  for (const rune of Object.values(RUNES)) {
+    const acquired = acquiredRunes.get(rune.id);
+    const maxLevel = rune.maxLevel || 3;
+    if (!acquired || (acquired.currentLevel || 1) < maxLevel) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * 获取可获得的符文（未满级）
+ */
+export function getAvailableRunes(acquiredRunes: Map<string, Rune>): Rune[] {
+  const available: Rune[] = [];
+
+  for (const rune of Object.values(RUNES)) {
+    const acquired = acquiredRunes.get(rune.id);
+    const maxLevel = rune.maxLevel || 3;
+    const currentLevel = acquired?.currentLevel || 0;
+
+    if (currentLevel < maxLevel) {
+      available.push({
+        ...rune,
+        currentLevel: currentLevel + 1, // 显示升级后的等级
+      });
+    }
+  }
+
+  return available;
 }
 
 function selectRuneByRarity(runes: Rune[], excludeIds: string[]): Rune | null {

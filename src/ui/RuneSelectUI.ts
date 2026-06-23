@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { Rune } from '@/types';
 import { RuneSystem } from '@/systems/RuneSystem';
-import { getRandomRunes } from '@/data/runes';
+import { getAvailableRunes, hasAvailableRunes } from '@/data/runes';
 
 // 稀有度颜色
 const RARITY_COLORS: Record<string, number> = {
@@ -32,6 +32,15 @@ export class RuneSelectUI {
   }
 
   show(): void {
+    // 检查是否还有可获得的符文
+    const acquiredRunes = this.runeSystem.getAcquiredRunesMap();
+    if (!hasAvailableRunes(acquiredRunes)) {
+      // 所有符文已满级，直接跳过
+      console.log('所有符文已满级，跳过选择');
+      this.onSelect();
+      return;
+    }
+
     const width = this.scene.scale.width;
     const height = this.scene.scale.height;
 
@@ -60,17 +69,24 @@ export class RuneSelectUI {
     title.setOrigin(0.5);
     this.container.add(title);
 
-    // 获取已获得符文ID
-    const acquiredIds = this.runeSystem.getAcquiredRunes().map((r) => r.id);
+    // 获取可获得的符文
+    const availableRunes = getAvailableRunes(acquiredRunes);
 
-    // 随机3个符文
-    const runes = getRandomRunes(3, acquiredIds);
+    // 随机选择最多3个
+    const runes = this.selectRandomRunes(availableRunes, 3);
+
+    if (runes.length === 0) {
+      // 没有可选符文，直接跳过
+      this.onSelect();
+      return;
+    }
 
     // 创建符文卡片 - 响应式尺寸
+    const cardCount = runes.length;
     const cardWidth = Math.min(200, width * 0.25);
     const cardHeight = Math.min(300, height * 0.5);
     const cardGap = Math.min(40, width * 0.05);
-    const totalWidth = cardWidth * 3 + cardGap * 2;
+    const totalWidth = cardWidth * cardCount + cardGap * (cardCount - 1);
     const startX = (width - totalWidth) / 2 + cardWidth / 2;
     const cardY = height / 2;
 
@@ -78,6 +94,14 @@ export class RuneSelectUI {
       const cardX = startX + index * (cardWidth + cardGap);
       this.createRuneCard(rune, cardX, cardY, cardWidth, cardHeight, width);
     });
+  }
+
+  /**
+   * 从可用符文中随机选择指定数量
+   */
+  private selectRandomRunes(runes: Rune[], count: number): Rune[] {
+    const shuffled = [...runes].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, Math.min(count, runes.length));
   }
 
   private createRuneCard(

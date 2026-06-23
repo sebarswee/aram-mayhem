@@ -164,6 +164,10 @@ export class RuneSystem {
     return Array.from(this.acquiredRunes.values());
   }
 
+  getAcquiredRunesMap(): Map<string, Rune> {
+    return this.acquiredRunes;
+  }
+
   hasRune(runeId: string): boolean {
     return this.acquiredRunes.has(runeId);
   }
