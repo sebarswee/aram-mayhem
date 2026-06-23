@@ -55,11 +55,14 @@ export class CollisionSystem {
     const proj = projectile as Projectile;
     const enem = enemy as Enemy;
 
-    // 计算距离
-    const distance = Phaser.Math.Distance.Between(proj.x, proj.y, enem.x, enem.y);
-    console.log(`[CollisionSystem] Collision detected, distance: ${distance.toFixed(0)}, proj: (${proj.x.toFixed(0)}, ${proj.y.toFixed(0)}), enemy: (${enem.x.toFixed(0)}, ${enem.y.toFixed(0)})`);
-
     if (!proj.active || !enem.active) return;
+
+    // 碰撞保护：投射物创建后 50ms 内不触发碰撞
+    // 这是为了防止投射物在玩家位置创建时立即与附近的敌人碰撞
+    const age = Date.now() - proj.config.creationTime;
+    if (age < 50) {
+      return;
+    }
 
     // 检查是否已经命中过这个敌人（穿透时避免重复）
     if (proj.config.hitEnemies && proj.config.hitEnemies.has(enem.instanceId)) {

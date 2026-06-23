@@ -19,6 +19,7 @@ export interface ProjectileConfig {
   range: number;
   isFromPlayer: boolean;
   color: number;
+  creationTime: number;  // 创建时间，用于碰撞保护
   // 连锁信息
   chainRemaining?: number;      // 剩余连锁次数
   chainRange?: number;          // 连锁范围
@@ -48,6 +49,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     super(scene, x, y, textureKey);
 
     this.config = config;
+    this.config.creationTime = Date.now();  // 记录创建时间
     this.startXY = { x, y };
 
     scene.add.existing(this);
@@ -58,9 +60,6 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     if (body) {
       body.setSize(16, 16);
       body.setEnable(true);
-      console.log(`[Projectile] Body created, enable: ${body.enable}, x: ${x}, y: ${y}`);
-    } else {
-      console.error(`[Projectile] No body created!`);
     }
 
     // 设置深度
@@ -98,11 +97,6 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
   }
 
   update(delta: number): void {
-    // 调试：确认 update 被调用
-    if (this.lifetime > 4000) {
-      console.log(`[Projectile] update called, pos: (${this.x.toFixed(0)}, ${this.y.toFixed(0)}), active: ${this.active}`);
-    }
-
     // 更新尾迹粒子位置
     if (this.trailParticles) {
       this.trailParticles.setPosition(this.x, this.y);
@@ -140,9 +134,6 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
   }
 
   destroy(): void {
-    console.log(`[Projectile] destroy called, skill: ${this.config.skill.id}`);
-    console.trace('destroy stack trace');
-
     // 火球术爆炸效果
     if (this.config.skill.id === 'fireball') {
       this.createFireballExplosion();

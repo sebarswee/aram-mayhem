@@ -31,8 +31,6 @@ export class SkillSystem {
       classType: Projectile,
       runChildUpdate: true,
     });
-
-    console.log(`[SkillSystem] Projectile group created, runChildUpdate: true`);
   }
 
   /**
@@ -233,9 +231,6 @@ export class SkillSystem {
 
       projectile.fire(angle);
       this.projectiles.add(projectile);
-
-      // 调试：确认投射物被创建
-      console.log(`[SkillSystem] Created projectile, group size: ${this.projectiles.getLength()}, texture: ${projectile.texture.key}`);
     }
   }
 
