@@ -140,15 +140,35 @@ export class SkillSystem {
   private castSkill(skill: Skill, target: Enemy): void {
     this.player.skillCooldowns.set(skill.id, skill.cooldown);
 
-    if (skill.categories.includes('projectile')) {
-      this.castProjectile(skill, target);
-    } else if (skill.categories.includes('area')) {
-      this.castArea(skill);
+    // 检查连射强化
+    const multicastCount = this.getMulticastCount(skill);
+
+    for (let i = 0; i < multicastCount; i++) {
+      this.scene.time.delayedCall(i * 100, () => {
+        if (skill.categories.includes('projectile')) {
+          this.castProjectile(skill, target);
+        } else if (skill.categories.includes('area')) {
+          this.castArea(skill);
+        }
+      });
     }
   }
 
+  /**
+   * 获取连射次数
+   */
+  private getMulticastCount(skill: Skill): number {
+    let count = 1;
+    for (const enhancement of skill.enhancements) {
+      if (enhancement.type === 'multicast') {
+        count = Math.max(count, enhancement.value);
+      }
+    }
+    return count;
+  }
+
   private castProjectile(skill: Skill, target: Enemy): void {
-    const angle = Phaser.Math.Angle.Between(
+    const baseAngle = Phaser.Math.Angle.Between(
       this.player.x,
       this.player.y,
       target.x,
@@ -161,29 +181,78 @@ export class SkillSystem {
     const baseDamage = skill.damage + this.player.stats.attack;
     const { damage } = this.calculateDamage(baseDamage);
 
-    const config: ProjectileConfig = {
-      skill,
-      damage,
-      speed: skill.speed || 300,
-      range: skill.rangeValue,
-      isFromPlayer: true,
-      color,
-      // 连锁属性
-      chainRemaining: skill.chainCount || 0,
-      chainRange: skill.chainRange || 150,
-      chainDamageDecay: skill.chainDamageDecay || 0.8,
-      previousTargets: new Set<string>(),
-    };
+    // 获取投射物数量强化
+    const projectileCount = this.getProjectileCount(skill);
+    const spreadAngle = 0.15; // 散射角度
 
-    const projectile = new Projectile(
-      this.scene,
-      this.player.x,
-      this.player.y,
-      config
-    );
+    for (let i = 0; i < projectileCount; i++) {
+      // 计算散射角度
+      let angle = baseAngle;
+      if (projectileCount > 1) {
+        const offset = (i - (projectileCount - 1) / 2) * spreadAngle;
+        angle = baseAngle + offset;
+      }
 
-    projectile.fire(angle);
-    this.projectiles.add(projectile);
+      // 获取穿透次数
+      const pierceCount = this.getPierceCount(skill);
+
+      const config: ProjectileConfig = {
+        skill,
+        damage,
+        speed: skill.speed || 300,
+        range: skill.rangeValue,
+        isFromPlayer: true,
+        color,
+        // 连锁属性
+        chainRemaining: skill.chainCount || 0,
+        chainRange: skill.chainRange || 150,
+        chainDamageDecay: skill.chainDamageDecay || 0.8,
+        previousTargets: new Set<string>(),
+        // 穿透属性
+        pierceCount,
+        hitEnemies: new Set<string>(),
+      };
+
+      const projectile = new Projectile(
+        this.scene,
+        this.player.x,
+        this.player.y,
+        config
+      );
+
+      projectile.fire(angle);
+      this.projectiles.add(projectile);
+    }
+  }
+
+  /**
+   * 获取投射物数量
+   */
+  private getProjectileCount(skill: Skill): number {
+    let count = skill.baseValues.projectileCount || 1;
+    for (const enhancement of skill.enhancements) {
+      if (enhancement.type === 'projectile_count') {
+        count += enhancement.value;
+      }
+    }
+    // 多重箭技能自带3支箭
+    if (skill.id === 'multi_shot') {
+      count = Math.max(count, 3);
+    }
+    return count;
+  }
+
+  /**
+   * 获取穿透次数
+   */
+  private getPierceCount(skill: Skill): number {
+    let count = 0;
+    for (const enhancement of skill.enhancements) {
+      if (enhancement.type === 'pierce') {
+        count += enhancement.value;
+      }
+    }
+    return count;
   }
 
   private castArea(skill: Skill): void {

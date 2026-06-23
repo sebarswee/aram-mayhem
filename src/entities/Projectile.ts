@@ -24,6 +24,9 @@ export interface ProjectileConfig {
   chainRange?: number;          // 连锁范围
   chainDamageDecay?: number;    // 伤害衰减
   previousTargets?: Set<string>; // 已打击的目标ID
+  // 穿透信息
+  pierceCount?: number;         // 剩余穿透次数
+  hitEnemies?: Set<string>;     // 已命中的敌人ID
 }
 
 export class Projectile extends Phaser.Physics.Arcade.Sprite {

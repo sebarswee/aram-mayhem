@@ -1,15 +1,16 @@
 import Phaser from 'phaser';
 import { Player } from '@/entities/Player';
-import { GameState } from '@/types';
+import { GameState, Skill } from '@/types';
 import { InputSystem } from '@/systems/InputSystem';
 import { EnemySystem } from '@/systems/EnemySystem';
 import { SkillSystem } from '@/systems/SkillSystem';
 import { CollisionSystem } from '@/systems/CollisionSystem';
 import { ExpSystem } from '@/systems/ExpSystem';
-import { RuneSystem } from '@/systems/RuneSystem';
+import { EnhancementSystem } from '@/systems/EnhancementSystem';
 import { HUD } from '@/ui/HUD';
-import { RuneSelectUI } from '@/ui/RuneSelectUI';
-import { getRandomSkillSet } from '@/data/skills';
+import { SkillSelectUI } from '@/ui/SkillSelectUI';
+import { UpgradeSelectUI } from '@/ui/UpgradeSelectUI';
+import { getRandomBasicSkills, cloneSkill } from '@/data/skills';
 import { GAME_WIDTH, GAME_HEIGHT, updateGameSize } from '@/config/game.config';
 import { GraphicsFactory } from '@/graphics/GraphicsFactory';
 
@@ -32,11 +33,12 @@ export class BattleScene extends Phaser.Scene {
   private skillSystem!: SkillSystem;
   private collisionSystem!: CollisionSystem;
   private expSystem!: ExpSystem;
-  private runeSystem!: RuneSystem;
+  private enhancementSystem!: EnhancementSystem;
 
   // UI
   private hud!: HUD;
-  private runeSelectUI!: RuneSelectUI;
+  private skillSelectUI!: SkillSelectUI;
+  private upgradeSelectUI!: UpgradeSelectUI;
 
   // 波次控制
   private waveTimer!: Phaser.Time.TimerEvent;
@@ -82,9 +84,6 @@ export class BattleScene extends Phaser.Scene {
     // 创建玩家
     this.player = new Player(this, GAME_WIDTH / 2, GAME_HEIGHT / 2);
 
-    // 初始化技能
-    this.initPlayerSkills();
-
     // 初始化系统 - 读取摇杆设置
     const joystickMode = window.gameSettings?.joystickMode || 'follow';
     this.inputSystem = new InputSystem(this, joystickMode);
@@ -92,19 +91,26 @@ export class BattleScene extends Phaser.Scene {
     this.skillSystem = new SkillSystem(this, this.player);
     this.collisionSystem = new CollisionSystem(this, this.player, this.enemySystem, this.skillSystem);
     this.expSystem = new ExpSystem(this, this.gameState);
-    this.runeSystem = new RuneSystem(this, this.player);
+    this.enhancementSystem = new EnhancementSystem(this, this.player);
 
     // 初始化UI
     this.hud = new HUD(this, this.player, this.gameState, this.expSystem);
-    this.runeSelectUI = new RuneSelectUI(this, this.runeSystem, () => {
+
+    // 开局技能选择界面
+    this.skillSelectUI = new SkillSelectUI(this, (skill: Skill) => {
+      this.onStartingSkillSelected(skill);
+    });
+
+    // 升级选择界面
+    this.upgradeSelectUI = new UpgradeSelectUI(this, this.enhancementSystem, () => {
       this.resumeGame();
     });
 
     // 设置事件监听
     this.setupEvents();
 
-    // 开始第一波
-    this.startWave(1);
+    // 显示开局技能选择
+    this.showStartingSkillSelection();
   }
 
   private updateSize(): void {
@@ -113,14 +119,33 @@ export class BattleScene extends Phaser.Scene {
     updateGameSize(width, height);
   }
 
-  private initPlayerSkills(): void {
-    const skillSet = getRandomSkillSet();
-    this.player.skills = [...skillSet.basics, skillSet.ultimate];
+  /**
+   * 显示开局技能选择
+   */
+  private showStartingSkillSelection(): void {
+    this.gameState.isSelectingSkill = true;
+    this.player.isInvincible = true;
+    this.physics.pause();
 
-    // 初始化冷却
-    for (const skill of this.player.skills) {
-      this.player.skillCooldowns.set(skill.id, 0);
-    }
+    // 获取4个随机基础技能
+    const skills = getRandomBasicSkills(4);
+    this.skillSelectUI.show(skills);
+  }
+
+  /**
+   * 玩家选择初始技能后
+   */
+  private onStartingSkillSelected(skill: Skill): void {
+    this.gameState.isSelectingSkill = false;
+    this.player.isInvincible = false;
+    this.physics.resume();
+
+    // 添加技能到玩家
+    this.player.skills.push(skill);
+    this.player.skillCooldowns.set(skill.id, 0);
+
+    // 开始第一波
+    this.startWave(1);
   }
 
   private setupEvents(): void {
@@ -132,13 +157,63 @@ export class BattleScene extends Phaser.Scene {
     });
 
     // 升级
-    this.events.on('levelUp', () => {
+    this.events.on('levelUp', (level: number) => {
+      // 检查大招解锁
+      if (this.enhancementSystem.shouldUnlockUltimate(level)) {
+        const ultimate = this.enhancementSystem.unlockUltimate();
+        if (ultimate) {
+          // 显示大招解锁提示
+          this.showUltimateUnlockMessage(ultimate);
+        }
+      }
+
+      // 显示升级选择
       this.pauseForUpgrade();
     });
 
     // 玩家死亡
     this.player.on('death', () => {
       this.gameOver();
+    });
+  }
+
+  /**
+   * 显示大招解锁消息
+   */
+  private showUltimateUnlockMessage(ultimate: Skill): void {
+    const width = this.scale.width;
+    const height = this.scale.height;
+
+    const container = this.add.container(width / 2, height / 2 - 100);
+    container.setDepth(999);
+
+    const bg = this.add.rectangle(0, 0, 300, 80, 0x000000, 0.8);
+    container.add(bg);
+
+    const text = this.add.text(0, -15, '大招解锁！', {
+      fontSize: '20px',
+      color: '#ffcc00',
+      fontStyle: 'bold',
+    });
+    text.setOrigin(0.5);
+    container.add(text);
+
+    const skillName = this.add.text(0, 15, ultimate.name, {
+      fontSize: '24px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+    });
+    skillName.setOrigin(0.5);
+    container.add(skillName);
+
+    // 动画
+    this.tweens.add({
+      targets: container,
+      alpha: 0,
+      y: height / 2 - 150,
+      delay: 2000,
+      duration: 500,
+      onComplete: () => container.destroy(),
     });
   }
 
@@ -176,8 +251,8 @@ export class BattleScene extends Phaser.Scene {
     this.physics.pause();
     this.enemySystem.pause();
 
-    // 显示符文选择
-    this.runeSelectUI.show();
+    // 显示升级选择
+    this.upgradeSelectUI.show();
   }
 
   private resumeGame(): void {
@@ -208,7 +283,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
-    if (this.gameState.isDead || this.gameState.isUpgrading) return;
+    if (this.gameState.isDead || this.gameState.isUpgrading || this.gameState.isSelectingSkill) return;
 
     // 处理输入
     const input = this.inputSystem.getInput();
@@ -238,7 +313,7 @@ export class BattleScene extends Phaser.Scene {
         currentHp: 100,
         attack: 10,
         defense: 5,
-        speed: 200,
+        speed: 280, // 使用更新后的速度
         critRate: 0.05,
         critDamage: 1.5,
       },
@@ -253,6 +328,8 @@ export class BattleScene extends Phaser.Scene {
       isPaused: false,
       isDead: false,
       isUpgrading: false,
+      isSelectingSkill: false,
+      ultimateSlots: 0,
     };
   }
 
@@ -263,7 +340,8 @@ export class BattleScene extends Phaser.Scene {
     this.skillSystem?.destroy();
     this.collisionSystem?.destroy();
     this.hud?.destroy();
-    this.runeSelectUI?.destroy();
+    this.skillSelectUI?.destroy();
+    this.upgradeSelectUI?.destroy();
     this.waveTimer?.destroy();
 
     // 移除事件

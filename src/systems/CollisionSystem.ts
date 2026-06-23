@@ -57,9 +57,17 @@ export class CollisionSystem {
 
     if (!proj.active || !enem.active) return;
 
+    // 检查是否已经命中过这个敌人（穿透时避免重复）
+    if (proj.config.hitEnemies && proj.config.hitEnemies.has(enem.instanceId)) {
+      return;
+    }
+
     // 记录此敌人已被打击
     if (proj.config.previousTargets) {
       proj.config.previousTargets.add(enem.instanceId);
+    }
+    if (proj.config.hitEnemies) {
+      proj.config.hitEnemies.add(enem.instanceId);
     }
 
     // 造成伤害
@@ -91,8 +99,15 @@ export class CollisionSystem {
       );
     }
 
-    // 销毁投射物
-    proj.destroy();
+    // 检查穿透
+    const pierceCount = proj.config.pierceCount || 0;
+    if (pierceCount > 0) {
+      // 减少穿透次数，不销毁投射物
+      proj.config.pierceCount = pierceCount - 1;
+    } else {
+      // 没有穿透了，销毁投射物
+      proj.destroy();
+    }
 
     // 如果击杀敌人，发出事件
     if (killed) {

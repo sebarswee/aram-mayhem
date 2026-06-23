@@ -20,6 +20,26 @@ export interface SkillEffect {
   duration?: number;
 }
 
+// 技能强化类型
+export type EnhancementType = 'split' | 'range' | 'pierce' | 'multicast' | 'effect' | 'damage' | 'cooldown' | 'projectile_count';
+
+// 技能强化（附加在技能上）
+export interface SkillEnhancement {
+  id: string;
+  type: EnhancementType;
+  value: number;
+  source: string;  // 来自哪个强化石
+}
+
+// 技能基础值（用于计算强化）
+export interface SkillBaseValues {
+  damage: number;
+  range: number;
+  projectileCount: number;
+  pierce: number;
+  cooldown: number;
+}
+
 export interface Skill {
   id: string;
   name: string;
@@ -38,9 +58,47 @@ export interface Skill {
   chainCount?: number;        // 连锁次数
   chainRange?: number;        // 连锁范围
   chainDamageDecay?: number;  // 每次连锁伤害衰减 (0-1)
+  // 新增强化相关字段
+  enhancements: SkillEnhancement[];  // 已获得的强化
+  baseValues: SkillBaseValues;       // 原始值（用于计算强化）
 }
 
-// ==================== 符文系统 ====================
+// ==================== 技能强化石系统 ====================
+
+// 技能强化石
+export interface SkillEnhancer {
+  id: string;
+  name: string;
+  description: string;
+  rarity: Rarity;
+  type: EnhancementType;
+  value: number;
+  maxLevel: number;
+  // 限制条件
+  skillCategories?: SkillCategory[];  // 只对特定类型技能生效
+  skillElements?: Element[];          // 只对特定元素技能生效
+  excludeElements?: Element[];        // 排除特定元素（如"附加灼烧"不能用于火焰技能）
+}
+
+// 属性提升选项
+export interface StatBoost {
+  id: string;
+  name: string;
+  description: string;
+  stat: string;
+  value: number;
+  isPercent: boolean;
+}
+
+// 升级选项类型
+export type UpgradeOptionType = 'new_skill' | 'skill_enhancer' | 'stat_boost';
+
+export interface UpgradeOption {
+  type: UpgradeOptionType;
+  data: Skill | SkillEnhancer | StatBoost;
+}
+
+// ==================== 符文系统（保留兼容）====================
 export interface RuneEffect {
   type: RuneType;
   target?: 'all' | 'element' | 'category';
@@ -116,6 +174,8 @@ export interface GameState {
   isPaused: boolean;
   isDead: boolean;
   isUpgrading: boolean;
+  isSelectingSkill: boolean;  // 新增：正在选择初始技能
+  ultimateSlots: number;      // 新增：已解锁的大招槽位
 }
 
 // ==================== 输入系统 ====================

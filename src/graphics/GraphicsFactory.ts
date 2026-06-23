@@ -544,25 +544,32 @@ export class GraphicsFactory {
    * 创建技能图标
    */
   private createSkillIcons(): void {
-    // 火球术
+    // 投射物技能
     this.createSkillIcon('skill_fireball', 0xff4400, '🔥');
-    // 冰刺
     this.createSkillIcon('skill_ice_shard', 0x44ccff, '❄️');
-    // 闪电箭
     this.createSkillIcon('skill_lightning_bolt', 0xffff00, '⚡');
-    // 烈焰环
+    this.createSkillIcon('skill_multi_shot', 0xaaaaaa, '🏹');
+    this.createSkillIcon('skill_boomerang', 0x888888, '🪃');
+    this.createSkillIcon('skill_homing_missile', 0xff6600, '🚀');
+    this.createSkillIcon('skill_poison_dart', 0x44ff44, '🎯');
+
+    // 范围技能
     this.createSkillIcon('skill_flame_circle', 0xff8800, '🔥');
-    // 冰霜新星
     this.createSkillIcon('skill_frost_nova', 0x88ddff, '❄️');
-    // 旋风斩
     this.createSkillIcon('skill_whirlwind', 0xcccccc, '🌀');
-    // 毒雾
     this.createSkillIcon('skill_poison_cloud', 0x44ff44, '☠️');
-    // 陨石
+    this.createSkillIcon('skill_ground_spike', 0x886644, '⛰️');
+    this.createSkillIcon('skill_holy_light', 0xffcc00, '✨');
+    this.createSkillIcon('skill_black_hole', 0x8800ff, '🕳️');
+    this.createSkillIcon('skill_time_stop', 0x6644ff, '⏱️');
+
+    // 召唤/防御技能
+    this.createSkillIcon('skill_summon', 0xffcc00, '👻');
+    this.createSkillIcon('skill_shield', 0x66aaff, '🛡️');
+
+    // 大招
     this.createSkillIcon('skill_meteor', 0xff6600, '☄️');
-    // 暴风雪
     this.createSkillIcon('skill_blizzard', 0x66ccff, '🌨️');
-    // 雷霆风暴
     this.createSkillIcon('skill_thunder_storm', 0xffff44, '🌩️');
   }
 
