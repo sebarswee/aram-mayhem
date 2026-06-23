@@ -2,7 +2,6 @@ import Phaser from 'phaser';
 import { Rune } from '@/types';
 import { RuneSystem } from '@/systems/RuneSystem';
 import { getRandomRunes } from '@/data/runes';
-import { GAME_WIDTH, GAME_HEIGHT } from '@/config/game.config';
 
 // 稀有度颜色
 const RARITY_COLORS: Record<string, number> = {
@@ -33,26 +32,30 @@ export class RuneSelectUI {
   }
 
   show(): void {
+    const width = this.scene.scale.width;
+    const height = this.scene.scale.height;
+
     this.container.setVisible(true);
     this.container.removeAll(true);
 
     // 半透明背景
     const bg = this.scene.add.rectangle(
-      GAME_WIDTH / 2,
-      GAME_HEIGHT / 2,
-      GAME_WIDTH,
-      GAME_HEIGHT,
+      width / 2,
+      height / 2,
+      width,
+      height,
       0x000000,
       0.7
     );
     this.container.add(bg);
 
     // 标题
+    const titleFontSize = Math.min(32, width / 20);
     const title = this.scene.add.text(
-      GAME_WIDTH / 2,
-      100,
+      width / 2,
+      height * 0.1,
       '选择符文',
-      { fontSize: '32px', color: '#ffcc00', fontStyle: 'bold' }
+      { fontSize: `${titleFontSize}px`, color: '#ffcc00', fontStyle: 'bold' }
     );
     title.setOrigin(0.5);
     this.container.add(title);
@@ -63,15 +66,17 @@ export class RuneSelectUI {
     // 随机3个符文
     const runes = getRandomRunes(3, acquiredIds);
 
-    // 创建符文卡片
-    const cardWidth = 200;
-    const cardHeight = 300;
-    const startX = GAME_WIDTH / 2 - (cardWidth * 1.5 + 40);
-    const cardY = GAME_HEIGHT / 2;
+    // 创建符文卡片 - 响应式尺寸
+    const cardWidth = Math.min(200, width * 0.25);
+    const cardHeight = Math.min(300, height * 0.5);
+    const cardGap = Math.min(40, width * 0.05);
+    const totalWidth = cardWidth * 3 + cardGap * 2;
+    const startX = (width - totalWidth) / 2 + cardWidth / 2;
+    const cardY = height / 2;
 
     runes.forEach((rune, index) => {
-      const cardX = startX + index * (cardWidth + 40);
-      this.createRuneCard(rune, cardX, cardY, cardWidth, cardHeight);
+      const cardX = startX + index * (cardWidth + cardGap);
+      this.createRuneCard(rune, cardX, cardY, cardWidth, cardHeight, width);
     });
   }
 
@@ -79,29 +84,32 @@ export class RuneSelectUI {
     rune: Rune,
     x: number,
     y: number,
-    width: number,
-    height: number
+    cardWidth: number,
+    cardHeight: number,
+    screenWidth: number
   ): void {
     const color = RARITY_COLORS[rune.rarity] || 0xffffff;
 
     // 卡片背景
-    const card = this.scene.add.rectangle(x, y, width, height, 0x222222, 1);
+    const card = this.scene.add.rectangle(x, y, cardWidth, cardHeight, 0x222222, 1);
     card.setStrokeStyle(3, color);
     this.container.add(card);
 
     // 稀有度标签
+    const rarityFontSize = Math.min(14, screenWidth / 50);
     const rarityText = this.scene.add.text(
       x,
-      y - height / 2 + 30,
+      y - cardHeight / 2 + 30,
       this.getRarityLabel(rune.rarity),
-      { fontSize: '14px', color: `#${color.toString(16).padStart(6, '0')}` }
+      { fontSize: `${rarityFontSize}px`, color: `#${color.toString(16).padStart(6, '0')}` }
     );
     rarityText.setOrigin(0.5);
     this.container.add(rarityText);
 
     // 符文名称
+    const nameFontSize = Math.min(20, screenWidth / 35);
     const nameText = this.scene.add.text(x, y - 50, rune.name, {
-      fontSize: '20px',
+      fontSize: `${nameFontSize}px`,
       color: '#ffffff',
       fontStyle: 'bold',
     });
@@ -109,10 +117,11 @@ export class RuneSelectUI {
     this.container.add(nameText);
 
     // 符文描述
+    const descFontSize = Math.min(14, screenWidth / 50);
     const descText = this.scene.add.text(x, y + 20, rune.description, {
-      fontSize: '14px',
+      fontSize: `${descFontSize}px`,
       color: '#aaaaaa',
-      wordWrap: { width: width - 20 },
+      wordWrap: { width: cardWidth - 20 },
       align: 'center',
     });
     descText.setOrigin(0.5, 0);
@@ -121,11 +130,12 @@ export class RuneSelectUI {
     // 当前等级(如果已获得)
     const existingLevel = this.runeSystem.getRuneLevel(rune.id);
     if (existingLevel > 0) {
+      const levelFontSize = Math.min(12, screenWidth / 60);
       const levelText = this.scene.add.text(
         x,
         y + 80,
         `当前: Lv.${existingLevel} → Lv.${existingLevel + 1}`,
-        { fontSize: '12px', color: '#00ff00' }
+        { fontSize: `${levelFontSize}px`, color: '#00ff00' }
       );
       levelText.setOrigin(0.5);
       this.container.add(levelText);

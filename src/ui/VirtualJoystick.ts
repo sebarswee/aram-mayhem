@@ -20,15 +20,18 @@ export class VirtualJoystick {
   private touchRadius: number = 80;
   private mode: JoystickMode;
   private isVisible: boolean = true;
+  private touchZone: Phaser.GameObjects.Zone | null = null;
 
   constructor(scene: Phaser.Scene, config: JoystickConfig = { mode: 'fixed' }) {
     this.scene = scene;
     this.mode = config.mode;
 
-    // 计算固定位置（默认左下角，距离边缘有足够空间）
-    const padding = 100; // 距离边缘的距离
+    // 计算固定位置（根据屏幕尺寸自适应）
+    const width = scene.scale.width;
+    const height = scene.scale.height;
+    const padding = Math.min(100, width * 0.15, height * 0.1);
     this.baseX = config.fixedX ?? padding;
-    this.baseY = config.fixedY ?? scene.cameras.main.height - padding;
+    this.baseY = config.fixedY ?? height - padding;
 
     // 绘制摇杆底座
     this.base = scene.add.circle(this.baseX, this.baseY, this.radius + 10, 0x444444, 0.5);
@@ -44,6 +47,9 @@ export class VirtualJoystick {
   }
 
   private setupEvents(): void {
+    const width = this.scene.scale.width;
+    const height = this.scene.scale.height;
+
     if (this.mode === 'fixed') {
       // 固定模式：只在摇杆区域内响应
       this.base.setInteractive(
@@ -57,12 +63,12 @@ export class VirtualJoystick {
       });
     } else {
       // 跟随模式：触摸左半屏任意位置，摇杆出现在手指位置
-      const touchZone = this.scene.add
-        .zone(0, 0, this.scene.cameras.main.width / 2, this.scene.cameras.main.height)
+      this.touchZone = this.scene.add
+        .zone(0, 0, width / 2, height)
         .setOrigin(0, 0)
         .setInteractive();
 
-      touchZone.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      this.touchZone.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
         this.pointer = pointer;
         // 摇杆出现在手指位置
         this.baseX = pointer.x;
@@ -111,9 +117,10 @@ export class VirtualJoystick {
 
     // 跟随模式下，重置到默认位置（隐藏状态）
     if (this.mode === 'follow') {
-      const padding = 100;
+      const height = this.scene.scale.height;
+      const padding = Math.min(100, this.scene.scale.width * 0.15, height * 0.1);
       this.baseX = padding;
-      this.baseY = this.scene.cameras.main.height - padding;
+      this.baseY = height - padding;
       this.base.setPosition(this.baseX, this.baseY);
     }
   }
@@ -126,16 +133,28 @@ export class VirtualJoystick {
     this.isVisible = visible;
     this.base.setVisible(visible);
     this.thumb.setVisible(visible);
+    if (this.touchZone) {
+      this.touchZone.setVisible(visible);
+    }
   }
 
   setMode(mode: JoystickMode): void {
     this.mode = mode;
-    // 重置位置
     this.reset();
+    // 清理旧的事件监听
+    if (this.touchZone) {
+      this.touchZone.destroy();
+      this.touchZone = null;
+    }
+    this.base.removeAllListeners();
+    this.setupEvents();
   }
 
   destroy(): void {
     this.base.destroy();
     this.thumb.destroy();
+    if (this.touchZone) {
+      this.touchZone.destroy();
+    }
   }
 }

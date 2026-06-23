@@ -10,7 +10,7 @@ import { RuneSystem } from '@/systems/RuneSystem';
 import { HUD } from '@/ui/HUD';
 import { RuneSelectUI } from '@/ui/RuneSelectUI';
 import { getRandomSkillSet } from '@/data/skills';
-import { GAME_WIDTH, GAME_HEIGHT } from '@/config/game.config';
+import { GAME_WIDTH, GAME_HEIGHT, updateGameSize } from '@/config/game.config';
 
 declare global {
   interface Window {
@@ -41,13 +41,28 @@ export class BattleScene extends Phaser.Scene {
   private waveTimer!: Phaser.Time.TimerEvent;
   private waveTransitioning: boolean = false;
 
+  // 游戏边界（基于实际屏幕）
+  private gameBounds!: Phaser.Geom.Rectangle;
+
   constructor() {
     super({ key: 'BattleScene' });
   }
 
   create(): void {
+    // 更新游戏尺寸
+    this.updateSize();
+
     // 初始化游戏状态
     this.gameState = this.registry.get('gameState');
+
+    // 计算游戏边界（保持一定边距）
+    const padding = 20;
+    this.gameBounds = new Phaser.Geom.Rectangle(
+      padding,
+      padding,
+      GAME_WIDTH - padding * 2,
+      GAME_HEIGHT - padding * 2
+    );
 
     // 创建玩家
     this.player = new Player(this, GAME_WIDTH / 2, GAME_HEIGHT / 2);
@@ -75,6 +90,29 @@ export class BattleScene extends Phaser.Scene {
 
     // 开始第一波
     this.startWave(1);
+
+    // 监听窗口大小变化
+    this.scale.on('resize', this.handleResize, this);
+  }
+
+  private updateSize(): void {
+    const width = this.scale.width;
+    const height = this.scale.height;
+    updateGameSize(width, height);
+  }
+
+  private handleResize(): void {
+    this.updateSize();
+    // 更新游戏边界
+    const padding = 20;
+    this.gameBounds = new Phaser.Geom.Rectangle(
+      padding,
+      padding,
+      GAME_WIDTH - padding * 2,
+      GAME_HEIGHT - padding * 2
+    );
+    // 更新物理世界边界
+    this.physics.world.setBounds(0, 0, GAME_WIDTH, GAME_HEIGHT);
   }
 
   private initPlayerSkills(): void {
