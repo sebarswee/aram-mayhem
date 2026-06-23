@@ -55,7 +55,9 @@ export class CollisionSystem {
     const proj = projectile as Projectile;
     const enem = enemy as Enemy;
 
-    console.log(`[CollisionSystem] handleProjectileHitEnemy called, proj.active: ${proj.active}, enemy.active: ${enem.active}`);
+    // 计算距离
+    const distance = Phaser.Math.Distance.Between(proj.x, proj.y, enem.x, enem.y);
+    console.log(`[CollisionSystem] Collision detected, distance: ${distance.toFixed(0)}, proj: (${proj.x.toFixed(0)}, ${proj.y.toFixed(0)}), enemy: (${enem.x.toFixed(0)}, ${enem.y.toFixed(0)})`);
 
     if (!proj.active || !enem.active) return;
 
