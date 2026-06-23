@@ -63,10 +63,12 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
+    // 检查 origin
+    console.log(`[Projectile] origin: (${this.originX}, ${this.originY}), displayWidth: ${this.displayWidth}, displayHeight: ${this.displayHeight}`);
+
     // 调试：用白色方块替代纹理，看是否是纹理问题
     this.setTint(0x00ff00);  // 亮绿色 tint
     this.setScale(2);  // 放大 2 倍
-    console.log(`[Projectile] Applied green tint and scale 2`);
 
     // 确保物理体被正确激活
     const body = this.body as Phaser.Physics.Arcade.Body;
