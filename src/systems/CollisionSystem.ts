@@ -87,6 +87,7 @@ export class CollisionSystem {
 
     // 应用技能效果（冰冻、减速、灼烧等）
     const effects = proj.getEffects();
+    console.log(`[CollisionSystem] Applying effects:`, effects.map(e => e.type));
     this.applyEffects(enem, effects);
 
     // 检查是否可以连锁
@@ -290,13 +291,17 @@ export class CollisionSystem {
    * 应用技能效果到敌人
    */
   private applyEffects(enemy: Enemy, effects: { type: string; value?: number; duration?: number }[]): void {
+    console.log(`[CollisionSystem] applyEffects called, effects count: ${effects.length}`);
     for (const effect of effects) {
+      console.log(`[CollisionSystem] Processing effect: ${effect.type}, value: ${effect.value}, duration: ${effect.duration}`);
       if (effect.type === 'burn' && effect.value && effect.duration) {
         this.applyBurn(enemy, effect.value, effect.duration);
       } else if (effect.type === 'freeze' && effect.duration) {
         this.applyFreeze(enemy, effect.value || 0.3, effect.duration);
       } else if (effect.type === 'stun' && effect.duration) {
         this.applyStun(enemy, effect.duration);
+      } else if (effect.type === 'poison' && effect.value && effect.duration) {
+        this.applyPoison(enemy, effect.value, effect.duration);
       }
     }
   }
@@ -329,18 +334,27 @@ export class CollisionSystem {
    */
   private applyFreeze(enemy: Enemy, slowAmount: number, duration: number): void {
     // 确保敌人和 config 存在
-    if (!enemy || !enemy.config) return;
+    if (!enemy || !enemy.config) {
+      console.log(`[CollisionSystem] applyFreeze failed: enemy or config is null`);
+      return;
+    }
+
+    console.log(`[CollisionSystem] applyFreeze: slowAmount=${slowAmount}, duration=${duration}, currentSpeed=${enemy.config.speed}`);
 
     const originalSpeed = enemy.config.speed;
     enemy.config.speed *= (1 - slowAmount);
 
+    console.log(`[CollisionSystem] Speed reduced: ${originalSpeed} -> ${enemy.config.speed}`);
+
     // 视觉效果 - 变蓝
     enemy.setTint(0x88ddff);
+    console.log(`[CollisionSystem] Tint set to blue`);
 
     this.scene.time.delayedCall(duration, () => {
       if (enemy.active && enemy.config) {
         enemy.config.speed = originalSpeed;
         enemy.clearTint();
+        console.log(`[CollisionSystem] Freeze ended, speed restored to ${originalSpeed}`);
       }
     });
   }
@@ -351,6 +365,8 @@ export class CollisionSystem {
   private applyStun(enemy: Enemy, duration: number): void {
     // 确保敌人和 config 存在
     if (!enemy || !enemy.config) return;
+
+    console.log(`[CollisionSystem] applyStun: duration=${duration}`);
 
     const originalSpeed = enemy.config.speed;
     enemy.config.speed = 0;
@@ -368,6 +384,39 @@ export class CollisionSystem {
           enemy.setAlpha(1);
         }
       },
+    });
+  }
+
+  /**
+   * 毒效果 - 持续伤害 + 变绿
+   */
+  private applyPoison(enemy: Enemy, damagePerSec: number, duration: number): void {
+    if (!enemy || !enemy.config) return;
+
+    console.log(`[CollisionSystem] applyPoison: damagePerSec=${damagePerSec}, duration=${duration}`);
+
+    const tickDamage = damagePerSec;
+    const ticks = Math.floor(duration / 1000);
+
+    // 视觉效果 - 变绿
+    enemy.setTint(0x44ff44);
+
+    let ticksRemaining = ticks;
+    const poisonTimer = this.scene.time.addEvent({
+      delay: 1000,
+      callback: () => {
+        if (enemy.active) {
+          enemy.takeDamage(tickDamage);
+        }
+        ticksRemaining--;
+        if (ticksRemaining <= 0) {
+          poisonTimer.destroy();
+          if (enemy.active) {
+            enemy.clearTint();
+          }
+        }
+      },
+      repeat: ticks - 1,
     });
   }
 
