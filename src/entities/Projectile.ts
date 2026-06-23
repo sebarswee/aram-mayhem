@@ -98,7 +98,8 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
 
   update(delta: number): void {
     // 调试：确认 update 被调用
-    console.log(`[Projectile] update! id: ${this.config.skill.id}, pos: (${this.x.toFixed(0)}, ${this.y.toFixed(0)}), active: ${this.active}, visible: ${this.visible}, alpha: ${this.alpha}`);
+    const screenSize = { width: this.scene.scale.width, height: this.scene.scale.height };
+    console.log(`[Projectile] update! id: ${this.config.skill.id}, pos: (${this.x.toFixed(0)}, ${this.y.toFixed(0)}), screen: ${screenSize.width}x${screenSize.height}, texture: ${this.texture.key}, scale: ${this.scaleX}`);
 
     // 更新尾迹粒子位置
     if (this.trailParticles) {
