@@ -3,7 +3,6 @@ import { Player } from '@/entities/Player';
 import { Enemy } from '@/entities/Enemy';
 import { Projectile, ProjectileConfig } from '@/entities/Projectile';
 import { Skill } from '@/types';
-import { GAME_WIDTH, GAME_HEIGHT } from '@/config/game.config';
 import { SkillEffects } from '@/graphics/SkillEffects';
 
 // 元素颜色映射
@@ -145,8 +144,6 @@ export class SkillSystem {
       this.castProjectile(skill, target);
     } else if (skill.categories.includes('area')) {
       this.castArea(skill);
-    } else if (skill.categories.includes('dash')) {
-      this.castDash(skill, target);
     }
   }
 
@@ -355,64 +352,6 @@ export class SkillSystem {
       },
       repeat: Math.floor(duration / tickInterval) - 1,
     });
-  }
-
-  private castDash(skill: Skill, target: Enemy): void {
-    const angle = Phaser.Math.Angle.Between(
-      this.player.x,
-      this.player.y,
-      target.x,
-      target.y
-    );
-
-    const dashDistance = skill.rangeValue;
-    const newX = this.player.x + Math.cos(angle) * dashDistance;
-    const newY = this.player.y + Math.sin(angle) * dashDistance;
-
-    const clampedX = Phaser.Math.Clamp(newX, 20, GAME_WIDTH - 20);
-    const clampedY = Phaser.Math.Clamp(newY, 20, GAME_HEIGHT - 20);
-
-    // 计算最终伤害
-    const baseDamage = skill.damage + this.player.stats.attack;
-    const { damage } = this.calculateDamage(baseDamage);
-
-    // 创建冲刺轨迹
-    const element = skill.elements[0] || 'physical';
-    this.skillEffects.createDashTrail(this.player.x, this.player.y, element);
-
-    this.scene.tweens.add({
-      targets: this.player,
-      x: clampedX,
-      y: clampedY,
-      duration: 150,
-      onUpdate: () => {
-        // 冲刺过程中创建轨迹
-        this.skillEffects.createDashTrail(this.player.x, this.player.y, element);
-      },
-      onComplete: () => {
-        this.damageEnemiesInArea(clampedX, clampedY, damage, skill);
-        // 暗影步额外效果
-        if (skill.categories.includes('area')) {
-          this.skillEffects.createAreaEffect(skill, clampedX, clampedY);
-        }
-      },
-    });
-  }
-
-  private damageEnemiesInArea(x: number, y: number, damage: number, skill?: Skill): void {
-    const bodies = this.scene.physics.overlapCirc(x, y, 50) as Phaser.Physics.Arcade.Body[];
-    for (const body of bodies) {
-      const enemy = body.gameObject as Enemy;
-      // 确保是敌人对象且拥有 config 属性
-      if (enemy && enemy.active && enemy.config && enemy.takeDamage) {
-        enemy.takeDamage(damage);
-        // 触发生命偷取
-        this.applyLifesteal(damage);
-        if (skill) {
-          this.applyEffects(enemy, skill.effects);
-        }
-      }
-    }
   }
 
   /**

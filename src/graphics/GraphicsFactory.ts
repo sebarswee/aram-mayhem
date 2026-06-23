@@ -554,8 +554,6 @@ export class GraphicsFactory {
     this.createSkillIcon('skill_flame_circle', 0xff8800, '🔥');
     // 冰霜新星
     this.createSkillIcon('skill_frost_nova', 0x88ddff, '❄️');
-    // 闪避冲刺
-    this.createSkillIcon('skill_dash', 0xffffff, '💨');
     // 旋风斩
     this.createSkillIcon('skill_whirlwind', 0xcccccc, '🌀');
     // 毒雾

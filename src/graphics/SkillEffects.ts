@@ -185,9 +185,6 @@ export class SkillEffects {
       case 'thunder_storm':
         this.createThunderStormEffect(x, y, skill.rangeValue);
         break;
-      case 'shadow_step':
-        this.createShadowStepEffect(x, y, skill.rangeValue);
-        break;
       default:
         this.createDefaultAreaEffect(x, y, skill.rangeValue, skill.elements[0]);
     }
@@ -573,65 +570,6 @@ export class SkillEffects {
   }
 
   /**
-   * 暗影步效果
-   */
-  private createShadowStepEffect(x: number, y: number, radius: number): void {
-    // 暗影爆炸
-    const shadow = this.scene.add.circle(x, y, radius, 0x8800ff, 0.6);
-    shadow.setDepth(20);
-
-    // 暗影触手
-    const tentacles: Phaser.GameObjects.Graphics[] = [];
-    for (let i = 0; i < 6; i++) {
-      const angle = (i / 6) * Math.PI * 2;
-      const tentacle = this.scene.add.graphics();
-      tentacle.fillStyle(0x6600aa, 0.8);
-
-      const points: number[] = [];
-      for (let j = 0; j <= 5; j++) {
-        const t = j / 5;
-        const r = radius * t;
-        const wobble = Math.sin(t * Math.PI * 2) * 10;
-        points.push(
-          x + Math.cos(angle) * r + Math.cos(angle + Math.PI / 2) * wobble,
-          y + Math.sin(angle) * r + Math.sin(angle + Math.PI / 2) * wobble
-        );
-      }
-
-      tentacle.fillRect(x - 4, y, 8, radius);
-      tentacle.setDepth(21);
-      tentacles.push(tentacle);
-    }
-
-    // 暗影粒子
-    const particles = this.scene.add.particles(x, y, 'particle_glow', {
-      speed: { min: 100, max: 200 },
-      angle: { min: 0, max: 360 },
-      scale: { start: 0.8, end: 0 },
-      alpha: { start: 0.8, end: 0 },
-      tint: 0x8800ff,
-      lifespan: 600,
-      quantity: 15,
-      emitting: false,
-    });
-    particles.explode();
-    particles.setDepth(22);
-
-    // 消散动画
-    this.scene.tweens.add({
-      targets: [shadow, ...tentacles],
-      alpha: 0,
-      scale: 1.5,
-      duration: 400,
-      onComplete: () => {
-        shadow.destroy();
-        tentacles.forEach(t => t.destroy());
-        particles.destroy();
-      },
-    });
-  }
-
-  /**
    * 默认范围效果
    */
   private createDefaultAreaEffect(x: number, y: number, radius: number, element: string): void {
@@ -660,29 +598,6 @@ export class SkillEffects {
         ring.destroy();
         inner.destroy();
       },
-    });
-  }
-
-  /**
-   * 创建冲刺轨迹效果
-   */
-  createDashTrail(x: number, y: number, element: string): void {
-    const colors: Record<string, number> = {
-      physical: 0xffffff,
-      shadow: 0x8800ff,
-    };
-
-    const color = colors[element] || 0xffffff;
-
-    const trail = this.scene.add.circle(x, y, 20, color, 0.5);
-    trail.setDepth(15);
-
-    this.scene.tweens.add({
-      targets: trail,
-      alpha: 0,
-      scale: 2,
-      duration: 300,
-      onComplete: () => trail.destroy(),
     });
   }
 }

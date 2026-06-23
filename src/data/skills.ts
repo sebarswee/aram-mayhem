@@ -89,21 +89,6 @@ export const SKILLS: Record<string, Skill> = {
     ],
   },
 
-  // ==================== 位移技能 ====================
-  dash: {
-    id: 'dash',
-    name: '闪避冲刺',
-    description: '快速冲刺，并对路径上的敌人造成伤害',
-    type: 'basic',
-    elements: ['physical'],
-    categories: ['dash'],
-    range: 'mid',
-    cooldown: 5000,
-    damage: 15,
-    rangeValue: 200,
-    effects: [{ type: 'damage', value: 15 }],
-  },
-
   whirlwind: {
     id: 'whirlwind',
     name: '旋风斩',
