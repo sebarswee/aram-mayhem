@@ -14,6 +14,9 @@ declare global {
 
 export class BootScene extends Phaser.Scene {
   private joystickMode: JoystickMode = 'follow';
+  private loadingBar!: Phaser.GameObjects.Graphics;
+  private loadingText!: Phaser.GameObjects.Text;
+  private percentText!: Phaser.GameObjects.Text;
 
   constructor() {
     super({ key: 'BootScene' });
@@ -25,23 +28,138 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
-    // 生成所有像素风格视觉素材
-    const graphicsFactory = new GraphicsFactory(this);
-    graphicsFactory.generateAll();
+    const width = this.scale.width;
+    const height = this.scale.height;
 
-    // 初始化全局游戏状态
-    this.registry.set('gameState', this.createInitialState());
+    // 创建背景
+    const bg = this.add.graphics();
+    bg.fillStyle(0x1a1a2e, 1);
+    bg.fillRect(0, 0, width, height);
 
-    // 初始化全局设置
-    window.gameSettings = {
-      joystickMode: this.joystickMode,
-    };
+    // 标题
+    const titleText = this.add.text(width / 2, height * 0.25, '🎮 技能乱斗', {
+      font: `bold ${Math.min(48, width / 15)}px Arial`,
+      color: '#66ccff',
+      stroke: '#000000',
+      strokeThickness: 4,
+    });
+    titleText.setOrigin(0.5, 0.5);
 
-    // 创建UI
-    this.createUI();
+    // 副标题
+    const subtitleText = this.add.text(width / 2, height * 0.25 + 50, 'Skill Brawl', {
+      font: `${Math.min(24, width / 30)}px Arial`,
+      color: '#aaaaaa',
+    });
+    subtitleText.setOrigin(0.5, 0.5);
+
+    // 加载进度条背景
+    const barWidth = Math.min(300, width * 0.5);
+    const barHeight = Math.min(20, height * 0.03);
+    const barY = height * 0.5;
+
+    const progressBox = this.add.graphics();
+    progressBox.fillStyle(0x333355, 0.8);
+    progressBox.fillRoundedRect(width / 2 - barWidth / 2, barY, barWidth, barHeight, 5);
+
+    // 加载进度条
+    this.loadingBar = this.add.graphics();
+
+    // 加载文字
+    this.loadingText = this.add.text(width / 2, barY - 30, '正在加载资源...', {
+      font: `${Math.min(18, width / 35)}px Arial`,
+      color: '#ffffff',
+    });
+    this.loadingText.setOrigin(0.5, 0.5);
+
+    // 百分比文字
+    this.percentText = this.add.text(width / 2, barY + barHeight + 20, '0%', {
+      font: `${Math.min(20, width / 30)}px Arial`,
+      color: '#66ccff',
+    });
+    this.percentText.setOrigin(0.5, 0.5);
+
+    // 开始异步加载资源
+    this.loadAssets(width, height, barWidth, barHeight, barY);
+  }
+
+  private async loadAssets(
+    width: number,
+    height: number,
+    barWidth: number,
+    barHeight: number,
+    barY: number
+  ): Promise<void> {
+    // 模拟加载进度，因为 GraphicsFactory 是同步的
+    const steps = 10;
+    const delayPerStep = 100; // 每步100ms
+
+    for (let i = 0; i <= steps; i++) {
+      const progress = i / steps;
+
+      // 更新进度条
+      this.loadingBar.clear();
+      this.loadingBar.fillStyle(0x66ccff, 1);
+      this.loadingBar.fillRoundedRect(
+        width / 2 - barWidth / 2,
+        barY,
+        barWidth * progress,
+        barHeight,
+        5
+      );
+
+      // 更新百分比文字
+      this.percentText.setText(`${Math.floor(progress * 100)}%`);
+
+      // 在进度50%时生成纹理
+      if (i === 5) {
+        this.loadingText.setText('正在生成像素素材...');
+        const graphicsFactory = new GraphicsFactory(this);
+        graphicsFactory.generateAll();
+      }
+
+      // 在进度80%时初始化状态
+      if (i === 8) {
+        this.loadingText.setText('正在初始化游戏...');
+        this.registry.set('gameState', this.createInitialState());
+        window.gameSettings = {
+          joystickMode: this.joystickMode,
+        };
+      }
+
+      // 等待一段时间
+      await this.delay(delayPerStep);
+    }
+
+    // 加载完成
+    this.loadingText.setText('加载完成！');
+
+    // 短暂延迟后显示开始按钮
+    await this.delay(300);
+
+    // 清理加载界面
+    this.loadingBar.destroy();
+    this.loadingText.destroy();
+    this.percentText.destroy();
+
+    // 显示开始界面
+    this.showStartScreen(width, height);
 
     // 监听窗口大小变化
     this.scale.on('resize', this.handleResize, this);
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => {
+      this.time.delayedCall(ms, resolve);
+    });
+  }
+
+  private showStartScreen(width: number, height: number): void {
+    // 创建开始按钮
+    this.createStartButton(width, height);
+
+    // 创建设置按钮
+    this.createSettingsButton(width, height);
   }
 
   private updateSize(): void {
@@ -54,38 +172,6 @@ export class BootScene extends Phaser.Scene {
     this.updateSize();
     // 重新创建UI
     this.scene.restart();
-  }
-
-  private createUI(): void {
-    const width = this.scale.width;
-    const height = this.scale.height;
-
-    // 背景
-    const bg = this.add.graphics();
-    bg.fillStyle(0x1a1a2e, 1);
-    bg.fillRect(0, 0, width, height);
-
-    // 标题
-    const titleText = this.add.text(width / 2, height * 0.3, '🎮 技能乱斗', {
-      font: `bold ${Math.min(48, width / 15)}px Arial`,
-      color: '#66ccff',
-      stroke: '#000000',
-      strokeThickness: 4,
-    });
-    titleText.setOrigin(0.5, 0.5);
-
-    // 副标题
-    const subtitleText = this.add.text(width / 2, height * 0.3 + 50, 'Skill Brawl', {
-      font: `${Math.min(24, width / 30)}px Arial`,
-      color: '#aaaaaa',
-    });
-    subtitleText.setOrigin(0.5, 0.5);
-
-    // 创建开始按钮
-    this.createStartButton(width, height);
-
-    // 创建设置按钮
-    this.createSettingsButton(width, height);
   }
 
   private createStartButton(width: number, height: number): void {
