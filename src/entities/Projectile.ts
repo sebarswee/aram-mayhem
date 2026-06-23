@@ -32,9 +32,10 @@ export interface ProjectileConfig {
 
 export class Projectile extends Phaser.Physics.Arcade.Sprite {
   public config: ProjectileConfig;
-  private lifetime: number = 0;
+  private lifetime: number;
   private startXY: { x: number; y: number };
   private trailParticles: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+  private lastTime: number = 0;  // 记录上一帧的时间
 
   constructor(
     scene: Phaser.Scene,
@@ -42,17 +43,9 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     y: number,
     config: ProjectileConfig
   ) {
-    // 根据元素选择纹理
+    // 检查纹理是否存在
     const element = config.skill.elements[0] || 'fire';
     const textureKey = ELEMENT_TEXTURE_MAP[element] || 'projectile_fire';
-
-    // 检查纹理是否存在
-    if (!scene.textures.exists(textureKey)) {
-      console.error(`[Projectile] Texture ${textureKey} DOES NOT EXIST!`);
-    } else {
-      const texture = scene.textures.get(textureKey);
-      console.log(`[Projectile] Texture ${textureKey} exists, source: ${texture.source[0]?.width}x${texture.source[0]?.height}`);
-    }
 
     super(scene, x, y, textureKey);
 
@@ -62,20 +55,6 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
-
-    // 调试：使用 player 纹理
-    this.setTexture('player');
-    this.setTint(0x00ff00);  // 绿色
-    this.setScale(1.5);
-    this.setVisible(true);
-    this.setAlpha(1);
-
-    // 检查是否被添加到显示列表
-    console.log(`[Projectile] In display list: ${scene.children.exists(this)}, parent: ${this.parentContainer?.name || 'none'}, depth: ${this.depth}`);
-
-    // 检查摄像机
-    const cam = scene.cameras.main;
-    console.log(`[Projectile] Camera scroll: (${cam.scrollX}, ${cam.scrollY}), zoom: ${cam.zoom}, visible: ${this.willRender(cam)}`);
 
     // 确保物理体被正确激活
     const body = this.body as Phaser.Physics.Arcade.Body;
@@ -89,6 +68,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
 
     // 设置存活时间
     this.lifetime = PROJECTILE_LIFETIME;
+    this.lastTime = 0;  // 初始化为 0，第一次 update 时会设置
 
     // 创建尾迹粒子
     this.createTrailParticles(element);
@@ -118,9 +98,12 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.setRotation(angle);
   }
 
-  update(delta: number): void {
-    // 调试：第一次 update 时记录 delta
-    console.log(`[Projectile] update called, delta: ${delta}, lifetime before: ${this.lifetime}`);
+  update(_time: number): void {
+    // 注意：_time 是游戏开始以来的总时间，不是 delta
+    // 我们需要自己计算 delta
+    const currentTime = _time;
+    const delta = this.lastTime === 0 ? 0 : currentTime - this.lastTime;
+    this.lastTime = currentTime;
 
     // 更新尾迹粒子位置
     if (this.trailParticles) {
@@ -130,7 +113,6 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     // 检查存活时间
     this.lifetime -= delta;
     if (this.lifetime <= 0) {
-      console.log(`[Projectile] Destroyed by lifetime: ${this.lifetime}`);
       this.destroy();
       return;
     }
@@ -143,7 +125,6 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
       this.y
     );
     if (distance > this.config.range) {
-      console.log(`[Projectile] Destroyed by range: ${distance} > ${this.config.range}`);
       this.destroy();
     }
   }

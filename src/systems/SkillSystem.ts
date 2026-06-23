@@ -31,9 +31,6 @@ export class SkillSystem {
       classType: Projectile,
       runChildUpdate: true,
     });
-
-    // 调试：确认 runChildUpdate 生效
-    console.log(`[SkillSystem] Group runChildUpdate: ${(this.projectiles as any).runChildUpdate}`);
   }
 
   /**
@@ -234,14 +231,6 @@ export class SkillSystem {
 
       projectile.fire(angle);
       this.projectiles.add(projectile);
-
-      // 调试：创建一个简单的测试精灵在相同位置
-      const testSprite = this.scene.add.sprite(this.player.x, this.player.y, 'player');
-      testSprite.setTint(0xff0000);
-      testSprite.setScale(2);
-      testSprite.setDepth(100);
-      this.scene.time.delayedCall(500, () => testSprite.destroy());
-      console.log(`[SkillSystem] Created test sprite at (${this.player.x}, ${this.player.y}), visible: ${testSprite.visible}`);
     }
   }
 
