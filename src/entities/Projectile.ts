@@ -103,6 +103,9 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
   }
 
   update(delta: number): void {
+    // 调试：输出位置
+    console.log(`[Projectile] Update: pos (${this.x.toFixed(0)}, ${this.y.toFixed(0)}), active: ${this.active}, lifetime: ${this.lifetime.toFixed(0)}`);
+
     // 更新尾迹粒子位置
     if (this.trailParticles) {
       this.trailParticles.setPosition(this.x, this.y);
@@ -111,6 +114,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     // 检查存活时间
     this.lifetime -= delta;
     if (this.lifetime <= 0) {
+      console.log(`[Projectile] Destroyed by lifetime`);
       this.destroy();
       return;
     }
@@ -123,6 +127,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
       this.y
     );
     if (distance > this.config.range) {
+      console.log(`[Projectile] Destroyed by range: ${distance.toFixed(0)} > ${this.config.range}`);
       this.destroy();
     }
   }
