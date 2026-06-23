@@ -55,14 +55,14 @@ export class CollisionSystem {
     const proj = projectile as Projectile;
     const enem = enemy as Enemy;
 
-    if (!proj.active || !enem.active) return;
-
     // 碰撞保护：投射物创建后 50ms 内不触发碰撞
     // 这是为了防止投射物在玩家位置创建时立即与附近的敌人碰撞
     const age = Date.now() - proj.config.creationTime;
     if (age < 50) {
       return;
     }
+
+    if (!proj.active || !enem.active) return;
 
     // 检查是否已经命中过这个敌人（穿透时避免重复）
     if (proj.config.hitEnemies && proj.config.hitEnemies.has(enem.instanceId)) {
