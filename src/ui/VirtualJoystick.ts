@@ -16,8 +16,8 @@ export class VirtualJoystick {
   private vector: Phaser.Math.Vector2 = new Phaser.Math.Vector2(0, 0);
   private baseX: number;
   private baseY: number;
-  private radius: number = 50;
-  private touchRadius: number = 80;
+  private radius: number = 60;  // 增大摇杆活动范围
+  private touchRadius: number = 100;  // 增大触控响应区域
   private mode: JoystickMode;
   private isVisible: boolean = true;
   private touchZone: Phaser.GameObjects.Zone | null = null;
@@ -97,9 +97,19 @@ export class VirtualJoystick {
     const dy = y - this.baseY;
     const distance = Math.sqrt(dx * dx + dy * dy);
 
+    // 死区设置 - 小范围移动不触发
+    const deadZone = 10;
+    if (distance < deadZone) {
+      this.thumb.setPosition(this.baseX, this.baseY);
+      this.vector.set(0, 0);
+      return;
+    }
+
     if (distance < this.radius) {
       this.thumb.setPosition(x, y);
-      this.vector.set(dx / this.radius, dy / this.radius);
+      // 固定速度：只返回方向，不根据距离缩放
+      const angle = Math.atan2(dy, dx);
+      this.vector.set(Math.cos(angle), Math.sin(angle));
     } else {
       const angle = Math.atan2(dy, dx);
       this.thumb.setPosition(

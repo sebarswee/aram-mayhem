@@ -10,7 +10,7 @@ export const INITIAL_PLAYER_STATS: PlayerStats = {
   currentHp: 100,
   attack: 10,
   defense: 5,
-  speed: 200,
+  speed: 280,
   critRate: 0.05,
   critDamage: 1.5,
   // 符文加成属性（初始为0）
