@@ -556,8 +556,10 @@ export class GraphicsFactory {
     this.createSkillIcon('skill_frost_nova', 0x88ddff, '❄️');
     // 闪避冲刺
     this.createSkillIcon('skill_dash', 0xffffff, '💨');
-    // 暗影步
-    this.createSkillIcon('skill_shadow_step', 0x8800ff, '👤');
+    // 旋风斩
+    this.createSkillIcon('skill_whirlwind', 0xcccccc, '🌀');
+    // 毒雾
+    this.createSkillIcon('skill_poison_cloud', 0x44ff44, '☠️');
     // 陨石
     this.createSkillIcon('skill_meteor', 0xff6600, '☄️');
     // 暴风雪

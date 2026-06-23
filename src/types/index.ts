@@ -15,7 +15,7 @@ export type EnemyBehavior = 'chase' | 'ranged' | 'summon' | 'teleport';
 
 // ==================== 技能系统 ====================
 export interface SkillEffect {
-  type: 'damage' | 'burn' | 'freeze' | 'stun' | 'knockback' | 'heal' | 'shield';
+  type: 'damage' | 'burn' | 'freeze' | 'stun' | 'knockback' | 'heal' | 'shield' | 'poison';
   value: number;
   duration?: number;
 }

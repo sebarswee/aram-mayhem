@@ -104,18 +104,35 @@ export const SKILLS: Record<string, Skill> = {
     effects: [{ type: 'damage', value: 15 }],
   },
 
-  shadow_step: {
-    id: 'shadow_step',
-    name: '暗影步',
-    description: '瞬移并留下暗影爆炸',
+  whirlwind: {
+    id: 'whirlwind',
+    name: '旋风斩',
+    description: '原地旋转，对周围敌人造成伤害',
+    type: 'basic',
+    elements: ['physical'],
+    categories: ['area'],
+    range: 'melee',
+    cooldown: 4000,
+    damage: 30,
+    rangeValue: 120,
+    effects: [{ type: 'damage', value: 30 }],
+  },
+
+  poison_cloud: {
+    id: 'poison_cloud',
+    name: '毒雾',
+    description: '释放毒雾，持续伤害范围内敌人',
     type: 'basic',
     elements: ['shadow'],
-    categories: ['dash', 'area'],
+    categories: ['area'],
     range: 'mid',
-    cooldown: 6000,
-    damage: 35,
-    rangeValue: 180,
-    effects: [{ type: 'damage', value: 35 }],
+    cooldown: 5000,
+    damage: 20,
+    rangeValue: 150,
+    effects: [
+      { type: 'damage', value: 20 },
+      { type: 'poison', value: 5, duration: 3000 },
+    ],
   },
 
   // ==================== 大招 ====================

@@ -170,6 +170,12 @@ export class SkillEffects {
       case 'frost_nova':
         this.createFrostNovaEffect(x, y, skill.rangeValue);
         break;
+      case 'whirlwind':
+        this.createWhirlwindEffect(x, y, skill.rangeValue);
+        break;
+      case 'poison_cloud':
+        this.createPoisonCloudEffect(x, y, skill.rangeValue);
+        break;
       case 'meteor':
         this.createMeteorEffect(x, y, skill.rangeValue);
         break;
@@ -185,6 +191,116 @@ export class SkillEffects {
       default:
         this.createDefaultAreaEffect(x, y, skill.rangeValue, skill.elements[0]);
     }
+  }
+
+  /**
+   * 毒雾效果 - 持续毒雾
+   */
+  private createPoisonCloudEffect(x: number, y: number, radius: number): void {
+    // 毒雾粒子系统
+    const poison = this.scene.add.particles(x, y, 'particle_glow', {
+      speed: { min: 30, max: 80 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 0.8, end: 0 },
+      alpha: { start: 0.6, end: 0 },
+      tint: 0x44ff44, // 绿色毒雾
+      lifespan: 2000,
+      frequency: 80,
+      quantity: 3,
+      emitZone: {
+        type: 'random' as const,
+        source: new Phaser.Geom.Circle(0, 0, radius) as Phaser.Types.GameObjects.Particles.RandomZoneSource,
+      },
+    });
+    poison.setDepth(20);
+
+    // 毒雾区域
+    const poisonZone = this.scene.add.circle(x, y, radius, 0x44ff44, 0.15);
+    poisonZone.setDepth(19);
+
+    // 3秒后停止
+    this.scene.time.delayedCall(3000, () => {
+      poison.stop();
+      this.scene.tweens.add({
+        targets: [poison, poisonZone],
+        alpha: 0,
+        duration: 500,
+        onComplete: () => {
+          poison.destroy();
+          poisonZone.destroy();
+        },
+      });
+    });
+  }
+
+  /**
+   * 旋风斩效果 - 旋转剑刃
+   */
+  private createWhirlwindEffect(x: number, y: number, radius: number): void {
+    // 旋转剑刃
+    const blades: Phaser.GameObjects.Graphics[] = [];
+    for (let i = 0; i < 4; i++) {
+      const angle = (i / 4) * Math.PI * 2;
+      const blade = this.scene.add.graphics();
+      blade.fillStyle(0xcccccc, 1);
+
+      // 剑刃形状
+      const bladeX = x + Math.cos(angle) * radius * 0.5;
+      const bladeY = y + Math.sin(angle) * radius * 0.5;
+      blade.fillTriangle(
+        bladeX, bladeY - 20,
+        bladeX - 8, bladeY + 10,
+        bladeX + 8, bladeY + 10
+      );
+      blade.fillStyle(0xffffff, 0.6);
+      blade.fillTriangle(
+        bladeX, bladeY - 16,
+        bladeX - 4, bladeY + 6,
+        bladeX + 4, bladeY + 6
+      );
+      blade.setDepth(21);
+      blades.push(blade);
+    }
+
+    // 旋转动画
+    const rotationContainer = this.scene.add.container(x, y);
+    blades.forEach(b => rotationContainer.add(b));
+    rotationContainer.setDepth(21);
+
+    this.scene.tweens.add({
+      targets: rotationContainer,
+      angle: 360 * 2, // 旋转2圈
+      duration: 500,
+      onComplete: () => {
+        rotationContainer.destroy();
+      },
+    });
+
+    // 冲击波
+    const wave = this.scene.add.graphics();
+    wave.lineStyle(4, 0xffffff, 0.8);
+    wave.strokeCircle(x, y, radius);
+    wave.setDepth(20);
+
+    this.scene.tweens.add({
+      targets: wave,
+      scaleX: 1.3,
+      scaleY: 1.3,
+      alpha: 0,
+      duration: 300,
+      onComplete: () => wave.destroy(),
+    });
+
+    // 中心闪光
+    const flash = this.scene.add.circle(x, y, 30, 0xffffff, 0.5);
+    flash.setDepth(22);
+    this.scene.tweens.add({
+      targets: flash,
+      alpha: 0,
+      scale: 1.5,
+      duration: 200,
+      onComplete: () => flash.destroy(),
+    });
   }
 
   /**

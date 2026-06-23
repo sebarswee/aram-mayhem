@@ -204,6 +204,9 @@ export class SkillSystem {
     } else if (skill.id === 'thunder_storm') {
       // 雷霆风暴：随机雷击
       this.castThunderStorm(skill, damage);
+    } else if (skill.id === 'poison_cloud') {
+      // 毒雾：持续伤害
+      this.castPoisonCloud(skill, damage);
     } else {
       // 其他范围技能：立即造成伤害
       const bodies = this.scene.physics.overlapCirc(
@@ -309,6 +312,48 @@ export class SkillSystem {
         }
       },
       repeat: strikeCount - 1,
+    });
+  }
+
+  /**
+   * 释放毒雾 - 持续伤害
+   */
+  private castPoisonCloud(skill: Skill, damage: number): void {
+    const centerX = this.player.x;
+    const centerY = this.player.y;
+    const radius = skill.rangeValue;
+    const duration = 3000; // 3秒
+    const tickInterval = 500; // 每0.5秒伤害一次
+    let elapsed = 0;
+
+    const damageTimer = this.scene.time.addEvent({
+      delay: tickInterval,
+      callback: () => {
+        elapsed += tickInterval;
+        if (elapsed >= duration) {
+          damageTimer.destroy();
+          return;
+        }
+
+        // 检测范围内敌人
+        const bodies = this.scene.physics.overlapCirc(
+          centerX,
+          centerY,
+          radius
+        ) as Phaser.Physics.Arcade.Body[];
+
+        for (const body of bodies) {
+          const enemy = body.gameObject as Enemy;
+          if (enemy && enemy.active && enemy.config && enemy.takeDamage) {
+            const tickDamage = Math.floor(damage * 0.3); // 每次造成30%伤害
+            enemy.takeDamage(tickDamage);
+            // 中毒效果 - 变绿
+            enemy.setTint(0x44ff44);
+            this.applyLifesteal(tickDamage);
+          }
+        }
+      },
+      repeat: Math.floor(duration / tickInterval) - 1,
     });
   }
 
