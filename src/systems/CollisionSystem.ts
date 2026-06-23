@@ -351,7 +351,12 @@ export class CollisionSystem {
 
     // 视觉效果 - 变蓝
     enemy.setTint(0x88ddff);
-    console.log(`[CollisionSystem] Tint set to blue`);
+    console.log(`[CollisionSystem] Tint set to blue, current tint: 0x${enemy.tintTopLeft.toString(16)}`);
+
+    // 验证 tint 是否生效
+    this.scene.time.delayedCall(100, () => {
+      console.log(`[CollisionSystem] After 100ms, tint: 0x${enemy.tintTopLeft.toString(16)}, active: ${enemy.active}`);
+    });
 
     this.scene.time.delayedCall(duration, () => {
       if (enemy.active && enemy.config) {
