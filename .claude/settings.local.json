@@ -17,7 +17,8 @@
       "Bash(git commit -m 'feat: add balance configuration *)",
       "Bash(git commit -m 'feat: add Player entity with movement and damage *)",
       "Bash(git commit -m 'feat: add BootScene for resource loading *)",
-      "Bash(git commit -m 'feat: add InputSystem, Enemy, and EnemySystem *)"
+      "Bash(git commit -m 'feat: add InputSystem, Enemy, and EnemySystem *)",
+      "Bash(git commit -m 'feat: add skill data, projectile, skill system, collision and exp systems *)"
     ]
   }
 }
