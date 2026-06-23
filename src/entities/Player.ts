@@ -9,6 +9,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private lastDamageTime: number = 0;
   private glowSprite: Phaser.GameObjects.Sprite | null = null;
   public isInvincible: boolean = false; // 无敌状态
+  private shieldValue: number = 0; // 护盾值
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, 'player');
@@ -60,6 +61,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       return false;
     }
 
+    // 先扣护盾
+    if (this.shieldValue > 0) {
+      if (this.shieldValue >= amount) {
+        this.shieldValue -= amount;
+        return false;
+      } else {
+        amount -= this.shieldValue;
+        this.shieldValue = 0;
+      }
+    }
+
     // 计算实际伤害(考虑防御)
     const actualDamage = Math.max(1, amount - this.stats.defense * 0.5);
     this.stats.currentHp = Math.max(0, this.stats.currentHp - actualDamage);
@@ -81,6 +93,27 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     return false;
+  }
+
+  /**
+   * 添加护盾
+   */
+  addShield(amount: number): void {
+    this.shieldValue += amount;
+  }
+
+  /**
+   * 检查是否有护盾
+   */
+  hasShield(): boolean {
+    return this.shieldValue > 0;
+  }
+
+  /**
+   * 获取当前护盾值
+   */
+  getShield(): number {
+    return this.shieldValue;
   }
 
   heal(amount: number): void {

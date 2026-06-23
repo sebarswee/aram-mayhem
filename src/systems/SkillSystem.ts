@@ -149,6 +149,10 @@ export class SkillSystem {
           this.castProjectile(skill, target);
         } else if (skill.categories.includes('area')) {
           this.castArea(skill);
+        } else if (skill.categories.includes('summon')) {
+          this.castSummon(skill);
+        } else if (skill.categories.includes('buff')) {
+          this.castBuff(skill);
         }
       });
     }
@@ -273,6 +277,18 @@ export class SkillSystem {
     } else if (skill.id === 'poison_cloud') {
       // 毒雾：持续伤害
       this.castPoisonCloud(skill, damage);
+    } else if (skill.id === 'black_hole') {
+      // 黑洞：持续伤害
+      this.castBlackHole(skill, damage);
+    } else if (skill.id === 'time_stop') {
+      // 时间停止：范围眩晕
+      this.castTimeStop(skill, damage);
+    } else if (skill.id === 'holy_light') {
+      // 神圣之光：伤害+治疗
+      this.castHolyLight(skill, damage);
+    } else if (skill.id === 'ground_spike') {
+      // 地刺：伤害+击退
+      this.castGroundSpike(skill, damage);
     } else {
       // 其他范围技能：立即造成伤害
       const bodies = this.scene.physics.overlapCirc(
@@ -290,6 +306,235 @@ export class SkillSystem {
           // 触发生命偷取
           this.applyLifesteal(damage);
         }
+      }
+    }
+  }
+
+  /**
+   * 释放召唤技能
+   */
+  private castSummon(skill: Skill): void {
+    // 创建一个临时精灵跟随玩家攻击
+    const spirit = this.scene.add.container(this.player.x, this.player.y);
+    spirit.setDepth(45);
+
+    // 精灵外观
+    const body = this.scene.add.circle(0, 0, 15, 0xffcc00, 0.8);
+    const glow = this.scene.add.circle(0, 0, 20, 0xffff00, 0.4);
+    spirit.add([glow, body]);
+
+    // 精灵攻击计时器
+    const baseDamage = skill.damage + this.player.stats.attack;
+    const { damage } = this.calculateDamage(baseDamage);
+
+    let attackCount = 0;
+    const maxAttacks = 5; // 攻击5次后消失
+
+    const attackTimer = this.scene.time.addEvent({
+      delay: 800, // 每0.8秒攻击一次
+      callback: () => {
+        attackCount++;
+        if (attackCount > maxAttacks) {
+          attackTimer.destroy();
+          // 消失动画
+          this.scene.tweens.add({
+            targets: spirit,
+            alpha: 0,
+            scale: 0,
+            duration: 200,
+            onComplete: () => spirit.destroy(),
+          });
+          return;
+        }
+
+        // 寻找最近敌人攻击
+        const enemies = this.scene.physics.overlapCirc(
+          spirit.x,
+          spirit.y,
+          skill.rangeValue
+        ) as Phaser.Physics.Arcade.Body[];
+
+        for (const body of enemies) {
+          const enemy = body.gameObject as Enemy;
+          if (enemy && enemy.active && enemy.config && enemy.takeDamage) {
+            enemy.takeDamage(damage);
+            this.applyLifesteal(damage);
+
+            // 攻击视觉效果
+            const beam = this.scene.add.graphics();
+            beam.lineStyle(2, 0xffff00, 0.8);
+            beam.lineBetween(spirit.x, spirit.y, enemy.x, enemy.y);
+            this.scene.time.delayedCall(100, () => beam.destroy());
+            break; // 每次只攻击一个
+          }
+        }
+      },
+      repeat: maxAttacks,
+    });
+
+    // 精灵跟随玩家
+    this.scene.tweens.add({
+      targets: spirit,
+      x: this.player.x,
+      y: this.player.y,
+      duration: 100,
+      repeat: maxAttacks * 4,
+      onUpdate: () => {
+        spirit.x = this.player.x;
+        spirit.y = this.player.y;
+      },
+    });
+  }
+
+  /**
+   * 释放增益技能
+   */
+  private castBuff(skill: Skill): void {
+    if (skill.id === 'shield') {
+      // 获取护盾值
+      const shieldEffect = skill.effects.find(e => e.type === 'shield');
+      const shieldValue = shieldEffect?.value || 50;
+
+      // 给玩家添加护盾
+      this.player.addShield(shieldValue);
+
+      // 护盾视觉效果
+      const shield = this.scene.add.circle(this.player.x, this.player.y, 35, 0x66aaff, 0.3);
+      shield.setStrokeStyle(2, 0x66aaff, 0.8);
+      shield.setDepth(48);
+
+      // 跟随玩家
+      const followEvent = this.scene.time.addEvent({
+        delay: 50,
+        callback: () => {
+          if (!this.player.active || !this.player.hasShield()) {
+            followEvent.destroy();
+            shield.destroy();
+            return;
+          }
+          shield.setPosition(this.player.x, this.player.y);
+        },
+        repeat: -1,
+      });
+    }
+  }
+
+  /**
+   * 释放黑洞 - 持续伤害和吸引
+   */
+  private castBlackHole(skill: Skill, damage: number): void {
+    const centerX = this.player.x;
+    const centerY = this.player.y;
+    const radius = skill.rangeValue;
+    const duration = 2000;
+    const tickInterval = 300;
+    let elapsed = 0;
+
+    const damageTimer = this.scene.time.addEvent({
+      delay: tickInterval,
+      callback: () => {
+        elapsed += tickInterval;
+        if (elapsed >= duration) {
+          damageTimer.destroy();
+          return;
+        }
+
+        const bodies = this.scene.physics.overlapCirc(
+          centerX,
+          centerY,
+          radius
+        ) as Phaser.Physics.Arcade.Body[];
+
+        for (const body of bodies) {
+          const enemy = body.gameObject as Enemy;
+          if (enemy && enemy.active && enemy.config && enemy.takeDamage) {
+            // 伤害
+            const tickDamage = Math.floor(damage * 0.4);
+            enemy.takeDamage(tickDamage);
+            this.applyLifesteal(tickDamage);
+
+            // 吸引效果 - 向中心移动
+            const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, centerX, centerY);
+            enemy.x += Math.cos(angle) * 20;
+            enemy.y += Math.sin(angle) * 20;
+          }
+        }
+      },
+      repeat: Math.floor(duration / tickInterval) - 1,
+    });
+  }
+
+  /**
+   * 释放时间停止 - 范围眩晕
+   */
+  private castTimeStop(skill: Skill, damage: number): void {
+    const bodies = this.scene.physics.overlapCirc(
+      this.player.x,
+      this.player.y,
+      skill.rangeValue
+    ) as Phaser.Physics.Arcade.Body[];
+
+    for (const body of bodies) {
+      const enemy = body.gameObject as Enemy;
+      if (enemy && enemy.active && enemy.config && enemy.takeDamage) {
+        enemy.takeDamage(damage);
+        this.applyEffects(enemy, skill.effects);
+        this.applyLifesteal(damage);
+      }
+    }
+  }
+
+  /**
+   * 释放神圣之光 - 伤害+治疗
+   */
+  private castHolyLight(skill: Skill, damage: number): void {
+    // 伤害敌人
+    const bodies = this.scene.physics.overlapCirc(
+      this.player.x,
+      this.player.y,
+      skill.rangeValue
+    ) as Phaser.Physics.Arcade.Body[];
+
+    for (const body of bodies) {
+      const enemy = body.gameObject as Enemy;
+      if (enemy && enemy.active && enemy.config && enemy.takeDamage) {
+        enemy.takeDamage(damage);
+        this.applyLifesteal(damage);
+      }
+    }
+
+    // 治疗自己
+    const healEffect = skill.effects.find(e => e.type === 'heal');
+    if (healEffect) {
+      this.player.heal(healEffect.value);
+    }
+  }
+
+  /**
+   * 释放地刺 - 伤害+击退
+   */
+  private castGroundSpike(skill: Skill, damage: number): void {
+    const bodies = this.scene.physics.overlapCirc(
+      this.player.x,
+      this.player.y,
+      skill.rangeValue
+    ) as Phaser.Physics.Arcade.Body[];
+
+    for (const body of bodies) {
+      const enemy = body.gameObject as Enemy;
+      if (enemy && enemy.active && enemy.config && enemy.takeDamage) {
+        enemy.takeDamage(damage);
+        this.applyLifesteal(damage);
+
+        // 击退效果
+        const angle = Phaser.Math.Angle.Between(
+          this.player.x,
+          this.player.y,
+          enemy.x,
+          enemy.y
+        );
+        enemy.x += Math.cos(angle) * 50;
+        enemy.y += Math.sin(angle) * 50;
       }
     }
   }
