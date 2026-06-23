@@ -11,6 +11,7 @@ import { HUD } from '@/ui/HUD';
 import { RuneSelectUI } from '@/ui/RuneSelectUI';
 import { getRandomSkillSet } from '@/data/skills';
 import { GAME_WIDTH, GAME_HEIGHT, updateGameSize } from '@/config/game.config';
+import { GraphicsFactory } from '@/graphics/GraphicsFactory';
 
 declare global {
   interface Window {
@@ -52,8 +53,15 @@ export class BattleScene extends Phaser.Scene {
     // 更新游戏尺寸
     this.updateSize();
 
+    // 确保纹理存在（防止热重载或直接进入场景时纹理丢失）
+    if (!this.textures.exists('player')) {
+      console.log('Generating textures...');
+      const graphicsFactory = new GraphicsFactory(this);
+      graphicsFactory.generateAll();
+    }
+
     // 初始化游戏状态
-    this.gameState = this.registry.get('gameState');
+    this.gameState = this.registry.get('gameState') || this.createDefaultGameState();
 
     // 计算游戏边界（保持一定边距）
     const padding = 20;
@@ -231,6 +239,31 @@ export class BattleScene extends Phaser.Scene {
     if (!this.waveTransitioning && this.enemySystem.getActiveEnemyCount() === 0) {
       this.onWaveComplete();
     }
+  }
+
+  private createDefaultGameState(): GameState {
+    return {
+      stats: {
+        maxHp: 100,
+        currentHp: 100,
+        attack: 10,
+        defense: 5,
+        speed: 200,
+        critRate: 0.05,
+        critDamage: 1.5,
+      },
+      skills: [],
+      runes: [],
+      level: 1,
+      exp: 0,
+      expToNext: 10,
+      wave: 1,
+      kills: 0,
+      bossesKilled: 0,
+      isPaused: false,
+      isDead: false,
+      isUpgrading: false,
+    };
   }
 
   shutdown(): void {
