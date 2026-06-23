@@ -51,7 +51,12 @@ export class SkillSystem {
   }
 
   update(delta: number, enemies: Phaser.Physics.Arcade.Group): void {
-    if (!this.player.active || enemies.countActive(true) === 0) return;
+    if (!this.player.active) return;
+
+    const activeEnemyCount = enemies.countActive(true);
+    if (activeEnemyCount === 0) {
+      return;
+    }
 
     // 更新技能冷却
     this.player.update(delta);
@@ -226,6 +231,9 @@ export class SkillSystem {
 
       projectile.fire(angle);
       this.projectiles.add(projectile);
+
+      // 调试：确认投射物被创建
+      console.log(`[SkillSystem] Created projectile for skill ${skill.id}, active: ${projectile.active}`);
     }
   }
 

@@ -53,8 +53,12 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    // 设置碰撞体
-    this.body?.setSize(16, 16);
+    // 确保物理体被正确激活
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    if (body) {
+      body.setSize(16, 16);
+      body.setEnable(true);
+    }
 
     // 设置深度
     this.setDepth(40);
