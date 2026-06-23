@@ -55,11 +55,14 @@ export class CollisionSystem {
     const proj = projectile as Projectile;
     const enem = enemy as Enemy;
 
+    console.log(`[CollisionSystem] handleProjectileHitEnemy triggered! proj.active: ${proj.active}, enemy.active: ${enem.active}`);
+
     // 碰撞保护：投射物创建后 50ms 内不触发碰撞
     // 这是为了防止投射物在玩家位置创建时立即与附近的敌人碰撞
     const creationTime = proj.config.creationTime || 0;
     const age = Date.now() - creationTime;
     if (age < 50) {
+      console.log(`[CollisionSystem] Projectile too young, skip collision`);
       return;
     }
 
