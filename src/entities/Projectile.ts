@@ -58,6 +58,9 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     if (body) {
       body.setSize(16, 16);
       body.setEnable(true);
+      console.log(`[Projectile] Body created, enable: ${body.enable}, x: ${x}, y: ${y}`);
+    } else {
+      console.error(`[Projectile] No body created!`);
     }
 
     // 设置深度
@@ -137,6 +140,8 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
   }
 
   destroy(): void {
+    console.log(`[Projectile] destroy called, skill: ${this.config.skill.id}`);
+
     // 火球术爆炸效果
     if (this.config.skill.id === 'fireball') {
       this.createFireballExplosion();

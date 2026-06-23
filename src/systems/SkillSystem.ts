@@ -31,6 +31,8 @@ export class SkillSystem {
       classType: Projectile,
       runChildUpdate: true,
     });
+
+    console.log(`[SkillSystem] Projectile group created, runChildUpdate: true`);
   }
 
   /**
