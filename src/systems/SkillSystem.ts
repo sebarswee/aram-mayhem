@@ -171,7 +171,7 @@ export class SkillSystem {
       this.player.x,
       this.player.y,
       skill.rangeValue
-    ) as Phaser.Types.Physics.Arcade.ArcadeBodyType[];
+    ) as Phaser.Physics.Arcade.Body[];
 
     for (const body of bodies) {
       const enemy = body.gameObject as Enemy;
@@ -209,7 +209,7 @@ export class SkillSystem {
   }
 
   private damageEnemiesInArea(x: number, y: number, damage: number): void {
-    const bodies = this.scene.physics.overlapCirc(x, y, 50) as Phaser.Types.Physics.Arcade.ArcadeBodyType[];
+    const bodies = this.scene.physics.overlapCirc(x, y, 50) as Phaser.Physics.Arcade.Body[];
     for (const body of bodies) {
       const enemy = body.gameObject as Enemy;
       if (enemy && enemy.active && enemy.takeDamage) {

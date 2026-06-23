@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { Enemy, EnemyConfig } from '@/types';
+import { EnemyConfig } from '@/types';
 import { Enemy as EnemyEntity } from '@/entities/Enemy';
 import { ENEMY_CONFIGS, getEnemyPoolForWave, getElitePoolForWave } from '@/data/enemies';
 import { ENEMY_SPAWN_CONFIG, ENEMY_SCALING } from '@/config/balance.config';

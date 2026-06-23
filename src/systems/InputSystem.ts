@@ -4,7 +4,7 @@ import { VirtualJoystick } from '@/ui/VirtualJoystick';
 import { GAME_HEIGHT } from '@/config/game.config';
 
 export class InputSystem {
-  private scene: Phaser.Scene;
+  private _scene: Phaser.Scene;
   private joystick: VirtualJoystick;
   private keys: {
     W: Phaser.Input.Keyboard.Key;
@@ -18,7 +18,7 @@ export class InputSystem {
   };
 
   constructor(scene: Phaser.Scene) {
-    this.scene = scene;
+    this._scene = scene;
 
     // 创建虚拟摇杆
     this.joystick = new VirtualJoystick(scene, 150, GAME_HEIGHT - 150);

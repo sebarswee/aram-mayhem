@@ -11,12 +11,12 @@ export class HUD {
   private expSystem: ExpSystem;
 
   // UI元素
-  private hpBar: Phaser.GameObjects.Graphics;
-  private hpText: Phaser.GameObjects.Text;
-  private expBar: Phaser.GameObjects.Graphics;
-  private levelText: Phaser.GameObjects.Text;
-  private waveText: Phaser.GameObjects.Text;
-  private killsText: Phaser.GameObjects.Text;
+  private hpBar!: Phaser.GameObjects.Graphics;
+  private hpText!: Phaser.GameObjects.Text;
+  private expBar!: Phaser.GameObjects.Graphics;
+  private levelText!: Phaser.GameObjects.Text;
+  private waveText!: Phaser.GameObjects.Text;
+  private killsText!: Phaser.GameObjects.Text;
 
   constructor(
     scene: Phaser.Scene,

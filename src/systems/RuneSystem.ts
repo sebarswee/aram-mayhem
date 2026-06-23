@@ -1,17 +1,16 @@
 import Phaser from 'phaser';
 import { Player } from '@/entities/Player';
 import { Rune } from '@/types';
-import { getRandomRunes } from '@/data/runes';
 
 export class RuneSystem {
-  private scene: Phaser.Scene;
+  private _scene: Phaser.Scene;
   private player: Player;
   private acquiredRunes: Map<string, Rune> = new Map();
   private exclusiveGroups: Map<string, string> = new Map();
   private baseStats: Record<string, number>;
 
   constructor(scene: Phaser.Scene, player: Player) {
-    this.scene = scene;
+    this._scene = scene;
     this.player = player;
     this.baseStats = {
       maxHp: 100,
