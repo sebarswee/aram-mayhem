@@ -63,12 +63,10 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    // 调试：创建一个简单的图形覆盖投射物
-    const debugGraphics = scene.add.graphics();
-    debugGraphics.fillStyle(0x00ff00, 1);  // 亮绿色
-    debugGraphics.fillCircle(0, 0, 12);
-    this.add(debugGraphics);
-    console.log(`[Projectile] Added debug graphics to projectile`);
+    // 调试：用白色方块替代纹理，看是否是纹理问题
+    this.setTint(0x00ff00);  // 亮绿色 tint
+    this.setScale(2);  // 放大 2 倍
+    console.log(`[Projectile] Applied green tint and scale 2`);
 
     // 确保物理体被正确激活
     const body = this.body as Phaser.Physics.Arcade.Body;
