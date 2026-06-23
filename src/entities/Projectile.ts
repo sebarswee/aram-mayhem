@@ -35,6 +35,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
   private lifetime: number = 0;
   private startXY: { x: number; y: number };
   private trailParticles: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+  private debugGraphics: Phaser.GameObjects.Graphics | null = null;  // 调试用
 
   constructor(
     scene: Phaser.Scene,
@@ -63,12 +64,13 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    // 检查 origin
-    console.log(`[Projectile] origin: (${this.originX}, ${this.originY}), displayWidth: ${this.displayWidth}, displayHeight: ${this.displayHeight}`);
+    // 调试：创建一个绿色圆形来替代纹理
+    this.debugGraphics = scene.add.graphics();
+    this.debugGraphics.fillStyle(0x00ff00, 1);
+    this.debugGraphics.fillCircle(0, 0, 16);
+    this.debugGraphics.setDepth(41);
 
-    // 调试：用白色方块替代纹理，看是否是纹理问题
-    this.setTint(0x00ff00);  // 亮绿色 tint
-    this.setScale(2);  // 放大 2 倍
+    console.log(`[Projectile] Created debug graphics`);
 
     // 确保物理体被正确激活
     const body = this.body as Phaser.Physics.Arcade.Body;
@@ -79,11 +81,6 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
 
     // 设置深度
     this.setDepth(40);
-
-    // 调试：绘制一个明显的红色圆圈标记投射物位置
-    const debugCircle = scene.add.circle(x, y, 20, 0xff0000, 0.5);
-    debugCircle.setDepth(100);
-    scene.time.delayedCall(200, () => debugCircle.destroy());
 
     // 设置存活时间
     this.lifetime = PROJECTILE_LIFETIME;
@@ -117,9 +114,10 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
   }
 
   update(delta: number): void {
-    // 调试：确认 update 被调用
-    const screenSize = { width: this.scene.scale.width, height: this.scene.scale.height };
-    console.log(`[Projectile] update! id: ${this.config.skill.id}, pos: (${this.x.toFixed(0)}, ${this.y.toFixed(0)}), screen: ${screenSize.width}x${screenSize.height}, texture: ${this.texture.key}, scale: ${this.scaleX}`);
+    // 更新调试图形位置
+    if (this.debugGraphics) {
+      this.debugGraphics.setPosition(this.x, this.y);
+    }
 
     // 更新尾迹粒子位置
     if (this.trailParticles) {
@@ -158,6 +156,10 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
   }
 
   destroy(): void {
+    if (this.debugGraphics) {
+      this.debugGraphics.destroy();
+    }
+
     // 火球术爆炸效果
     if (this.config.skill.id === 'fireball') {
       this.createFireballExplosion();
