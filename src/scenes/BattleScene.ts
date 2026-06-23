@@ -98,29 +98,12 @@ export class BattleScene extends Phaser.Scene {
 
     // 开始第一波
     this.startWave(1);
-
-    // 监听窗口大小变化
-    this.scale.on('resize', this.handleResize, this);
   }
 
   private updateSize(): void {
     const width = this.scale.width;
     const height = this.scale.height;
     updateGameSize(width, height);
-  }
-
-  private handleResize(): void {
-    this.updateSize();
-    // 更新游戏边界
-    const padding = 20;
-    this.gameBounds = new Phaser.Geom.Rectangle(
-      padding,
-      padding,
-      GAME_WIDTH - padding * 2,
-      GAME_HEIGHT - padding * 2
-    );
-    // 更新物理世界边界
-    this.physics.world.setBounds(0, 0, GAME_WIDTH, GAME_HEIGHT);
   }
 
   private initPlayerSkills(): void {
@@ -279,7 +262,6 @@ export class BattleScene extends Phaser.Scene {
     // 移除事件
     this.events.off('enemyKilled');
     this.events.off('levelUp');
-    this.scale.off('resize', this.handleResize, this);
 
     // 停止所有 tweens
     this.tweens.killAll();

@@ -24,7 +24,9 @@ export class BootScene extends Phaser.Scene {
 
   preload(): void {
     // 更新游戏尺寸
-    this.updateSize();
+    const width = this.scale.width;
+    const height = this.scale.height;
+    updateGameSize(width, height);
   }
 
   create(): void {
@@ -146,9 +148,6 @@ export class BootScene extends Phaser.Scene {
 
     // 显示开始界面
     this.showStartScreen(width, height);
-
-    // 监听窗口大小变化
-    this.scale.on('resize', this.handleResize, this);
   }
 
   private delay(ms: number): Promise<void> {
@@ -163,18 +162,6 @@ export class BootScene extends Phaser.Scene {
 
     // 创建设置按钮
     this.createSettingsButton(width, height);
-  }
-
-  private updateSize(): void {
-    const width = this.scale.width;
-    const height = this.scale.height;
-    updateGameSize(width, height);
-  }
-
-  private handleResize(): void {
-    this.updateSize();
-    // 重新创建UI
-    this.scene.restart();
   }
 
   private createStartButton(width: number, height: number): void {
