@@ -92,6 +92,9 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     const velocityY = Math.sin(angle) * this.config.speed;
     this.setVelocity(velocityX, velocityY);
     this.setRotation(angle);
+
+    // 调试：输出位置和速度
+    console.log(`[Projectile] Fire at angle ${(angle * 180 / Math.PI).toFixed(0)}°, pos: (${this.x.toFixed(0)}, ${this.y.toFixed(0)}), velocity: (${velocityX.toFixed(0)}, ${velocityY.toFixed(0)})`);
   }
 
   update(delta: number): void {
