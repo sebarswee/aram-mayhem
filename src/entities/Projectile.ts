@@ -127,6 +127,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     // 检查存活时间
     this.lifetime -= delta;
     if (this.lifetime <= 0) {
+      console.log(`[Projectile] Destroyed by lifetime: ${this.lifetime}`);
       this.destroy();
       return;
     }
@@ -139,6 +140,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
       this.y
     );
     if (distance > this.config.range) {
+      console.log(`[Projectile] Destroyed by range: ${distance} > ${this.config.range}`);
       this.destroy();
     }
   }
