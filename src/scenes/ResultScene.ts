@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT } from '@/config/game.config';
 
 interface ResultData {
   kills: number;
@@ -13,14 +12,16 @@ export class ResultScene extends Phaser.Scene {
   }
 
   create(data: ResultData): void {
+    const width = this.scale.width;
+    const height = this.scale.height;
     const { kills, wave, level } = data;
 
     // 背景
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x1a1a2e);
+    this.add.rectangle(width / 2, height / 2, width, height, 0x1a1a2e);
 
     // 游戏结束标题
-    const title = this.add.text(GAME_WIDTH / 2, 120, '游戏结束', {
-      fontSize: '48px',
+    const title = this.add.text(width / 2, height * 0.15, '游戏结束', {
+      fontSize: `${Math.min(48, width / 15)}px`,
       color: '#ff4444',
       fontStyle: 'bold',
     });
@@ -30,8 +31,8 @@ export class ResultScene extends Phaser.Scene {
     const line = this.add.graphics();
     line.lineStyle(2, 0xffffff, 0.3);
     line.beginPath();
-    line.moveTo(GAME_WIDTH / 2 - 200, 180);
-    line.lineTo(GAME_WIDTH / 2 + 200, 180);
+    line.moveTo(width / 2 - Math.min(200, width * 0.3), height * 0.22);
+    line.lineTo(width / 2 + Math.min(200, width * 0.3), height * 0.22);
     line.strokePath();
 
     // 统计数据
@@ -41,16 +42,19 @@ export class ResultScene extends Phaser.Scene {
       { label: '达到等级', value: level, color: '#6666ff' },
     ];
 
-    stats.forEach((stat, index) => {
-      const y = 250 + index * 60;
+    const fontSize = Math.min(24, width / 30);
+    const valueFontSize = Math.min(28, width / 25);
 
-      this.add.text(GAME_WIDTH / 2 - 100, y, stat.label, {
-        fontSize: '24px',
+    stats.forEach((stat, index) => {
+      const y = height * 0.32 + index * height * 0.08;
+
+      this.add.text(width / 2 - Math.min(100, width * 0.15), y, stat.label, {
+        fontSize: `${fontSize}px`,
         color: '#aaaaaa',
       });
 
-      this.add.text(GAME_WIDTH / 2 + 100, y, String(stat.value), {
-        fontSize: '28px',
+      this.add.text(width / 2 + Math.min(100, width * 0.15), y, String(stat.value), {
+        fontSize: `${valueFontSize}px`,
         color: stat.color,
         fontStyle: 'bold',
       }).setOrigin(1, 0);
@@ -60,26 +64,29 @@ export class ResultScene extends Phaser.Scene {
     const gloryPoints = Math.floor(kills * 0.1 + wave * 5);
 
     // 荣耀点数
-    const gloryTitle = this.add.text(GAME_WIDTH / 2, 450, '获得荣耀点数', {
-      fontSize: '20px',
+    const gloryTitle = this.add.text(width / 2, height * 0.6, '获得荣耀点数', {
+      fontSize: `${Math.min(20, width / 35)}px`,
       color: '#ffcc00',
     });
     gloryTitle.setOrigin(0.5);
 
-    const gloryValue = this.add.text(GAME_WIDTH / 2, 490, `+${gloryPoints}`, {
-      fontSize: '36px',
+    const gloryValue = this.add.text(width / 2, height * 0.65, `+${gloryPoints}`, {
+      fontSize: `${Math.min(36, width / 20)}px`,
       color: '#ffcc00',
       fontStyle: 'bold',
     });
     gloryValue.setOrigin(0.5);
 
     // 重新开始按钮
-    const restartButton = this.add.rectangle(GAME_WIDTH / 2, 580, 200, 50, 0x444444);
+    const btnWidth = Math.min(200, width * 0.4);
+    const btnHeight = Math.min(50, height * 0.07);
+
+    const restartButton = this.add.rectangle(width / 2, height * 0.78, btnWidth, btnHeight, 0x444444);
     restartButton.setStrokeStyle(2, 0x00ff00);
     restartButton.setInteractive({ useHandCursor: true });
 
-    const restartText = this.add.text(GAME_WIDTH / 2, 580, '再来一局', {
-      fontSize: '20px',
+    const restartText = this.add.text(width / 2, height * 0.78, '再来一局', {
+      fontSize: `${Math.min(20, width / 30)}px`,
       color: '#00ff00',
     });
     restartText.setOrigin(0.5);
@@ -96,25 +103,37 @@ export class ResultScene extends Phaser.Scene {
       this.restart();
     });
 
-    // 返回主菜单按钮(暂未实现)
-    const menuButton = this.add.rectangle(GAME_WIDTH / 2, 650, 200, 40, 0x333333);
+    // 返回主菜单按钮
+    const menuButton = this.add.rectangle(width / 2, height * 0.88, btnWidth, btnHeight * 0.8, 0x333333);
     menuButton.setInteractive({ useHandCursor: true });
 
-    const menuText = this.add.text(GAME_WIDTH / 2, 650, '返回主菜单', {
-      fontSize: '16px',
+    const menuText = this.add.text(width / 2, height * 0.88, '返回主菜单', {
+      fontSize: `${Math.min(16, width / 40)}px`,
       color: '#888888',
     });
     menuText.setOrigin(0.5);
 
     menuButton.on('pointerdown', () => {
-      // 后续实现主菜单
-      this.restart();
+      this.backToMenu();
     });
   }
 
   private restart(): void {
     // 重置游戏状态
-    this.registry.set('gameState', {
+    this.registry.set('gameState', this.createDefaultGameState());
+
+    // 返回 BootScene 重新加载资源
+    this.scene.start('BootScene');
+  }
+
+  private backToMenu(): void {
+    // 返回主菜单
+    this.registry.set('gameState', this.createDefaultGameState());
+    this.scene.start('BootScene');
+  }
+
+  private createDefaultGameState() {
+    return {
       stats: {
         maxHp: 100,
         currentHp: 100,
@@ -135,9 +154,6 @@ export class ResultScene extends Phaser.Scene {
       isPaused: false,
       isDead: false,
       isUpgrading: false,
-    });
-
-    // 重新开始
-    this.scene.start('BattleScene');
+    };
   }
 }
