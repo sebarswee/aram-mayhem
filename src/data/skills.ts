@@ -39,7 +39,7 @@ export const SKILLS: Record<string, Skill> = {
   lightning_bolt: {
     id: 'lightning_bolt',
     name: '闪电箭',
-    description: '发射闪电，可连锁攻击',
+    description: '发射闪电，可连锁攻击3个敌人',
     type: 'basic',
     elements: ['lightning'],
     categories: ['projectile'],
@@ -48,6 +48,9 @@ export const SKILLS: Record<string, Skill> = {
     damage: 20,
     rangeValue: 500,
     speed: 500,
+    chainCount: 3,        // 连锁次数
+    chainRange: 150,      // 连锁范围
+    chainDamageDecay: 0.8, // 每次连锁伤害衰减
     effects: [{ type: 'damage', value: 20 }],
   },
 

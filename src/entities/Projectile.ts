@@ -19,6 +19,11 @@ export interface ProjectileConfig {
   range: number;
   isFromPlayer: boolean;
   color: number;
+  // 连锁信息
+  chainRemaining?: number;      // 剩余连锁次数
+  chainRange?: number;          // 连锁范围
+  chainDamageDecay?: number;    // 伤害衰减
+  previousTargets?: Set<string>; // 已打击的目标ID
 }
 
 export class Projectile extends Phaser.Physics.Arcade.Sprite {

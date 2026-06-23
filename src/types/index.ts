@@ -34,6 +34,10 @@ export interface Skill {
   speed?: number;
   effects: SkillEffect[];
   rarity?: 'common' | 'rare' | 'legendary';
+  // 连锁属性
+  chainCount?: number;        // 连锁次数
+  chainRange?: number;        // 连锁范围
+  chainDamageDecay?: number;  // 每次连锁伤害衰减 (0-1)
 }
 
 // ==================== 符文系统 ====================

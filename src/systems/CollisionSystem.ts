@@ -4,12 +4,14 @@ import { Enemy } from '@/entities/Enemy';
 import { Projectile } from '@/entities/Projectile';
 import { EnemySystem } from '@/systems/EnemySystem';
 import { SkillSystem } from '@/systems/SkillSystem';
+import { SkillEffects } from '@/graphics/SkillEffects';
 
 export class CollisionSystem {
   private scene: Phaser.Scene;
   private player: Player;
   private enemySystem: EnemySystem;
   private skillSystem: SkillSystem;
+  private skillEffects: SkillEffects;
 
   constructor(
     scene: Phaser.Scene,
@@ -21,6 +23,7 @@ export class CollisionSystem {
     this.player = player;
     this.enemySystem = enemySystem;
     this.skillSystem = skillSystem;
+    this.skillEffects = new SkillEffects(scene);
 
     this.setupCollisions();
   }
@@ -54,6 +57,11 @@ export class CollisionSystem {
 
     if (!proj.active || !enem.active) return;
 
+    // 记录此敌人已被打击
+    if (proj.config.previousTargets) {
+      proj.config.previousTargets.add(enem.instanceId);
+    }
+
     // 造成伤害
     const damage = proj.getDamage();
     const killed = enem.takeDamage(damage);
@@ -62,6 +70,24 @@ export class CollisionSystem {
     const effects = proj.getEffects();
     this.applyEffects(enem, effects);
 
+    // 检查是否可以连锁
+    const chainRemaining = proj.config.chainRemaining;
+    const chainRange = proj.config.chainRange;
+    const chainDecay = proj.config.chainDamageDecay;
+
+    if (chainRemaining && chainRemaining > 0 && chainRange) {
+      const previousTargets = proj.config.previousTargets || new Set<string>();
+      this.processChainLightning(
+        enem,
+        damage,
+        effects,
+        chainRemaining,
+        chainRange,
+        chainDecay || 0.8,
+        previousTargets
+      );
+    }
+
     // 销毁投射物
     proj.destroy();
 
@@ -69,6 +95,155 @@ export class CollisionSystem {
     if (killed) {
       this.scene.events.emit('enemyKilled', enem);
     }
+  }
+
+  /**
+   * 处理闪电连锁
+   */
+  private processChainLightning(
+    currentEnemy: Enemy,
+    currentDamage: number,
+    effects: { type: string; value?: number; duration?: number }[],
+    chainRemaining: number,
+    chainRange: number,
+    chainDecay: number,
+    previousTargets: Set<string>
+  ): void {
+    if (chainRemaining <= 0) return;
+
+    const nextTarget = this.findChainTarget(
+      currentEnemy.x,
+      currentEnemy.y,
+      chainRange,
+      previousTargets
+    );
+
+    if (!nextTarget) return;
+
+    // 添加到已打击列表
+    previousTargets.add(nextTarget.instanceId);
+
+    // 创建闪电视觉效果
+    this.createChainLightning(
+      currentEnemy.x,
+      currentEnemy.y,
+      nextTarget.x,
+      nextTarget.y
+    );
+
+    // 延迟打击下一个目标
+    this.scene.time.delayedCall(80, () => {
+      if (!nextTarget.active) return;
+
+      const chainDamage = Math.floor(currentDamage * chainDecay);
+      const killed = nextTarget.takeDamage(chainDamage);
+      this.applyEffects(nextTarget, effects);
+
+      if (killed) {
+        this.scene.events.emit('enemyKilled', nextTarget);
+      }
+
+      // 继续连锁
+      this.processChainLightning(
+        nextTarget,
+        chainDamage,
+        effects,
+        chainRemaining - 1,
+        chainRange,
+        chainDecay,
+        previousTargets
+      );
+    });
+  }
+
+  /**
+   * 寻找连锁目标
+   */
+  private findChainTarget(
+    x: number,
+    y: number,
+    range: number,
+    previousTargets: Set<string>
+  ): Enemy | null {
+    const enemies = this.enemySystem.getEnemies().getChildren() as Enemy[];
+    let nearestEnemy: Enemy | null = null;
+    let nearestDistance = range;
+
+    for (const enemy of enemies) {
+      if (!enemy.active) continue;
+
+      // 检查是否已经打击过
+      if (previousTargets.has(enemy.instanceId)) continue;
+
+      const distance = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestEnemy = enemy;
+      }
+    }
+
+    return nearestEnemy;
+  }
+
+  /**
+   * 创建连锁闪电视觉效果
+   */
+  private createChainLightning(x1: number, y1: number, x2: number, y2: number): void {
+    const graphics = this.scene.add.graphics();
+    graphics.setDepth(100);
+
+    // 绘制主闪电
+    graphics.lineStyle(4, 0xffff00, 1);
+    this.drawLightningBolt(graphics, x1, y1, x2, y2);
+
+    // 绘制发光效果
+    graphics.lineStyle(8, 0xffff88, 0.5);
+    this.drawLightningBolt(graphics, x1, y1, x2, y2);
+
+    // 添加起点和终点的闪光
+    const flash1 = this.scene.add.circle(x1, y1, 15, 0xffff88, 0.8);
+    const flash2 = this.scene.add.circle(x2, y2, 15, 0xffff88, 0.8);
+    flash1.setDepth(101);
+    flash2.setDepth(101);
+
+    // 淡出动画
+    this.scene.tweens.add({
+      targets: [graphics, flash1, flash2],
+      alpha: 0,
+      duration: 150,
+      onComplete: () => {
+        graphics.destroy();
+        flash1.destroy();
+        flash2.destroy();
+      },
+    });
+  }
+
+  /**
+   * 绘制锯齿状闪电
+   */
+  private drawLightningBolt(
+    graphics: Phaser.GameObjects.Graphics,
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number
+  ): void {
+    const segments = 5;
+    const dx = (x2 - x1) / segments;
+    const dy = (y2 - y1) / segments;
+
+    graphics.beginPath();
+    graphics.moveTo(x1, y1);
+
+    for (let i = 1; i < segments; i++) {
+      const x = x1 + dx * i + (Math.random() - 0.5) * 20;
+      const y = y1 + dy * i + (Math.random() - 0.5) * 20;
+      graphics.lineTo(x, y);
+    }
+
+    graphics.lineTo(x2, y2);
+    graphics.strokePath();
   }
 
   /**

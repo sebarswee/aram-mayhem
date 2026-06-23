@@ -14,6 +14,7 @@ const ENEMY_TEXTURE_MAP: Record<string, string> = {
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
   public config: EnemyConfig;
   public currentHp: number;
+  public instanceId: string; // 唯一实例ID（用于连锁判定）
   private target: Phaser.GameObjects.Sprite | null = null;
   private shadowGraphics: Phaser.GameObjects.Graphics | null = null;
 
@@ -24,6 +25,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     this.config = config;
     this.currentHp = config.hp;
+    this.instanceId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     scene.add.existing(this);
     scene.physics.add.existing(this);

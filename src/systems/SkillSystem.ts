@@ -150,6 +150,11 @@ export class SkillSystem {
       range: skill.rangeValue,
       isFromPlayer: true,
       color,
+      // 连锁属性
+      chainRemaining: skill.chainCount || 0,
+      chainRange: skill.chainRange || 150,
+      chainDamageDecay: skill.chainDamageDecay || 0.8,
+      previousTargets: new Set<string>(),
     };
 
     const projectile = new Projectile(
