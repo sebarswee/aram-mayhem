@@ -126,6 +126,9 @@ export const SKILLS: Record<string, Skill> = {
     rangeValue: 500,
     speed: 500,
     effects: [{ type: 'damage', value: 18 }],
+    chainCount: 3,
+    chainRange: 150,
+    chainDamageDecay: 0.8,
   }),
 
   thunder_storm: createSkill({
