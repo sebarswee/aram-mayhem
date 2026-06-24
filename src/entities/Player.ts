@@ -189,12 +189,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.stats.lifesteal += effect.value * 100;
         break;
       case 'dodge':
-        // Store dodge chance in stats (need to add to PlayerStats)
+        // Store dodge chance in stats
         (this.stats as any).dodgeChance = ((this.stats as any).dodgeChance || 0) + effect.value;
         break;
       case 'crit_boost':
         this.stats.critRate += effect.value;
         this.stats.critDamage += effect.value;
+        break;
+      case 'berserker':
+        // Store berserker value for attack calculation
+        (this.stats as any).berserkerValue = ((this.stats as any).berserkerValue || 0) + effect.value;
         break;
       case 'speed':
         this.stats.speed *= (1 + effect.value);
@@ -217,6 +221,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         break;
       case 'shield_boost':
         (this.stats as any).shieldBoost = ((this.stats as any).shieldBoost || 0) + effect.value;
+        break;
+      case 'element_boost':
+        // 元素伤害加成（针对特定元素）
+        if (effect.element) {
+          const key = `elementBoost_${effect.element}` as string;
+          (this.stats as any)[key] = ((this.stats as any)[key] || 0) + effect.value;
+        }
         break;
     }
   }
@@ -489,6 +500,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       attack *= (1 + boostValue / 100);
     }
 
+    // Apply berserker effect (attack increases as HP decreases)
+    const berserkerValue = (this.stats as any).berserkerValue || 0;
+    if (berserkerValue > 0) {
+      const hpPercent = this.stats.currentHp / this.stats.maxHp;
+      const missingHpPercent = 1 - hpPercent;
+      attack *= (1 + berserkerValue * missingHpPercent);
+    }
+
     return attack;
   }
 
@@ -522,6 +541,27 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     // 无敌状态不受伤
     if (this.isInvincible) {
+      return false;
+    }
+
+    // 闪避判定
+    const dodgeChance = (this.stats as any).dodgeChance || 0;
+    if (Math.random() < dodgeChance) {
+      // 闪避成功，显示闪避效果
+      const dodgeText = this.scene.add.text(this.x, this.y - 30, '闪避', {
+        fontSize: '16px',
+        color: '#00ffff',
+        fontStyle: 'bold',
+      });
+      dodgeText.setOrigin(0.5);
+      dodgeText.setDepth(200);
+      this.scene.tweens.add({
+        targets: dodgeText,
+        y: this.y - 60,
+        alpha: 0,
+        duration: 500,
+        onComplete: () => dodgeText.destroy(),
+      });
       return false;
     }
 
