@@ -69,6 +69,26 @@ export class CollisionSystem {
       undefined,
       this
     );
+
+    // 3. Listen for enemy explosion events
+    this.scene.events.on('enemyExplosion', this.handleEnemyExplosion, this);
+  }
+
+  /**
+   * Handle enemy explosion (from explode_on_death ability)
+   */
+  private handleEnemyExplosion(data: { x: number; y: number; radius: number; damage: number; sourceEnemy: Enemy }): void {
+    // Damage player if in range
+    const distanceToPlayer = Phaser.Math.Distance.Between(
+      this.player.x,
+      this.player.y,
+      data.x,
+      data.y
+    );
+
+    if (distanceToPlayer <= data.radius) {
+      this.player.takeDamage(data.damage);
+    }
   }
 
   /**
@@ -453,6 +473,9 @@ export class CollisionSystem {
     // Enemy collision damage
     ply.takeDamage(enem.config.damage);
 
+    // Trigger enemy attack abilities
+    this.triggerEnemyAttackAbilities(enem, ply);
+
     // Knockback enemy
     const angle = Phaser.Math.Angle.Between(
       ply.x,
@@ -471,6 +494,61 @@ export class CollisionSystem {
         enem.setTarget(ply);
       }
     });
+  }
+
+  /**
+   * Trigger enemy attack abilities when hitting player
+   */
+  private triggerEnemyAttackAbilities(enemy: Enemy, player: Player): void {
+    const abilities = enemy.getAttackAbilities();
+
+    for (const ability of abilities) {
+      switch (ability.type) {
+        case 'burn_on_contact':
+          // Apply burn to player
+          if (player.addStatusEffect) {
+            player.addStatusEffect({
+              type: 'burn',
+              value: ability.params?.damage || 5,
+              duration: ability.params?.duration || 2000,
+            });
+          }
+          break;
+
+        case 'slow_on_attack':
+          // Apply slow to player
+          if (player.addStatusEffect) {
+            player.addStatusEffect({
+              type: 'slow',
+              value: ability.params?.slow || 0.3,
+              duration: ability.params?.duration || 1500,
+            });
+          }
+          break;
+
+        case 'poison_on_attack':
+          // Apply poison to player
+          if (player.addStatusEffect) {
+            player.addStatusEffect({
+              type: 'poison',
+              value: ability.params?.damage || 5,
+              duration: ability.params?.duration || 3000,
+            });
+          }
+          break;
+
+        case 'root_on_attack':
+          // Apply root to player
+          if (player.addStatusEffect) {
+            player.addStatusEffect({
+              type: 'root',
+              value: 1,
+              duration: ability.params?.duration || 500,
+            });
+          }
+          break;
+      }
+    }
   }
 
   /**

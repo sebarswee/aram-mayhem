@@ -103,6 +103,39 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     // Apply element color tint
     this.applyElementTint();
+
+    // Apply passive abilities
+    this.applyPassiveAbilities();
+  }
+
+  /**
+   * Apply passive abilities on spawn
+   */
+  private applyPassiveAbilities(): void {
+    for (const ability of this.config.abilities) {
+      if (ability.trigger !== 'passive') continue;
+
+      switch (ability.type) {
+        case 'hp_boost':
+          const hpMultiplier = ability.params?.multiplier || 1.5;
+          this.currentHp = Math.floor(this.config.hp * hpMultiplier);
+          this.config = { ...this.config, hp: this.currentHp };
+          break;
+
+        case 'speed_boost':
+          const speedMultiplier = ability.params?.multiplier || 1.3;
+          this.config = { ...this.config, speed: Math.floor(this.config.speed * speedMultiplier) };
+          break;
+
+        case 'damage_reduction':
+          // Handled in takeDamage
+          break;
+
+        case 'burn_on_contact':
+          // Handled in CollisionSystem when enemy hits player
+          break;
+      }
+    }
   }
 
   private getScaleByType(type: EnemyType): number {
@@ -363,6 +396,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       }
     }
 
+    // Apply damage reduction ability
+    const damageReduction = this.getDamageReduction();
+    if (damageReduction > 0) {
+      finalDamage = finalDamage * (1 - damageReduction);
+    }
+
     this.currentHp -= finalDamage;
 
     // 受伤闪烁
@@ -382,6 +421,27 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   /**
+   * Get damage reduction from abilities
+   */
+  private getDamageReduction(): number {
+    for (const ability of this.config.abilities) {
+      if (ability.type === 'damage_reduction' && ability.trigger === 'passive') {
+        return ability.params?.reduction || 0;
+      }
+    }
+    return 0;
+  }
+
+  /**
+   * Get attack abilities (for CollisionSystem to trigger)
+   */
+  getAttackAbilities(): Array<{ type: string; params?: Record<string, any> }> {
+    return this.config.abilities
+      .filter(a => a.trigger === 'attack')
+      .map(a => ({ type: a.type, params: a.params }));
+  }
+
+  /**
    * Visual effect for counter hit
    */
   private showCounterEffect(): void {
@@ -396,6 +456,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   private die(): void {
+    // Check for explode_on_death ability
+    this.triggerDeathAbilities();
+
     // 创建元素特定死亡效果
     this.createElementDeathEffect();
 
@@ -406,6 +469,57 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     this.emit('death');
     this.destroy();
+  }
+
+  /**
+   * Trigger death abilities (explode_on_death)
+   */
+  private triggerDeathAbilities(): void {
+    for (const ability of this.config.abilities) {
+      if (ability.trigger !== 'death') continue;
+
+      switch (ability.type) {
+        case 'explode_on_death':
+          this.triggerExplosion(
+            ability.params?.damage || 10,
+            ability.params?.radius || 50
+          );
+          break;
+      }
+    }
+  }
+
+  /**
+   * Trigger explosion on death
+   */
+  private triggerExplosion(damage: number, radius: number): void {
+    // Visual effect
+    const explosion = this.scene.add.circle(this.x, this.y, radius, 0xff4400, 0.6);
+    explosion.setDepth(100);
+
+    const shockwave = this.scene.add.circle(this.x, this.y, radius * 1.5, 0xffff00, 0.3);
+    shockwave.setDepth(99);
+
+    this.scene.tweens.add({
+      targets: [explosion, shockwave],
+      scaleX: 1.5,
+      scaleY: 1.5,
+      alpha: 0,
+      duration: 300,
+      onComplete: () => {
+        explosion.destroy();
+        shockwave.destroy();
+      },
+    });
+
+    // Emit event for CollisionSystem to handle damage
+    this.scene.events.emit('enemyExplosion', {
+      x: this.x,
+      y: this.y,
+      radius,
+      damage,
+      sourceEnemy: this,
+    });
   }
 
   /**
