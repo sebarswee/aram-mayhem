@@ -254,6 +254,238 @@ export const SKILLS: Record<string, Skill> = {
     effects: [{ type: 'damage', value: 18 }, { type: 'stun', value: 0, duration: 1000 }],
   }),
 
+  stone_skin: createSkill({
+    id: 'stone_skin',
+    name: '石肤术',
+    description: '获得护盾并提升防御',
+    type: 'basic',
+    element: 'earth',
+    category: 'buff',
+    cooldown: 12000,
+    damage: 0,
+    rangeValue: 0,
+    effects: [{ type: 'shield', value: 30 }],
+  }),
+
+  // ===== 新增基础技能 =====
+
+  // 火 - 火焰护盾
+  flame_shield: createSkill({
+    id: 'flame_shield',
+    name: '火焰护盾',
+    description: '获得护盾，攻击者被灼烧',
+    type: 'basic',
+    element: 'fire',
+    category: 'buff',
+    cooldown: 15000,
+    damage: 0,
+    rangeValue: 0,
+    effects: [{ type: 'shield', value: 40 }, { type: 'burn', value: 10, duration: 3000 }],
+  }),
+
+  // 火 - 点燃
+  ignite: createSkill({
+    id: 'ignite',
+    name: '点燃',
+    description: '点燃最近敌人，造成持续伤害',
+    type: 'basic',
+    element: 'fire',
+    category: 'projectile',
+    cooldown: 2000,
+    damage: 8,
+    rangeValue: 250,
+    speed: 400,
+    effects: [{ type: 'damage', value: 8 }, { type: 'burn', value: 15, duration: 5000 }],
+  }),
+
+  // 水 - 水流冲刺
+  water_dash: createSkill({
+    id: 'water_dash',
+    name: '水流冲刺',
+    description: '向前冲刺，留下减速水迹',
+    type: 'basic',
+    element: 'water',
+    category: 'area',
+    cooldown: 6000,
+    damage: 10,
+    rangeValue: 100,
+    effects: [{ type: 'damage', value: 10 }, { type: 'slow', value: 0.5, duration: 3000 }],
+  }),
+
+  // 水 - 净化
+  purify: createSkill({
+    id: 'purify',
+    name: '净化',
+    description: '清除负面状态并恢复生命',
+    type: 'basic',
+    element: 'water',
+    category: 'buff',
+    cooldown: 20000,
+    damage: 0,
+    rangeValue: 0,
+    effects: [{ type: 'heal', value: 25 }],
+  }),
+
+  // 冰 - 冰墙
+  ice_wall: createSkill({
+    id: 'ice_wall',
+    name: '冰墙',
+    description: '创建冰墙阻挡敌人',
+    type: 'basic',
+    element: 'ice',
+    category: 'area',
+    cooldown: 8000,
+    damage: 5,
+    rangeValue: 80,
+    effects: [{ type: 'damage', value: 5 }, { type: 'freeze', value: 1, duration: 2000 }],
+  }),
+
+  // 冰 - 寒冰护甲
+  frost_armor: createSkill({
+    id: 'frost_armor',
+    name: '寒冰护甲',
+    description: '获得护盾，攻击者被减速',
+    type: 'basic',
+    element: 'ice',
+    category: 'buff',
+    cooldown: 14000,
+    damage: 0,
+    rangeValue: 0,
+    effects: [{ type: 'shield', value: 35 }],
+  }),
+
+  // 雷 - 静电场
+  static_field: createSkill({
+    id: 'static_field',
+    name: '静电场',
+    description: '创建电场，持续伤害范围敌人',
+    type: 'basic',
+    element: 'lightning',
+    category: 'area',
+    cooldown: 5000,
+    damage: 12,
+    rangeValue: 120,
+    effects: [{ type: 'damage', value: 12 }],
+  }),
+
+  // 雷 - 电弧
+  arc_lightning: createSkill({
+    id: 'arc_lightning',
+    name: '电弧',
+    description: '释放电弧，在敌人间跳跃',
+    type: 'basic',
+    element: 'lightning',
+    category: 'projectile',
+    cooldown: 1800,
+    damage: 14,
+    rangeValue: 350,
+    speed: 450,
+    effects: [{ type: 'damage', value: 14 }],
+    chainCount: 4,
+    chainRange: 120,
+    chainDamageDecay: 0.75,
+  }),
+
+  // 光 - 光环
+  halo: createSkill({
+    id: 'halo',
+    name: '光环',
+    description: '召唤光环，持续治疗自己',
+    type: 'basic',
+    element: 'holy',
+    category: 'buff',
+    cooldown: 10000,
+    damage: 0,
+    rangeValue: 0,
+    effects: [{ type: 'heal', value: 5 }],
+  }),
+
+  // 光 - 祝福
+  blessing: createSkill({
+    id: 'blessing',
+    name: '祝福',
+    description: '提升攻击力和暴击率',
+    type: 'basic',
+    element: 'holy',
+    category: 'buff',
+    cooldown: 18000,
+    damage: 0,
+    rangeValue: 0,
+    effects: [{ type: 'shield', value: 20 }],
+  }),
+
+  // 暗 - 暗影步
+  shadow_step: createSkill({
+    id: 'shadow_step',
+    name: '暗影步',
+    description: '瞬移并留下毒云',
+    type: 'basic',
+    element: 'shadow',
+    category: 'area',
+    cooldown: 7000,
+    damage: 15,
+    rangeValue: 100,
+    effects: [{ type: 'damage', value: 15 }, { type: 'poison', value: 8, duration: 4000 }],
+  }),
+
+  // 暗 - 诅咒
+  hex: createSkill({
+    id: 'hex',
+    name: '诅咒',
+    description: '诅咒敌人，降低其防御',
+    type: 'basic',
+    element: 'shadow',
+    category: 'projectile',
+    cooldown: 3000,
+    damage: 10,
+    rangeValue: 280,
+    speed: 320,
+    effects: [{ type: 'damage', value: 10 }, { type: 'defense_break', value: 0.4, duration: 4000 }],
+  }),
+
+  // 草 - 种子炸弹
+  seed_bomb: createSkill({
+    id: 'seed_bomb',
+    name: '种子炸弹',
+    description: '投掷种子，爆炸造成范围伤害',
+    type: 'basic',
+    element: 'grass',
+    category: 'projectile',
+    cooldown: 2200,
+    damage: 18,
+    rangeValue: 320,
+    speed: 280,
+    effects: [{ type: 'damage', value: 18 }],
+  }),
+
+  // 草 - 荆棘
+  thorns: createSkill({
+    id: 'thorns',
+    name: '荆棘',
+    description: '召唤荆棘，反弹伤害',
+    type: 'basic',
+    element: 'grass',
+    category: 'buff',
+    cooldown: 16000,
+    damage: 0,
+    rangeValue: 0,
+    effects: [{ type: 'damage_reflect', value: 0.25, duration: 8000 }],
+  }),
+
+  // 土 - 地震波
+  seismic_wave: createSkill({
+    id: 'seismic_wave',
+    name: '地震波',
+    description: '释放地震波，击退敌人',
+    type: 'basic',
+    element: 'earth',
+    category: 'area',
+    cooldown: 3500,
+    damage: 16,
+    rangeValue: 180,
+    effects: [{ type: 'damage', value: 16 }, { type: 'knockback', value: 120 }],
+  }),
+
   // ===== 大招（8个）=====
   meteor: createSkill({
     id: 'meteor',
