@@ -1,143 +1,117 @@
-// ==================== 元素与标签 ====================
-export type Element = 'fire' | 'ice' | 'lightning' | 'physical' | 'shadow' | 'holy';
+// ==================== 元素系统 ====================
+export type Element = 'fire' | 'water' | 'ice' | 'lightning' | 'holy' | 'shadow' | 'grass' | 'earth';
 
-export type SkillCategory = 'projectile' | 'area' | 'dash' | 'summon' | 'buff' | 'control';
+export type SkillCategory = 'projectile' | 'area' | 'buff' | 'summon';
 
-export type SkillRange = 'melee' | 'mid' | 'long';
+export type SkillType = 'basic' | 'ultimate';
 
 export type Rarity = 'common' | 'rare' | 'epic' | 'legendary' | 'mythic';
 
-export type RuneType = 'stat_boost' | 'skill_enhance' | 'passive' | 'new_skill' | 'special';
+// ==================== 元素标记（用于羁绊触发）====================
+export interface ElementMark {
+  element: Element;
+  timestamp: number;
+  duration: number;
+  source: string;
+}
 
-export type EnemyType = 'normal' | 'elite' | 'boss';
-
-export type EnemyBehavior = 'chase' | 'ranged' | 'summon' | 'teleport';
+// ==================== 羁绊效果 ====================
+export interface SynergyResult {
+  name: string;
+  elements: [Element, Element];
+  effect: string;
+  value?: number;
+  duration?: number;
+}
 
 // ==================== 技能系统 ====================
 export interface SkillEffect {
-  type: 'damage' | 'burn' | 'freeze' | 'stun' | 'knockback' | 'heal' | 'shield' | 'poison';
+  type: 'damage' | 'burn' | 'freeze' | 'stun' | 'poison' | 'heal' | 'shield' | 'knockback' | 'slow';
   value: number;
   duration?: number;
 }
 
-// 技能强化类型
-export type EnhancementType = 'split' | 'range' | 'pierce' | 'multicast' | 'effect' | 'damage' | 'cooldown' | 'projectile_count';
-
-// 技能强化（附加在技能上）
 export interface SkillEnhancement {
   id: string;
-  type: EnhancementType;
+  type: 'damage' | 'range' | 'cooldown' | 'projectile_count' | 'pierce' | 'effect_power';
   value: number;
-  source: string;  // 来自哪个强化石
+  level: number;
 }
 
-// 技能基础值（用于计算强化）
-export interface SkillBaseValues {
-  damage: number;
-  range: number;
-  projectileCount: number;
-  pierce: number;
-  cooldown: number;
+export interface SkillEvolution {
+  id: string;
+  name: string;
+  description: string;
+  effects: SkillEffect[];
+  modifiers: {
+    damage?: number;
+    range?: number;
+    cooldown?: number;
+    projectileCount?: number;
+    special?: string;
+  };
 }
 
 export interface Skill {
   id: string;
   name: string;
   description: string;
-  type: 'basic' | 'ultimate' | 'passive';
-  elements: Element[];
-  categories: SkillCategory[];
-  range: SkillRange;
+  type: SkillType;
+  element: Element;
+  category: SkillCategory;
   cooldown: number;
   damage: number;
   rangeValue: number;
   speed?: number;
   effects: SkillEffect[];
-  rarity?: 'common' | 'rare' | 'legendary';
-  // 连锁属性
-  chainCount?: number;        // 连锁次数
-  chainRange?: number;        // 连锁范围
-  chainDamageDecay?: number;  // 每次连锁伤害衰减 (0-1)
-  // 新增强化相关字段
-  enhancements: SkillEnhancement[];  // 已获得的强化
-  baseValues: SkillBaseValues;       // 原始值（用于计算强化）
-}
-
-// ==================== 技能强化石系统 ====================
-
-// 技能强化石
-export interface SkillEnhancer {
-  id: string;
-  name: string;
-  description: string;
-  rarity: Rarity;
-  type: EnhancementType;
-  value: number;
+  level: number;
   maxLevel: number;
-  // 限制条件
-  skillCategories?: SkillCategory[];  // 只对特定类型技能生效
-  skillElements?: Element[];          // 只对特定元素技能生效
-  excludeElements?: Element[];        // 排除特定元素（如"附加灼烧"不能用于火焰技能）
+  enhancements: SkillEnhancement[];
+  evolutions: SkillEvolution[];
+  baseValues: {
+    damage: number;
+    range: number;
+    cooldown: number;
+    projectileCount: number;
+  };
 }
 
-// 属性提升选项
-export interface StatBoost {
-  id: string;
-  name: string;
-  description: string;
-  stat: string;
-  value: number;
-  isPercent: boolean;
-}
+// ==================== 怪物系统 ====================
+export type EnemyType = 'normal' | 'elite' | 'boss';
 
-// 升级选项类型
-export type UpgradeOptionType = 'new_skill' | 'skill_enhancer' | 'stat_boost';
-
-export interface UpgradeOption {
-  type: UpgradeOptionType;
-  data: Skill | SkillEnhancer | StatBoost;
-}
-
-// ==================== 符文系统（保留兼容）====================
-export interface RuneEffect {
-  type: RuneType;
-  target?: 'all' | 'element' | 'category';
-  targetValue?: string;
-  stat?: string;
-  value: number;
-  isPercent: boolean;
-}
-
-export interface Rune {
-  id: string;
-  name: string;
-  description: string;
-  rarity: Rarity;
-  type: RuneType;
-  effects: RuneEffect[];
-  exclusiveGroup?: string;
-  maxLevel: number;
-  currentLevel?: number;
-}
-
-// ==================== 敌人系统 ====================
 export interface EnemyAbility {
-  type: 'charge' | 'shoot' | 'summon' | 'shield' | 'heal';
-  cooldown: number;
-  params?: Record<string, unknown>;
+  type: 'burn_on_contact' | 'speed_boost' | 'slow_on_attack' | 'explode_on_death' | 'damage_reduction' | 'poison_on_attack' | 'root_on_attack' | 'hp_boost';
+  trigger: 'passive' | 'attack' | 'death';
+  params?: Record<string, any>;
 }
 
 export interface EnemyConfig {
   id: string;
   name: string;
   type: EnemyType;
+  element: Element;
   hp: number;
   damage: number;
   speed: number;
-  behavior: EnemyBehavior;
   expValue: number;
+  color: number;
   abilities: EnemyAbility[];
-  color: number; // 临时用颜色代替精灵
+}
+
+// ==================== 掉落系统 ====================
+export interface FoodConfig {
+  id: string;
+  name: string;
+  healAmount: number;
+  rarity: Rarity;
+  emoji: string;
+  special?: 'clear_debuff' | 'full_heal';
+}
+
+export interface ExpOrbConfig {
+  value: number;
+  size: 'small' | 'medium' | 'large';
+  attractRange: number;
 }
 
 // ==================== 玩家系统 ====================
@@ -149,47 +123,20 @@ export interface PlayerStats {
   speed: number;
   critRate: number;
   critDamage: number;
-  // 符文加成属性
-  skillDamageBonus?: number;  // 技能伤害加成百分比
-  cooldownReduction?: number; // 冷却减少百分比
-  lifesteal?: number;         // 生命偷取百分比
+  lifesteal: number;
 }
 
 // ==================== 游戏状态 ====================
 export interface GameState {
-  // 玩家
   stats: PlayerStats;
   skills: Skill[];
-  runes: Rune[];
-
-  // 进度
   level: number;
   exp: number;
   expToNext: number;
   wave: number;
   kills: number;
-  bossesKilled: number;
-
-  // 状态
   isPaused: boolean;
   isDead: boolean;
   isUpgrading: boolean;
-  isSelectingSkill: boolean;  // 新增：正在选择初始技能
-  ultimateSlots: number;      // 新增：已解锁的大招槽位
+  ultimateSlots: number;
 }
-
-// ==================== 输入系统 ====================
-export interface InputState {
-  moveX: number;
-  moveY: number;
-  isMoving: boolean;
-}
-
-// ==================== 碰撞分组 ====================
-export const CollisionGroup = {
-  PLAYER: 'player',
-  ENEMY: 'enemy',
-  PLAYER_PROJECTILE: 'player_projectile',
-  ENEMY_PROJECTILE: 'enemy_projectile',
-  EXP_ORB: 'exp_orb',
-} as const;
