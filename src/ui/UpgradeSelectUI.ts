@@ -37,6 +37,10 @@ export class UpgradeSelectUI {
     this.container.removeAll(true);
     this.container.setVisible(true);
 
+    // 将容器移动到摄像机当前位置
+    const camera = this.scene.cameras.main;
+    this.container.setPosition(camera.scrollX, camera.scrollY);
+
     const width = this.scene.scale.width;
     const height = this.scene.scale.height;
 
@@ -152,7 +156,6 @@ export class UpgradeSelectUI {
     isSmallScreen: boolean
   ): void {
     const card = this.scene.add.container(x, y);
-    card.setScrollFactor(0); // 固定在屏幕上
 
     // 稀有度颜色
     let color = 0xffffff;
