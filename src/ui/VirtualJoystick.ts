@@ -22,10 +22,17 @@ export class VirtualJoystick {
   private isVisible: boolean = true;
   private touchZone: Phaser.GameObjects.Zone | null = null;
   private isDisabled: boolean = false;
+  // 绑定的事件处理器，用于精确移除
+  private boundPointerMove: (pointer: Phaser.Input.Pointer) => void;
+  private boundPointerUp: (pointer: Phaser.Input.Pointer) => void;
 
   constructor(scene: Phaser.Scene, config: JoystickConfig = { mode: 'fixed' }) {
     this.scene = scene;
     this.mode = config.mode;
+
+    // 绑定事件处理器
+    this.boundPointerMove = this.handlePointerMove.bind(this);
+    this.boundPointerUp = this.handlePointerUp.bind(this);
 
     // 计算固定位置（根据屏幕尺寸自适应）
     const width = scene.scale.width;
@@ -82,18 +89,22 @@ export class VirtualJoystick {
       });
     }
 
-    this.scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      if (this.isDisabled) return;
-      if (this.pointer === pointer) {
-        this.updatePosition(pointer.x, pointer.y);
-      }
-    });
+    // 使用绑定的事件处理器
+    this.scene.input.on('pointermove', this.boundPointerMove);
+    this.scene.input.on('pointerup', this.boundPointerUp);
+  }
 
-    this.scene.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-      if (this.pointer === pointer) {
-        this.reset();
-      }
-    });
+  private handlePointerMove(pointer: Phaser.Input.Pointer): void {
+    if (this.isDisabled) return;
+    if (this.pointer === pointer) {
+      this.updatePosition(pointer.x, pointer.y);
+    }
+  }
+
+  private handlePointerUp(pointer: Phaser.Input.Pointer): void {
+    if (this.pointer === pointer) {
+      this.reset();
+    }
   }
 
   private updatePosition(x: number, y: number): void {
@@ -172,9 +183,9 @@ export class VirtualJoystick {
   }
 
   destroy(): void {
-    // 清理全局事件监听
-    this.scene.input.off('pointermove');
-    this.scene.input.off('pointerup');
+    // 精确移除绑定的事件监听器
+    this.scene.input.off('pointermove', this.boundPointerMove);
+    this.scene.input.off('pointerup', this.boundPointerUp);
     this.base.destroy();
     this.thumb.destroy();
     if (this.touchZone) {

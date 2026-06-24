@@ -128,7 +128,8 @@ export class HUD {
     if (!basicSkills || basicSkills.length === 0) return;
 
     const iconSize = Math.min(48, width * 0.1);
-    const spacing = Math.min(10, width * 0.02);
+    // 增大间距，防止文字重叠
+    const spacing = Math.max(15, width * 0.03);
 
     // 基础技能：居中显示在底部
     const startX = width / 2 - ((basicSkills.length - 1) * (iconSize + spacing)) / 2;
@@ -213,10 +214,10 @@ export class HUD {
       container.add(keyText);
     }
 
-    // 技能名称（显示在图标下方，包含等级）
-    const levelText = skill.level > 1 ? ` Lv.${skill.level}` : '';
-    const nameText = this.scene.add.text(0, iconSize / 2 + 8, `${skill.name}${levelText}`, {
-      fontSize: '11px',
+    // 技能名称（显示在图标下方，等级用简洁格式）
+    const levelSuffix = skill.level > 1 ? ` ${skill.level}` : '';
+    const nameText = this.scene.add.text(0, iconSize / 2 + 8, `${skill.name}${levelSuffix}`, {
+      fontSize: '10px',
       color: isUltimate ? '#ffcc00' : '#ffffff',
     });
     nameText.setOrigin(0.5, 0);
