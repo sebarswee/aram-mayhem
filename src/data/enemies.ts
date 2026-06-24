@@ -305,3 +305,20 @@ export function getRandomEliteEnemy(): EnemyConfig {
 export function getRandomBoss(): EnemyConfig {
   return BOSS_ENEMIES[Math.floor(Math.random() * BOSS_ENEMIES.length)];
 }
+
+// ========== 兼容旧系统的导出 ==========
+
+// 转换为 Record 格式（兼容旧系统）
+export const ENEMY_CONFIGS: Record<string, EnemyConfig> = Object.fromEntries(
+  getAllEnemies().map(e => [e.id, e])
+);
+
+// 获取波次敌人池（兼容旧系统）
+export function getEnemyPoolForWave(wave: number): string[] {
+  return NORMAL_ENEMIES.map(e => e.id);
+}
+
+// 获取精英敌人池（兼容旧系统）
+export function getElitePoolForWave(wave: number): string[] {
+  return ELITE_ENEMIES.map(e => e.id);
+}
