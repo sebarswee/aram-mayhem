@@ -91,41 +91,41 @@ export class GraphicsFactory {
     this.createGolemSprite('rock_golem', 0xaa8844);
 
     // === 精英敌人 (4种) ===
-    // 炎魔精英
+    // 炎魔精英 - 火焰恶魔形状
     this.createEliteFlameLordSprite('elite_flame_lord', 0xff2200);
 
-    // 霜巨人精英
+    // 霜巨人精英 - 冰霜巨人形状
     this.createEliteFrostTitanSprite('elite_frost_titan', 0x66ccff);
 
-    // 雷龙精英
+    // 雷龙精英 - 龙形状
     this.createEliteStormDrakeSprite('elite_storm_drake', 0xcccc00);
 
-    // 暗影领主
+    // 暗影领主 - 恶魔形状
     this.createEliteShadowLordSprite('elite_shadow_lord', 0x6600cc);
 
     // === Boss敌人 (8种) ===
-    // 炎魔
+    // 炎魔 - 大型火焰恶魔
     this.createBossFlameLordSprite('boss_flame_lord', 0xff0000);
 
-    // 霜巨人
+    // 霜巨人 - 大型冰霜巨人
     this.createBossFrostGiantSprite('boss_frost_giant', 0x44aaff);
 
-    // 雷龙
+    // 雷龙 - 大型龙
     this.createBossThunderDragonSprite('boss_thunder_dragon', 0xaaaa00);
 
-    // 暗影之王
+    // 暗影之王 - 大型恶魔
     this.createBossShadowKingSprite('boss_shadow_king', 0x4400aa);
 
-    // 自然守护者
+    // 自然守护者 - 大型植物
     this.createBossNatureGuardianSprite('boss_nature_guardian', 0x22cc22);
 
-    // 巨像领主
+    // 巨像领主 - 大型岩石
     this.createBossGolemLordSprite('boss_golem_lord', 0x886622);
 
-    // 堕落天使
+    // 堕落天使 - 大型天使
     this.createBossFallenAngelSprite('boss_fallen_angel', 0xccaa00);
 
-    // 九头蛇
+    // 九头蛇 - 大型蛇形
     this.createBossHydraSprite('boss_hydra', 0x2266cc);
   }
 
@@ -1063,79 +1063,358 @@ export class GraphicsFactory {
   }
 
   private createEliteFlameLordSprite(key: string, color: number): void {
-    this.createEliteBase(key, color);
+    const size = 56;
+    const graphics = this.scene.add.graphics();
+
+    // 身体 - 更大的圆形
+    graphics.fillStyle(color, 1);
+    graphics.fillCircle(size / 2, size / 2 + 4, 20);
+
+    // 火焰光环
+    graphics.fillStyle(0xff4400, 0.4);
+    graphics.fillCircle(size / 2, size / 2 + 4, 24);
+
+    // 头部
+    graphics.fillStyle(this.lighten(color, 0.1), 1);
+    graphics.fillCircle(size / 2, size / 2 - 14, 12);
+
+    // 眼睛 - 燃烧的眼睛
+    graphics.fillStyle(0xffff00, 1);
+    graphics.fillCircle(size / 2 - 5, size / 2 - 16, 4);
+    graphics.fillCircle(size / 2 + 5, size / 2 - 16, 4);
+    graphics.fillStyle(0xff0000, 1);
+    graphics.fillCircle(size / 2 - 5, size / 2 - 16, 2);
+    graphics.fillCircle(size / 2 + 5, size / 2 - 16, 2);
+
+    // 角
+    graphics.fillStyle(this.darken(color, 0.2), 1);
+    graphics.fillTriangle(size / 2 - 12, size / 2 - 22, size / 2 - 8, size / 2 - 36, size / 2 - 4, size / 2 - 22);
+    graphics.fillTriangle(size / 2 + 4, size / 2 - 22, size / 2 + 8, size / 2 - 36, size / 2 + 12, size / 2 - 22);
+
+    graphics.generateTexture(key, size, size);
+    graphics.destroy();
   }
 
   private createEliteFrostTitanSprite(key: string, color: number): void {
-    this.createEliteBase(key, color);
+    const size = 60;
+    const graphics = this.scene.add.graphics();
+
+    // 身体 - 巨人形状
+    graphics.fillStyle(color, 1);
+    graphics.fillRect(12, 20, 36, 36);
+
+    // 头部
+    graphics.fillStyle(this.lighten(color, 0.15), 1);
+    graphics.fillRect(16, 4, 28, 20);
+
+    // 冰晶
+    graphics.fillStyle(0xffffff, 0.8);
+    graphics.fillTriangle(size / 2, 0, size / 2 - 6, 8, size / 2 + 6, 8);
+    graphics.fillTriangle(8, 8, 14, 12, 8, 20);
+    graphics.fillTriangle(size - 8, 8, size - 14, 12, size - 8, 20);
+
+    // 眼睛
+    graphics.fillStyle(0x0044aa, 1);
+    graphics.fillRect(22, 10, 6, 6);
+    graphics.fillRect(32, 10, 6, 6);
+
+    graphics.generateTexture(key, size, size);
+    graphics.destroy();
   }
 
   private createEliteStormDrakeSprite(key: string, color: number): void {
-    this.createEliteBase(key, color);
+    const size = 56;
+    const graphics = this.scene.add.graphics();
+
+    // 身体 - 龙形
+    graphics.fillStyle(color, 1);
+    graphics.fillEllipse(size / 2, size / 2 + 4, 28, 18);
+
+    // 翅膀
+    graphics.fillStyle(this.darken(color, 0.15), 1);
+    graphics.fillTriangle(8, size / 2, 4, size / 2 - 16, 16, size / 2 + 4);
+    graphics.fillTriangle(size - 8, size / 2, size - 4, size / 2 - 16, size - 16, size / 2 + 4);
+
+    // 头部
+    graphics.fillStyle(this.lighten(color, 0.1), 1);
+    graphics.fillEllipse(size / 2 - 8, size / 2 - 8, 14, 10);
+
+    // 眼睛
+    graphics.fillStyle(0xff0000, 1);
+    graphics.fillCircle(size / 2 - 12, size / 2 - 10, 3);
+
+    // 尾巴
+    graphics.fillStyle(this.darken(color, 0.2), 1);
+    graphics.fillTriangle(size - 8, size / 2 + 8, size - 4, size / 2 + 20, size - 12, size / 2 + 12);
+
+    graphics.generateTexture(key, size, size);
+    graphics.destroy();
   }
 
   private createEliteShadowLordSprite(key: string, color: number): void {
-    this.createEliteBase(key, color);
-  }
-
-  private createEliteBase(key: string, color: number): void {
-    const size = 52;
+    const size = 54;
     const graphics = this.scene.add.graphics();
+
+    // 身体 - 暗影形状
+    graphics.fillStyle(color, 0.8);
+    graphics.fillCircle(size / 2, size / 2, 22);
+
+    // 暗影波动
+    graphics.fillStyle(this.darken(color, 0.3), 0.6);
+    graphics.fillCircle(size / 2, size / 2, 26);
+
+    // 头部
+    graphics.fillStyle(this.darken(color, 0.1), 1);
+    graphics.fillCircle(size / 2, size / 2 - 16, 10);
+
+    // 眼睛 - 紫色发光
+    graphics.fillStyle(0xff00ff, 1);
+    graphics.fillCircle(size / 2 - 4, size / 2 - 18, 3);
+    graphics.fillCircle(size / 2 + 4, size / 2 - 18, 3);
+
+    // 角
     graphics.fillStyle(color, 1);
-    graphics.fillCircle(size / 2, size / 2, 20);
-    graphics.fillStyle(0xffff00, 1);
-    graphics.fillCircle(size / 2, 8, 6);
-    graphics.fillStyle(this.lighten(color, 0.3), 0.9);
-    graphics.fillCircle(size / 2 - 8, size / 2 - 8, 6);
-    graphics.fillCircle(size / 2 + 8, size / 2 - 8, 6);
+    graphics.fillTriangle(size / 2 - 10, size / 2 - 24, size / 2 - 6, size / 2 - 36, size / 2 - 2, size / 2 - 24);
+    graphics.fillTriangle(size / 2 + 2, size / 2 - 24, size / 2 + 6, size / 2 - 36, size / 2 + 10, size / 2 - 24);
+
     graphics.generateTexture(key, size, size);
     graphics.destroy();
   }
 
   private createBossFlameLordSprite(key: string, color: number): void {
-    this.createBossBase(key, color);
+    const size = 80;
+    const graphics = this.scene.add.graphics();
+
+    // 火焰光环背景
+    graphics.fillStyle(0xff2200, 0.3);
+    graphics.fillCircle(size / 2, size / 2, 36);
+
+    // 身体
+    graphics.fillStyle(color, 1);
+    graphics.fillCircle(size / 2, size / 2 + 6, 28);
+
+    // 头部
+    graphics.fillStyle(this.lighten(color, 0.1), 1);
+    graphics.fillCircle(size / 2, size / 2 - 20, 16);
+
+    // 眼睛 - 燃烧的眼睛
+    graphics.fillStyle(0xffff00, 1);
+    graphics.fillCircle(size / 2 - 8, size / 2 - 22, 6);
+    graphics.fillCircle(size / 2 + 8, size / 2 - 22, 6);
+    graphics.fillStyle(0xff0000, 1);
+    graphics.fillCircle(size / 2 - 8, size / 2 - 22, 3);
+    graphics.fillCircle(size / 2 + 8, size / 2 - 22, 3);
+
+    // 大角
+    graphics.fillStyle(this.darken(color, 0.3), 1);
+    graphics.fillTriangle(size / 2 - 20, size / 2 - 28, size / 2 - 12, size / 2 - 52, size / 2 - 4, size / 2 - 28);
+    graphics.fillTriangle(size / 2 + 4, size / 2 - 28, size / 2 + 12, size / 2 - 52, size / 2 + 20, size / 2 - 28);
+
+    graphics.generateTexture(key, size, size);
+    graphics.destroy();
   }
 
   private createBossFrostGiantSprite(key: string, color: number): void {
-    this.createBossBase(key, color);
+    const size = 84;
+    const graphics = this.scene.add.graphics();
+
+    // 身体 - 巨大的巨人
+    graphics.fillStyle(color, 1);
+    graphics.fillRect(16, 28, 52, 52);
+
+    // 冰晶装饰
+    graphics.fillStyle(0xffffff, 0.6);
+    graphics.fillTriangle(20, 20, 28, 12, 36, 20);
+    graphics.fillTriangle(48, 20, 56, 12, 64, 20);
+
+    // 头部
+    graphics.fillStyle(this.lighten(color, 0.2), 1);
+    graphics.fillRect(24, 4, 36, 28);
+
+    // 眼睛 - 冰蓝色
+    graphics.fillStyle(0x0033aa, 1);
+    graphics.fillRect(32, 12, 8, 8);
+    graphics.fillRect(44, 12, 8, 8);
+    graphics.fillStyle(0xffffff, 0.8);
+    graphics.fillRect(34, 14, 3, 3);
+    graphics.fillRect(46, 14, 3, 3);
+
+    graphics.generateTexture(key, size, size);
+    graphics.destroy();
   }
 
   private createBossThunderDragonSprite(key: string, color: number): void {
-    this.createBossBase(key, color);
+    const size = 80;
+    const graphics = this.scene.add.graphics();
+
+    // 身体 - 大龙形
+    graphics.fillStyle(color, 1);
+    graphics.fillEllipse(size / 2, size / 2 + 8, 40, 24);
+
+    // 大翅膀
+    graphics.fillStyle(this.darken(color, 0.2), 1);
+    graphics.fillTriangle(8, size / 2, 4, size / 2 - 24, 20, size / 2 + 8);
+    graphics.fillTriangle(size - 8, size / 2, size - 4, size / 2 - 24, size - 20, size / 2 + 8);
+
+    // 头部
+    graphics.fillStyle(this.lighten(color, 0.15), 1);
+    graphics.fillEllipse(size / 2 - 12, size / 2 - 12, 18, 14);
+
+    // 眼睛 - 红色发光
+    graphics.fillStyle(0xff0000, 1);
+    graphics.fillCircle(size / 2 - 16, size / 2 - 14, 5);
+    graphics.fillStyle(0xffff00, 0.8);
+    graphics.fillCircle(size / 2 - 16, size / 2 - 14, 2);
+
+    // 尾巴
+    graphics.fillStyle(this.darken(color, 0.3), 1);
+    graphics.fillTriangle(size - 12, size / 2 + 12, size - 8, size / 2 + 32, size - 20, size / 2 + 18);
+
+    graphics.generateTexture(key, size, size);
+    graphics.destroy();
   }
 
   private createBossShadowKingSprite(key: string, color: number): void {
-    this.createBossBase(key, color);
+    const size = 78;
+    const graphics = this.scene.add.graphics();
+
+    // 暗影光环
+    graphics.fillStyle(0x000000, 0.4);
+    graphics.fillCircle(size / 2, size / 2, 34);
+
+    // 身体
+    graphics.fillStyle(color, 0.9);
+    graphics.fillCircle(size / 2, size / 2 + 4, 26);
+
+    // 头部
+    graphics.fillStyle(this.darken(color, 0.1), 1);
+    graphics.fillCircle(size / 2, size / 2 - 20, 14);
+
+    // 眼睛 - 强烈的紫色发光
+    graphics.fillStyle(0xff00ff, 1);
+    graphics.fillCircle(size / 2 - 6, size / 2 - 22, 5);
+    graphics.fillCircle(size / 2 + 6, size / 2 - 22, 5);
+    graphics.fillStyle(0xffffff, 0.8);
+    graphics.fillCircle(size / 2 - 6, size / 2 - 22, 2);
+    graphics.fillCircle(size / 2 + 6, size / 2 - 22, 2);
+
+    // 大角
+    graphics.fillStyle(color, 1);
+    graphics.fillTriangle(size / 2 - 18, size / 2 - 30, size / 2 - 10, size / 2 - 50, size / 2 - 2, size / 2 - 30);
+    graphics.fillTriangle(size / 2 + 2, size / 2 - 30, size / 2 + 10, size / 2 - 50, size / 2 + 18, size / 2 - 30);
+
+    graphics.generateTexture(key, size, size);
+    graphics.destroy();
   }
 
   private createBossNatureGuardianSprite(key: string, color: number): void {
-    this.createBossBase(key, color);
+    const size = 76;
+    const graphics = this.scene.add.graphics();
+
+    // 身体 - 植物形状
+    graphics.fillStyle(color, 1);
+    graphics.fillCircle(size / 2, size / 2 + 8, 24);
+
+    // 叶子装饰
+    graphics.fillStyle(this.lighten(color, 0.2), 1);
+    graphics.fillTriangle(12, size / 2 + 4, 8, size / 2 - 12, 20, size / 2 + 8);
+    graphics.fillTriangle(size - 12, size / 2 + 4, size - 8, size / 2 - 12, size - 20, size / 2 + 8);
+    graphics.fillTriangle(size / 2, 8, size / 2 - 12, 20, size / 2 + 12, 20);
+
+    // 头部
+    graphics.fillStyle(this.lighten(color, 0.1), 1);
+    graphics.fillCircle(size / 2, size / 2 - 16, 12);
+
+    // 眼睛
+    graphics.fillStyle(0xffff00, 1);
+    graphics.fillCircle(size / 2 - 4, size / 2 - 18, 3);
+    graphics.fillCircle(size / 2 + 4, size / 2 - 18, 3);
+
+    graphics.generateTexture(key, size, size);
+    graphics.destroy();
   }
 
   private createBossGolemLordSprite(key: string, color: number): void {
-    this.createBossBase(key, color);
+    const size = 80;
+    const graphics = this.scene.add.graphics();
+
+    // 身体 - 巨大岩石
+    graphics.fillStyle(color, 1);
+    graphics.fillRect(12, 24, 56, 52);
+
+    // 岩石纹理
+    graphics.fillStyle(this.darken(color, 0.2), 1);
+    graphics.fillRect(20, 32, 12, 12);
+    graphics.fillRect(48, 40, 8, 8);
+
+    // 头部
+    graphics.fillStyle(this.darken(color, 0.1), 1);
+    graphics.fillRect(24, 4, 32, 24);
+
+    // 眼睛 - 发光
+    graphics.fillStyle(0xffff00, 1);
+    graphics.fillRect(28, 10, 8, 8);
+    graphics.fillRect(44, 10, 8, 8);
+
+    graphics.generateTexture(key, size, size);
+    graphics.destroy();
   }
 
   private createBossFallenAngelSprite(key: string, color: number): void {
-    this.createBossBase(key, color);
+    const size = 78;
+    const graphics = this.scene.add.graphics();
+
+    // 光环背景
+    graphics.fillStyle(color, 0.2);
+    graphics.fillCircle(size / 2, size / 2, 32);
+
+    // 身体
+    graphics.fillStyle(color, 1);
+    graphics.fillEllipse(size / 2, size / 2 + 8, 24, 18);
+
+    // 翅膀 - 一边堕落（暗）
+    graphics.fillStyle(0xffffff, 0.6);
+    graphics.fillTriangle(8, size / 2, 4, size / 2 - 20, 16, size / 2 + 4);
+    graphics.fillStyle(0x333333, 1);
+    graphics.fillTriangle(size - 8, size / 2, size - 4, size / 2 - 20, size - 16, size / 2 + 4);
+
+    // 头部
+    graphics.fillStyle(0xaaddff, 1);
+    graphics.fillCircle(size / 2, size / 2 - 16, 12);
+
+    // 眼睛 - 一边正常，一边红色
+    graphics.fillStyle(0x4444ff, 1);
+    graphics.fillCircle(size / 2 - 5, size / 2 - 18, 3);
+    graphics.fillStyle(0xff0000, 1);
+    graphics.fillCircle(size / 2 + 5, size / 2 - 18, 3);
+
+    graphics.generateTexture(key, size, size);
+    graphics.destroy();
   }
 
   private createBossHydraSprite(key: string, color: number): void {
-    this.createBossBase(key, color);
-  }
-
-  private createBossBase(key: string, color: number): void {
-    const size = 64;
+    const size = 82;
     const graphics = this.scene.add.graphics();
+
+    // 身体 - 蛇形
     graphics.fillStyle(color, 1);
-    graphics.fillCircle(size / 2, size / 2 + 4, 26);
-    graphics.fillStyle(0xff0000, 1);
-    graphics.fillCircle(size / 2, 8, 8);
-    graphics.fillStyle(this.lighten(color, 0.2), 0.9);
-    graphics.fillCircle(size / 2 - 12, size / 2 - 8, 8);
-    graphics.fillCircle(size / 2 + 12, size / 2 - 8, 8);
-    graphics.fillStyle(0xffffff, 0.6);
-    graphics.strokeCircle(size / 2, size / 2, 30);
+    graphics.fillEllipse(size / 2, size / 2 + 12, 36, 22);
+
+    // 多个头（简化为3个）
+    graphics.fillStyle(this.lighten(color, 0.1), 1);
+    graphics.fillCircle(size / 2 - 16, size / 2 - 16, 10);
+    graphics.fillCircle(size / 2, size / 2 - 20, 12);
+    graphics.fillCircle(size / 2 + 16, size / 2 - 16, 10);
+
+    // 眼睛
+    graphics.fillStyle(0xff6600, 1);
+    graphics.fillCircle(size / 2 - 18, size / 2 - 18, 3);
+    graphics.fillCircle(size / 2 - 14, size / 2 - 18, 3);
+    graphics.fillCircle(size / 2 - 3, size / 2 - 22, 3);
+    graphics.fillCircle(size / 2 + 3, size / 2 - 22, 3);
+    graphics.fillCircle(size / 2 + 14, size / 2 - 18, 3);
+    graphics.fillCircle(size / 2 + 18, size / 2 - 18, 3);
+
     graphics.generateTexture(key, size, size);
     graphics.destroy();
   }

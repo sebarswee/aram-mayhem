@@ -16,36 +16,29 @@ const EFFECT_PRIORITY: StatusEffect['type'][] = ['freeze', 'stun', 'poison', 'de
 
 // 敌人类型到精灵纹理的映射
 const ENEMY_TEXTURE_MAP: Record<string, string> = {
-  // Normal enemies (8 elements)
-  'flame_slime': 'enemy_slime',
-  'water_elemental': 'enemy_slime',
-  'frost_ghost': 'enemy_ghost',
-  'thunder_spirit': 'enemy_spirit',
-  'holy_sprite': 'enemy_spirit',
-  'shadow_demon': 'enemy_demon',
-  'vine_monster': 'enemy_plant',
-  'rock_golem': 'enemy_golem',
+  // Normal enemies (8 elements) - 直接使用 GraphicsFactory 创建的纹理名
+  'flame_slime': 'flame_slime',
+  'water_elemental': 'water_elemental',
+  'frost_ghost': 'frost_ghost',
+  'thunder_spirit': 'thunder_spirit',
+  'holy_sprite': 'holy_sprite',
+  'shadow_demon': 'shadow_demon',
+  'vine_monster': 'vine_monster',
+  'rock_golem': 'rock_golem',
   // Elite enemies
-  'elite_flame_lord': 'enemy_orc',
-  'elite_frost_titan': 'enemy_giant',
-  'elite_storm_drake': 'enemy_drake',
-  'elite_shadow_lord': 'enemy_demon',
+  'elite_flame_lord': 'elite_flame_lord',
+  'elite_frost_titan': 'elite_frost_titan',
+  'elite_storm_drake': 'elite_storm_drake',
+  'elite_shadow_lord': 'elite_shadow_lord',
   // Boss enemies
-  'boss_flame_lord': 'enemy_boss',
-  'boss_frost_giant': 'enemy_boss',
-  'boss_thunder_dragon': 'enemy_boss',
-  'boss_shadow_king': 'enemy_boss',
-  'boss_nature_guardian': 'enemy_boss',
-  'boss_golem_lord': 'enemy_boss',
-  'boss_fallen_angel': 'enemy_boss',
-  'boss_hydra': 'enemy_boss',
-  // Legacy mappings
-  'slime': 'enemy_slime',
-  'bat': 'enemy_bat',
-  'skeleton': 'enemy_skeleton',
-  'elite_orc': 'enemy_orc',
-  'elite_mage': 'enemy_mage',
-  'boss': 'enemy_boss',
+  'boss_flame_lord': 'boss_flame_lord',
+  'boss_frost_giant': 'boss_frost_giant',
+  'boss_thunder_dragon': 'boss_thunder_dragon',
+  'boss_shadow_king': 'boss_shadow_king',
+  'boss_nature_guardian': 'boss_nature_guardian',
+  'boss_golem_lord': 'boss_golem_lord',
+  'boss_fallen_angel': 'boss_fallen_angel',
+  'boss_hydra': 'boss_hydra',
 };
 
 // Element-specific death effect colors
