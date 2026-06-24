@@ -1,16 +1,18 @@
 import Phaser from 'phaser';
-import { Skill, SkillEnhancer, StatBoost, UpgradeOption } from '@/types';
+import { Skill, SkillEnhancer, StatBoost, UpgradeOption, SkillUpgradeData, SkillUpgradeOption as SkillUpgradeOptionType, SkillEvolutionBranch } from '@/types';
 import { EnhancementSystem } from '@/systems/EnhancementSystem';
+import { SkillUpgradeSystem } from '@/systems/SkillUpgradeSystem';
 import { getRandomSkill, cloneSkill } from '@/data/skills';
 import { getElementColor, ELEMENT_NAMES } from '@/data/elements';
 
 /**
  * 升级选择界面
- * 支持三种选项：新技能、技能强化石、属性提升
+ * 支持四种选项：新技能、技能升级、技能强化石、属性提升
  */
 export class UpgradeSelectUI {
   private scene: Phaser.Scene;
   private enhancementSystem: EnhancementSystem;
+  private skillUpgradeSystem: SkillUpgradeSystem;
   private container: Phaser.GameObjects.Container;
   private options: UpgradeOption[] = [];
   private onSelectCallback: () => void;
@@ -18,10 +20,12 @@ export class UpgradeSelectUI {
   constructor(
     scene: Phaser.Scene,
     enhancementSystem: EnhancementSystem,
+    skillUpgradeSystem: SkillUpgradeSystem,
     onSelect: () => void
   ) {
     this.scene = scene;
     this.enhancementSystem = enhancementSystem;
+    this.skillUpgradeSystem = skillUpgradeSystem;
     this.onSelectCallback = onSelect;
     this.container = scene.add.container(0, 0);
     this.container.setDepth(1000);
@@ -99,7 +103,26 @@ export class UpgradeSelectUI {
     const options: UpgradeOption[] = [];
     const player = (this.scene as any).player;
 
-    // 选项1：新技能（如果基础技能槽位未满）
+    // 选项1：技能升级（优先级最高）
+    const upgradableSkills = this.skillUpgradeSystem.getUpgradableSkills(player.skills);
+    if (upgradableSkills.length > 0) {
+      // 随机选一个可升级技能
+      const skill = upgradableSkills[Math.floor(Math.random() * upgradableSkills.length)];
+      const upgradeOptions = this.skillUpgradeSystem.getUpgradeOptions(skill);
+      if (upgradeOptions) {
+        options.push({
+          type: 'skill_upgrade',
+          data: {
+            skillId: skill.id,
+            skillName: skill.name,
+            currentLevel: skill.level,
+            options: upgradeOptions,
+          } as SkillUpgradeData,
+        });
+      }
+    }
+
+    // 选项2：新技能（如果基础技能槽位未满）
     if (player.canLearnBasicSkill()) {
       const currentSkills = player.getAllSkills();
       const existingIds = currentSkills.map((s: Skill) => s.id);
@@ -109,7 +132,7 @@ export class UpgradeSelectUI {
       }
     }
 
-    // 选项2：技能强化石
+    // 选项3：技能强化石
     const enhancerOptions = this.enhancementSystem.getApplicableEnhancersForPlayer();
     if (enhancerOptions.length > 0) {
       // 随机选一个
@@ -120,7 +143,7 @@ export class UpgradeSelectUI {
       });
     }
 
-    // 选项3：属性提升
+    // 选项4：属性提升
     const statBoost = this.enhancementSystem.getAvailableStatBoosts()[
       Math.floor(Math.random() * this.enhancementSystem.getAvailableStatBoosts().length)
     ];
@@ -178,6 +201,14 @@ export class UpgradeSelectUI {
       rarityText = '新技能';
       // 显示元素信息
       elementInfo = skill.elements.map(e => ELEMENT_NAMES[e]).join('·');
+    } else if (option.type === 'skill_upgrade') {
+      const upgradeData = option.data as SkillUpgradeData;
+      color = 0xffcc00;  // 金色
+      title = `${upgradeData.skillName} Lv.${upgradeData.currentLevel}→${upgradeData.currentLevel + 1}`;
+      const optionCount = upgradeData.options.length === 3 ? '进化选择' : '技能升级';
+      description = optionCount;
+      icon = '⬆️';
+      rarityText = '技能升级';
     } else if (option.type === 'skill_enhancer') {
       const enhancer = option.data as SkillEnhancer & { skillId?: string };
       const rarityColors: Record<string, number> = {
@@ -390,6 +421,11 @@ export class UpgradeSelectUI {
         }
         player.addBasicSkill(skill);
       }
+    } else if (option.type === 'skill_upgrade') {
+      // 显示技能升级选择界面
+      const upgradeData = option.data as SkillUpgradeData;
+      this.showSkillUpgradeSelection(upgradeData);
+      return; // 不关闭主界面，等待子选择完成
     } else if (option.type === 'skill_enhancer') {
       const enhancer = option.data as SkillEnhancer & { skillId?: string };
       this.enhancementSystem.applyEnhancer(enhancer, enhancer.skillId);
@@ -398,6 +434,160 @@ export class UpgradeSelectUI {
       this.enhancementSystem.applyStatBoost(boost);
     }
 
+    this.hide();
+    this.onSelectCallback();
+  }
+
+  /**
+   * 显示技能升级选择界面（二选一或三选一）
+   */
+  private showSkillUpgradeSelection(upgradeData: SkillUpgradeData): void {
+    const player = (this.scene as any).player;
+    const skill = player.skills.find((s: Skill) => s.id === upgradeData.skillId);
+    if (!skill) return;
+
+    // 清空当前容器
+    this.container.removeAll(true);
+
+    const width = this.scene.scale.width;
+    const height = this.scene.scale.height;
+
+    // 半透明背景
+    const bg = this.scene.add.rectangle(0, 0, width, height, 0x000000, 0.9);
+    bg.setOrigin(0, 0);
+    this.container.add(bg);
+
+    // 标题
+    const titleFontSize = Math.min(28, width / 20);
+    const title = this.scene.add.text(
+      width / 2,
+      height * 0.1,
+      `${skill.name} Lv.${upgradeData.currentLevel} → Lv.${upgradeData.currentLevel + 1}`,
+      {
+        fontSize: `${titleFontSize}px`,
+        color: '#ffcc00',
+        fontStyle: 'bold',
+      }
+    );
+    title.setOrigin(0.5);
+    this.container.add(title);
+
+    // 子标题
+    const isEvolution = upgradeData.options.length === 3;
+    const subtitle = this.scene.add.text(
+      width / 2,
+      height * 0.16,
+      isEvolution ? '选择进化分支' : '选择强化方向',
+      {
+        fontSize: '16px',
+        color: '#aaaaaa',
+      }
+    );
+    subtitle.setOrigin(0.5);
+    this.container.add(subtitle);
+
+    // 选项卡片
+    const cardWidth = Math.min(150, (width - 60) / upgradeData.options.length);
+    const cardHeight = isEvolution ? 200 : 150;
+    const startX = width / 2 - ((upgradeData.options.length - 1) * (cardWidth + 20)) / 2;
+    const cardY = height / 2;
+
+    upgradeData.options.forEach((opt, index) => {
+      const cardX = startX + index * (cardWidth + 20);
+      this.createUpgradeOptionCard(opt, cardX, cardY, cardWidth, cardHeight, isEvolution, skill);
+    });
+  }
+
+  /**
+   * 创建升级选项卡片
+   */
+  private createUpgradeOptionCard(
+    option: SkillUpgradeOptionType | SkillEvolutionBranch,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    isEvolution: boolean,
+    skill: Skill
+  ): void {
+    const card = this.scene.add.container(x, y);
+    card.setScrollFactor(0);
+    card.setSize(width, height);
+    card.setInteractive({ useHandCursor: true });
+
+    // 稀有度颜色
+    let borderColor = 0xffffff;
+    if (isEvolution && 'rarity' in option) {
+      const rarityColors: Record<string, number> = {
+        epic: 0x0088ff,
+        legendary: 0xaa00ff,
+        mythic: 0xffaa00,
+      };
+      borderColor = rarityColors[option.rarity] || 0xffffff;
+    }
+
+    // 卡片背景
+    const bg = this.scene.add.rectangle(0, 0, width, height, 0x222233, 1);
+    bg.setStrokeStyle(3, borderColor, 1);
+    card.add(bg);
+
+    // 名称
+    const nameFontSize = Math.min(14, width / 10);
+    const nameText = this.scene.add.text(0, -height / 2 + 25, option.name, {
+      fontSize: `${nameFontSize}px`,
+      color: '#ffffff',
+      fontStyle: 'bold',
+    });
+    nameText.setOrigin(0.5);
+    card.add(nameText);
+
+    // 稀有度标签（进化）
+    if (isEvolution && 'rarity' in option) {
+      const rarityText = this.scene.add.text(0, -height / 2 + 45, this.getRarityText(option.rarity), {
+        fontSize: '11px',
+        color: `#${borderColor.toString(16).padStart(6, '0')}`,
+      });
+      rarityText.setOrigin(0.5);
+      card.add(rarityText);
+    }
+
+    // 描述
+    const descFontSize = Math.min(11, width / 14);
+    const descText = this.scene.add.text(0, 10, option.description, {
+      fontSize: `${descFontSize}px`,
+      color: '#cccccc',
+      wordWrap: { width: width - 20 },
+      align: 'center',
+    });
+    descText.setOrigin(0.5);
+    card.add(descText);
+
+    // 交互
+    card.on('pointerover', () => {
+      bg.setStrokeStyle(4, 0xffffff, 1);
+      bg.setFillStyle(0x333344, 1);
+    });
+
+    card.on('pointerout', () => {
+      bg.setStrokeStyle(3, borderColor, 1);
+      bg.setFillStyle(0x222233, 1);
+    });
+
+    card.on('pointerdown', () => {
+      this.applySkillUpgrade(skill, option);
+    });
+
+    this.container.add(card);
+  }
+
+  /**
+   * 应用技能升级
+   */
+  private applySkillUpgrade(skill: Skill, option: SkillUpgradeOptionType | SkillEvolutionBranch): void {
+    // 使用 SkillUpgradeSystem 应用升级
+    this.skillUpgradeSystem.applyUpgrade(skill, option.id);
+
+    // 关闭界面
     this.hide();
     this.onSelectCallback();
   }

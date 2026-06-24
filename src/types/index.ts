@@ -58,6 +58,61 @@ export interface SkillEvolution {
   };
 }
 
+// ==================== 技能升级树系统 ====================
+
+// 技能升级选项（Lv2-Lv4）
+export interface SkillUpgradeOption {
+  id: string;
+  name: string;
+  description: string;
+  level: number;  // 2, 3, 4
+  modifiers?: {
+    damage?: number;      // 如 0.3 = +30%
+    range?: number;
+    cooldown?: number;
+    projectileCount?: number;
+    speed?: number;
+  };
+  effectAdd?: SkillEffect;
+  effectBoost?: {
+    type: string;
+    valueMultiplier?: number;
+    durationMultiplier?: number;
+  };
+  specialBehavior?: string;  // 如 "pierce:2", "split:2"
+}
+
+// 技能进化分支（Lv5）
+export interface SkillEvolutionBranch {
+  id: string;
+  name: string;
+  description: string;
+  rarity: 'epic' | 'legendary' | 'mythic';
+  modifiers?: {
+    damage?: number;
+    range?: number;
+    cooldown?: number;
+    projectileCount?: number;
+    speed?: number;
+  };
+  effects?: SkillEffect[];
+  specialBehavior?: string;
+  visualChange?: {
+    color?: number;
+    scale?: number;
+    particleEffect?: string;
+  };
+}
+
+// 技能升级树
+export interface SkillUpgradeTree {
+  skillId: string;
+  upgradeOptions: {
+    [level: number]: [SkillUpgradeOption, SkillUpgradeOption];  // 每级两个选项
+  };
+  evolutionBranches: [SkillEvolutionBranch, SkillEvolutionBranch, SkillEvolutionBranch];  // Lv5三选一
+}
+
 export interface Skill {
   id: string;
   name: string;
@@ -89,6 +144,10 @@ export interface Skill {
   chainDamageDecay?: number;
   // 稀有度（兼容旧系统）
   rarity?: Rarity;
+  // 技能升级系统
+  selectedUpgrades?: string[];  // 已选升级选项ID列表
+  evolutionId?: string;         // 已选进化分支ID（Lv5时设置）
+  specialBehaviors?: string[];  // 特殊行为列表
 }
 
 // ==================== 技能强化石（旧系统兼容）====================
@@ -116,11 +175,19 @@ export interface StatBoost {
 }
 
 // 升级选项类型
-export type UpgradeOptionType = 'new_skill' | 'skill_enhancer' | 'stat_boost';
+export type UpgradeOptionType = 'new_skill' | 'skill_upgrade' | 'skill_enhancer' | 'stat_boost';
+
+// 技能升级数据
+export interface SkillUpgradeData {
+  skillId: string;
+  skillName: string;
+  currentLevel: number;
+  options: (SkillUpgradeOption | SkillEvolutionBranch)[];
+}
 
 export interface UpgradeOption {
   type: UpgradeOptionType;
-  data: Skill | SkillEnhancer | StatBoost;
+  data: Skill | SkillEnhancer | StatBoost | SkillUpgradeData;
 }
 
 // ==================== 符文系统（兼容旧系统）====================

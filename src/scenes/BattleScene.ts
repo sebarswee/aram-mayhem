@@ -7,6 +7,7 @@ import { SkillSystem } from '@/systems/SkillSystem';
 import { CollisionSystem } from '@/systems/CollisionSystem';
 import { ExpSystem } from '@/systems/ExpSystem';
 import { EnhancementSystem } from '@/systems/EnhancementSystem';
+import { SkillUpgradeSystem } from '@/systems/SkillUpgradeSystem';
 import { ElementSystem } from '@/systems/ElementSystem';
 import { DropSystem } from '@/systems/DropSystem';
 import { HUD } from '@/ui/HUD';
@@ -36,6 +37,7 @@ export class BattleScene extends Phaser.Scene {
   private collisionSystem!: CollisionSystem;
   private expSystem!: ExpSystem;
   private enhancementSystem!: EnhancementSystem;
+  private skillUpgradeSystem!: SkillUpgradeSystem;
   private elementSystem!: ElementSystem;
   private dropSystem!: DropSystem;
 
@@ -112,6 +114,7 @@ export class BattleScene extends Phaser.Scene {
     this.collisionSystem.setDropSystem(this.dropSystem);
     this.expSystem = new ExpSystem(this, this.gameState);
     this.enhancementSystem = new EnhancementSystem(this, this.player);
+    this.skillUpgradeSystem = new SkillUpgradeSystem();
 
     // 初始化UI
     this.hud = new HUD(this, this.player, this.gameState, this.expSystem);
@@ -122,7 +125,7 @@ export class BattleScene extends Phaser.Scene {
     });
 
     // 升级选择界面
-    this.upgradeSelectUI = new UpgradeSelectUI(this, this.enhancementSystem, () => {
+    this.upgradeSelectUI = new UpgradeSelectUI(this, this.enhancementSystem, this.skillUpgradeSystem, () => {
       this.resumeGame();
     });
 
