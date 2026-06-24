@@ -229,8 +229,11 @@ export class BattleScene extends Phaser.Scene {
     });
 
     // 羁绊触发通知 - 连接 SkillSystem 和 HUD
-    this.skillSystem.getSynergyEvents().on('synergy_triggered', (data: { synergy: SynergyResult }) => {
-      this.hud.showSynergyNotification(data.synergy);
+    this.skillSystem.getSynergyEvents().on('synergy_triggered', (data: { synergy: SynergyResult; enemyPosition?: { x: number; y: number } }) => {
+      // 在敌人位置显示羁绊名称
+      if (data.enemyPosition) {
+        this.showSynergyAtPosition(data.synergy, data.enemyPosition.x, data.enemyPosition.y);
+      }
     });
   }
 
@@ -290,6 +293,32 @@ export class BattleScene extends Phaser.Scene {
       delay: 2000,
       duration: 500,
       onComplete: () => container.destroy(),
+    });
+  }
+
+  /**
+   * 在敌人位置显示羁绊名称
+   */
+  private showSynergyAtPosition(synergy: SynergyResult, x: number, y: number): void {
+    // 创建羁绊名称文字
+    const text = this.add.text(x, y - 20, synergy.name, {
+      fontSize: '16px',
+      color: '#ffcc00',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3,
+    });
+    text.setOrigin(0.5, 0.5);
+    text.setDepth(150);
+
+    // 上浮并淡出动画
+    this.tweens.add({
+      targets: text,
+      y: y - 60,
+      alpha: 0,
+      duration: 800,
+      ease: 'Power2',
+      onComplete: () => text.destroy(),
     });
   }
 
