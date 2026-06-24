@@ -374,12 +374,45 @@ export class BattleScene extends Phaser.Scene {
   private resumeGame(): void {
     this.gameState.isUpgrading = false;
 
-    // 取消玩家无敌
-    this.player.isInvincible = false;
+    // 先推开靠近玩家的敌人，防止卡住
+    this.pushEnemiesAwayFromPlayer();
 
-    // 恢复所有系统
-    this.physics.resume();
+    // 先重置敌人状态（速度为0），再恢复全局物理
     this.enemySystem.resume();
+    this.physics.resume();
+
+    // 最后取消玩家无敌
+    this.player.isInvincible = false;
+  }
+
+  /**
+   * 推开靠近玩家的敌人，防止恢复后玩家卡在敌人体内
+   */
+  private pushEnemiesAwayFromPlayer(): void {
+    const minDistance = 50; // 最小安全距离
+    const pushForce = 100;
+
+    const enemies = this.enemySystem.getEnemies().getChildren() as any[];
+    for (const enemy of enemies) {
+      if (!enemy.active) continue;
+
+      const distance = Phaser.Math.Distance.Between(
+        this.player.x, this.player.y,
+        enemy.x, enemy.y
+      );
+
+      if (distance < minDistance) {
+        // 计算推开方向（从玩家指向敌人）
+        const angle = Phaser.Math.Angle.Between(
+          this.player.x, this.player.y,
+          enemy.x, enemy.y
+        );
+        // 推到最小距离外
+        const pushDistance = minDistance - distance + 10;
+        enemy.x += Math.cos(angle) * pushDistance;
+        enemy.y += Math.sin(angle) * pushDistance;
+      }
+    }
   }
 
   private gameOver(): void {

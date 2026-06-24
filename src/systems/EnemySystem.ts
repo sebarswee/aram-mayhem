@@ -375,7 +375,10 @@ export class EnemySystem {
       this.spawnTimer.paused = false;
     }
     this.enemies.getChildren().forEach((enemy) => {
-      ((enemy as EnemyEntity).body as Phaser.Physics.Arcade.Body).enable = true;
+      const body = ((enemy as EnemyEntity).body as Phaser.Physics.Arcade.Body);
+      // 重置速度，防止残留速度导致敌人突然冲向玩家
+      body.setVelocity(0, 0);
+      body.enable = true;
     });
   }
 
