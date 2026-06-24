@@ -23,6 +23,7 @@ export class VirtualJoystick {
   private touchZone: Phaser.GameObjects.Zone | null = null;
   private isDisabled: boolean = false;
   // 绑定的事件处理器，用于精确移除
+  private boundPointerDown: (pointer: Phaser.Input.Pointer) => void;
   private boundPointerMove: (pointer: Phaser.Input.Pointer) => void;
   private boundPointerUp: (pointer: Phaser.Input.Pointer) => void;
 
@@ -31,6 +32,7 @@ export class VirtualJoystick {
     this.mode = config.mode;
 
     // 绑定事件处理器
+    this.boundPointerDown = this.handlePointerDown.bind(this);
     this.boundPointerMove = this.handlePointerMove.bind(this);
     this.boundPointerUp = this.handlePointerUp.bind(this);
 
@@ -71,27 +73,29 @@ export class VirtualJoystick {
         this.updatePosition(pointer.x, pointer.y);
       });
     } else {
-      // 跟随模式：触摸左半屏任意位置，摇杆出现在手指位置
-      this.touchZone = this.scene.add
-        .zone(0, 0, width / 2, height)
-        .setOrigin(0, 0)
-        .setInteractive();
-
-      this.touchZone.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-        if (this.isDisabled) return;
-        this.pointer = pointer;
-        // 摇杆出现在手指位置
-        this.baseX = pointer.x;
-        this.baseY = pointer.y;
-        this.base.setPosition(this.baseX, this.baseY);
-        this.thumb.setPosition(this.baseX, this.baseY);
-        this.updatePosition(pointer.x, pointer.y);
-      });
+      // 跟随模式：直接监听全局触摸事件，判断是否在左半屏
+      // 不使用 Zone，因为它可能有问题
+      this.scene.input.on('pointerdown', this.boundPointerDown);
     }
 
     // 使用绑定的事件处理器
     this.scene.input.on('pointermove', this.boundPointerMove);
     this.scene.input.on('pointerup', this.boundPointerUp);
+  }
+
+  private handlePointerDown(pointer: Phaser.Input.Pointer): void {
+    if (this.isDisabled) return;
+    const width = this.scene.scale.width;
+    // 只响应左半屏的触摸
+    if (pointer.x <= width / 2) {
+      this.pointer = pointer;
+      // 摇杆出现在手指位置
+      this.baseX = pointer.x;
+      this.baseY = pointer.y;
+      this.base.setPosition(this.baseX, this.baseY);
+      this.thumb.setPosition(this.baseX, this.baseY);
+      this.updatePosition(pointer.x, pointer.y);
+    }
   }
 
   private handlePointerMove(pointer: Phaser.Input.Pointer): void {
@@ -160,6 +164,8 @@ export class VirtualJoystick {
     this.thumb.setVisible(visible);
     if (this.touchZone) {
       this.touchZone.setVisible(visible);
+      // touchZone 需要保持交互，即使不可见
+      // 不调用 disableInteractive()，只控制可见性
     }
   }
 
@@ -171,6 +177,8 @@ export class VirtualJoystick {
       this.touchZone.destroy();
       this.touchZone = null;
     }
+    // 移除 follow 模式的 pointerdown 监听
+    this.scene.input.off('pointerdown', this.boundPointerDown);
     this.base.removeAllListeners();
     this.setupEvents();
   }
@@ -184,6 +192,7 @@ export class VirtualJoystick {
 
   destroy(): void {
     // 精确移除绑定的事件监听器
+    this.scene.input.off('pointerdown', this.boundPointerDown);
     this.scene.input.off('pointermove', this.boundPointerMove);
     this.scene.input.off('pointerup', this.boundPointerUp);
     this.base.destroy();
