@@ -814,24 +814,26 @@ export class CollisionSystem {
     // Trigger enemy attack abilities
     this.triggerEnemyAttackAbilities(enem, ply);
 
-    // Knockback enemy
-    const angle = Phaser.Math.Angle.Between(
-      ply.x,
-      ply.y,
-      enem.x,
-      enem.y
-    );
-    enem.setVelocity(
-      Math.cos(angle) * 200,
-      Math.sin(angle) * 200
-    );
+    // Knockback enemy (only if still active)
+    if (enem.active && enem.body) {
+      const angle = Phaser.Math.Angle.Between(
+        ply.x,
+        ply.y,
+        enem.x,
+        enem.y
+      );
+      enem.setVelocity(
+        Math.cos(angle) * 200,
+        Math.sin(angle) * 200
+      );
 
-    // Resume chasing after brief invulnerability
-    this.scene.time.delayedCall(300, () => {
-      if (enem.active) {
-        enem.setTarget(ply);
-      }
-    });
+      // Resume chasing after brief invulnerability
+      this.scene.time.delayedCall(300, () => {
+        if (enem.active && enem.body) {
+          enem.setTarget(ply);
+        }
+      });
+    }
   }
 
   /**
