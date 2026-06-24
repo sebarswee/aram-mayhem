@@ -213,8 +213,9 @@ export class HUD {
       container.add(keyText);
     }
 
-    // 技能名称（显示在图标下方）
-    const nameText = this.scene.add.text(0, iconSize / 2 + 8, skill.name, {
+    // 技能名称（显示在图标下方，包含等级）
+    const levelText = skill.level > 1 ? ` Lv.${skill.level}` : '';
+    const nameText = this.scene.add.text(0, iconSize / 2 + 8, `${skill.name}${levelText}`, {
       fontSize: '11px',
       color: isUltimate ? '#ffcc00' : '#ffffff',
     });
@@ -222,6 +223,30 @@ export class HUD {
     nameText.setScrollFactor(0);
     nameText.setDepth(101);
     container.add(nameText);
+
+    // 等级徽章（显示在右上角，Lv.2+ 才显示）
+    if (skill.level > 1) {
+      const badgeBg = this.scene.add.graphics();
+      const badgeSize = 16;
+      badgeBg.fillStyle(this.getLevelColor(skill.level), 1);
+      badgeBg.fillCircle(iconSize / 2 - badgeSize / 2, -iconSize / 2 + badgeSize / 2, badgeSize / 2);
+      badgeBg.setDepth(103);
+      container.add(badgeBg);
+
+      const badgeText = this.scene.add.text(
+        iconSize / 2 - badgeSize / 2,
+        -iconSize / 2 + badgeSize / 2,
+        `${skill.level}`,
+        {
+          fontSize: '10px',
+          color: '#ffffff',
+          fontStyle: 'bold',
+        }
+      );
+      badgeText.setOrigin(0.5, 0.5);
+      badgeText.setDepth(104);
+      container.add(badgeText);
+    }
 
     // 交互区域（悬停放大效果 + 大招点击）
     const hitArea = this.scene.add.rectangle(0, 0, iconSize, iconSize, 0x000000, 0);
@@ -272,6 +297,20 @@ export class HUD {
    */
   private getSkillColor(skill: Skill): number {
     return getElementColor(skill.elements[0]);
+  }
+
+  /**
+   * 获取等级对应颜色
+   */
+  private getLevelColor(level: number): number {
+    const colors: Record<number, number> = {
+      1: 0xffffff, // 白色
+      2: 0x44ff44, // 绿色
+      3: 0x0088ff, // 蓝色
+      4: 0xaa00ff, // 紫色
+      5: 0xffaa00, // 橙色（进化）
+    };
+    return colors[level] || 0xffffff;
   }
 
   /**
@@ -472,9 +511,10 @@ export class HUD {
       return;
     }
 
-    // 检查技能ID是否变化
+    // 检查技能ID或等级是否变化
     for (let i = 0; i < currentSkills.length; i++) {
-      if (currentSkills[i].id !== this.skillUIs[i].skill.id) {
+      if (currentSkills[i].id !== this.skillUIs[i].skill.id ||
+          currentSkills[i].level !== this.skillUIs[i].skill.level) {
         this.rebuildSkillUIs();
         return;
       }
