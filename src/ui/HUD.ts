@@ -121,93 +121,130 @@ export class HUD {
    * 创建技能UI显示
    */
   private createSkillUI(width: number, height: number): void {
-    const skills = this.player.skills;
-    if (!skills || skills.length === 0) return;
+    const allSkills = this.player.getAllSkills();
+    const basicSkills = this.player.skills;
+    const ultimateSkills = this.player.ultimateSkills;
+
+    if (!basicSkills || basicSkills.length === 0) return;
 
     const iconSize = Math.min(48, width * 0.1);
     const spacing = Math.min(10, width * 0.02);
-    const startX = width / 2 - ((skills.length - 1) * (iconSize + spacing)) / 2;
+
+    // 基础技能：居中显示在底部
+    const startX = width / 2 - ((basicSkills.length - 1) * (iconSize + spacing)) / 2;
     const y = height - iconSize - 40; // 给技能名称留出空间
 
-    skills.forEach((skill, index) => {
+    basicSkills.forEach((skill, index) => {
       const x = startX + index * (iconSize + spacing);
-      const isUltimate = skill.type === 'ultimate';
+      this.createSkillIcon(skill, x, y, iconSize, false, index);
+    });
 
-      // 创建容器
-      const container = this.scene.add.container(x, y);
-      container.setScrollFactor(0);
-      container.setDepth(100);
+    // 大招：显示在右侧，带按键提示
+    ultimateSkills.forEach((skill, index) => {
+      const x = width - iconSize - 20;
+      const ultimateY = height - iconSize * (2.5 - index * 1.5) - 20;
+      this.createSkillIcon(skill, x, ultimateY, iconSize, true, index);
+    });
+  }
 
-      // 技能图标背景
-      const bg = this.scene.add.graphics();
-      bg.fillStyle(0x222233, 1);
-      bg.fillRoundedRect(-iconSize / 2, -iconSize / 2, iconSize, iconSize, 6);
+  /**
+   * 创建单个技能图标
+   */
+  private createSkillIcon(
+    skill: Skill,
+    x: number,
+    y: number,
+    iconSize: number,
+    isUltimate: boolean,
+    index: number
+  ): void {
+    // 创建容器
+    const container = this.scene.add.container(x, y);
+    container.setScrollFactor(0);
+    container.setDepth(100);
 
-      // 大招金色边框
-      if (isUltimate) {
-        bg.lineStyle(3, 0xffcc00, 1);
-      } else {
-        bg.lineStyle(2, this.getSkillColor(skill), 0.8);
-      }
-      bg.strokeRoundedRect(-iconSize / 2, -iconSize / 2, iconSize, iconSize, 6);
-      container.add(bg);
+    // 技能图标背景
+    const bg = this.scene.add.graphics();
+    bg.fillStyle(0x222233, 1);
+    bg.fillRoundedRect(-iconSize / 2, -iconSize / 2, iconSize, iconSize, 6);
 
-      // 技能图标
-      const iconKey = `skill_${skill.id}`;
-      // 检查纹理是否存在，如果不存在则使用默认图标
-      const textureExists = this.scene.textures.exists(iconKey);
-      const icon = this.scene.add.image(0, 0, textureExists ? iconKey : 'player');
-      icon.setDisplaySize(iconSize - 8, iconSize - 8);
-      container.add(icon);
+    // 大招金色边框
+    if (isUltimate) {
+      bg.lineStyle(3, 0xffcc00, 1);
+    } else {
+      bg.lineStyle(2, this.getSkillColor(skill), 0.8);
+    }
+    bg.strokeRoundedRect(-iconSize / 2, -iconSize / 2, iconSize, iconSize, 6);
+    container.add(bg);
 
-      // 冷却遮罩
-      const cooldownOverlay = this.scene.add.graphics();
-      cooldownOverlay.fillStyle(0x000000, 0.7);
-      container.add(cooldownOverlay);
+    // 技能图标
+    const iconKey = `skill_${skill.id}`;
+    // 检查纹理是否存在，如果不存在则使用默认图标
+    const textureExists = this.scene.textures.exists(iconKey);
+    const icon = this.scene.add.image(0, 0, textureExists ? iconKey : 'player');
+    icon.setDisplaySize(iconSize - 8, iconSize - 8);
+    container.add(icon);
 
-      // 冷却文字
-      const cooldownText = this.scene.add.text(0, 0, '', {
-        fontSize: `${Math.min(16, iconSize * 0.35)}px`,
-        color: '#ffffff',
+    // 冷却遮罩
+    const cooldownOverlay = this.scene.add.graphics();
+    cooldownOverlay.fillStyle(0x000000, 0.7);
+    container.add(cooldownOverlay);
+
+    // 冷却文字
+    const cooldownText = this.scene.add.text(0, 0, '', {
+      fontSize: `${Math.min(16, iconSize * 0.35)}px`,
+      color: '#ffffff',
+      fontStyle: 'bold',
+    });
+    cooldownText.setOrigin(0.5, 0.5);
+    cooldownText.setDepth(101);
+    container.add(cooldownText);
+
+    // 大招按键提示
+    if (isUltimate) {
+      const keyText = this.scene.add.text(0, -iconSize / 2 - 12, index === 0 ? '[Q]' : '[E]', {
+        fontSize: '12px',
+        color: '#ffcc00',
         fontStyle: 'bold',
       });
-      cooldownText.setOrigin(0.5, 0.5);
-      cooldownText.setDepth(101);
-      container.add(cooldownText);
+      keyText.setOrigin(0.5, 0.5);
+      keyText.setScrollFactor(0);
+      keyText.setDepth(101);
+      container.add(keyText);
+    }
 
-      // 技能名称（显示在图标下方）
-      const nameText = this.scene.add.text(0, iconSize / 2 + 8, skill.name, {
-        fontSize: `${Math.min(11, width / 55)}px`,
-        color: isUltimate ? '#ffcc00' : '#ffffff',
-      });
-      nameText.setOrigin(0.5, 0);
-      nameText.setScrollFactor(0);
-      nameText.setDepth(101);
-      container.add(nameText);
+    // 技能名称（显示在图标下方）
+    const nameText = this.scene.add.text(0, iconSize / 2 + 8, skill.name, {
+      fontSize: '11px',
+      color: isUltimate ? '#ffcc00' : '#ffffff',
+    });
+    nameText.setOrigin(0.5, 0);
+    nameText.setScrollFactor(0);
+    nameText.setDepth(101);
+    container.add(nameText);
 
-      // 交互区域（悬停放大效果）
-      const hitArea = this.scene.add.rectangle(0, 0, iconSize, iconSize, 0x000000, 0);
-      hitArea.setInteractive({ useHandCursor: true });
-      hitArea.setScrollFactor(0);
-      hitArea.setDepth(102);
+    // 交互区域（悬停放大效果）
+    const hitArea = this.scene.add.rectangle(0, 0, iconSize, iconSize, 0x000000, 0);
+    hitArea.setInteractive({ useHandCursor: true });
+    hitArea.setScrollFactor(0);
+    hitArea.setDepth(102);
 
-      // 悬停放大效果
-      hitArea.on('pointerover', () => {
-        container.setScale(1.1);
-      });
-      hitArea.on('pointerout', () => {
-        container.setScale(1);
-      });
-      container.add(hitArea);
+    // 悬停放大效果
+    hitArea.on('pointerover', () => {
+      container.setScale(1.1);
+    });
+    hitArea.on('pointerout', () => {
+      container.setScale(1);
+    });
+    container.add(hitArea);
 
-      this.skillUIs.push({
-        container,
-        icon,
-        cooldownOverlay,
-        cooldownText,
-        nameText,
-        skill,
-      });
+    this.skillUIs.push({
+      container,
+      icon,
+      cooldownOverlay,
+      cooldownText,
+      nameText,
+      skill,
     });
   }
 
@@ -274,7 +311,7 @@ export class HUD {
    * 更新技能UI（检测技能变化）
    */
   private updateSkillUIs(): void {
-    const currentSkills = this.player.skills;
+    const currentSkills = this.player.getAllSkills();
 
     // 检查技能数量是否变化
     if (currentSkills.length !== this.skillUIs.length) {

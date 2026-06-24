@@ -20,7 +20,13 @@ const DEBUFF_TYPES = ['burn', 'poison', 'slow', 'root'];
 export class Player extends Phaser.Physics.Arcade.Sprite {
   public stats: PlayerStats;
   public skills: Skill[] = [];
+  public ultimateSkills: Skill[] = []; // Separate slot for ultimate skills
   public skillCooldowns: Map<string, number> = new Map();
+
+  // Skill slot limits
+  public readonly MAX_BASIC_SKILLS = 4;
+  public readonly MAX_ULTIMATE_SKILLS = 2;
+
   private lastDamageTime: number = 0;
   private glowSprite: Phaser.GameObjects.Sprite | null = null;
   public isInvincible: boolean = false;
@@ -89,6 +95,59 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.glowSprite.setScale(1.3);
     this.glowSprite.setDepth(49);
   }
+
+  // ==================== Skill Management ====================
+
+  /**
+   * Check if player can learn a new basic skill
+   */
+  canLearnBasicSkill(): boolean {
+    return this.skills.filter(s => s.type !== 'ultimate').length < this.MAX_BASIC_SKILLS;
+  }
+
+  /**
+   * Check if player can learn a new ultimate skill
+   */
+  canLearnUltimateSkill(): boolean {
+    return this.ultimateSkills.length < this.MAX_ULTIMATE_SKILLS;
+  }
+
+  /**
+   * Add a basic skill to the player
+   * Returns true if skill was added, false if slot is full
+   */
+  addBasicSkill(skill: Skill): boolean {
+    if (!this.canLearnBasicSkill()) {
+      console.warn('[Player] Basic skill slots full (max 4)');
+      return false;
+    }
+    this.skills.push(skill);
+    this.skillCooldowns.set(skill.id, 0);
+    return true;
+  }
+
+  /**
+   * Add an ultimate skill to the player
+   * Returns true if skill was added, false if slot is full
+   */
+  addUltimateSkill(skill: Skill): boolean {
+    if (!this.canLearnUltimateSkill()) {
+      console.warn('[Player] Ultimate skill slots full (max 2)');
+      return false;
+    }
+    this.ultimateSkills.push(skill);
+    this.skillCooldowns.set(skill.id, 0);
+    return true;
+  }
+
+  /**
+   * Get all skills (basic + ultimate) for display
+   */
+  getAllSkills(): Skill[] {
+    return [...this.skills, ...this.ultimateSkills];
+  }
+
+  // ==================== Movement ====================
 
   move(velocityX: number, velocityY: number): void {
     // Root prevents movement

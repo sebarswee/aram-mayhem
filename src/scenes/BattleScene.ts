@@ -118,6 +118,9 @@ export class BattleScene extends Phaser.Scene {
     // 设置事件监听
     this.setupEvents();
 
+    // 设置大招按键监听
+    this.setupUltimateKeys();
+
     // 显示开局技能选择
     this.showStartingSkillSelection();
   }
@@ -150,8 +153,7 @@ export class BattleScene extends Phaser.Scene {
     this.physics.resume();
 
     // 添加技能到玩家
-    this.player.skills.push(skill);
-    this.player.skillCooldowns.set(skill.id, 0);
+    this.player.addBasicSkill(skill);
 
     // 开始第一波
     this.startWave(1);
@@ -183,6 +185,25 @@ export class BattleScene extends Phaser.Scene {
     // 玩家死亡
     this.player.on('death', () => {
       this.gameOver();
+    });
+  }
+
+  /**
+   * 设置大招按键监听 (Q和E)
+   */
+  private setupUltimateKeys(): void {
+    // Q键 - 第一个大招
+    this.input.keyboard?.on('keydown-Q', () => {
+      if (!this.gameState.isSelectingSkill && !this.gameState.isPaused) {
+        this.skillSystem.useUltimateByIndex(0, this.enemySystem.getEnemies());
+      }
+    });
+
+    // E键 - 第二个大招
+    this.input.keyboard?.on('keydown-E', () => {
+      if (!this.gameState.isSelectingSkill && !this.gameState.isPaused) {
+        this.skillSystem.useUltimateByIndex(1, this.enemySystem.getEnemies());
+      }
     });
   }
 

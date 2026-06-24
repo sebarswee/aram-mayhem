@@ -431,14 +431,8 @@ export class SkillSystem {
     // 更新技能冷却
     this.player.update(delta);
 
-    // 检查每个技能是否可以释放
-    // Note: Ultimate skills are NOT auto-cast; they must be triggered via useUltimate()
+    // 检查每个基础技能是否可以释放（大招需要手动触发）
     for (const skill of this.player.skills) {
-      // Skip ultimate skills for auto-cast
-      if (skill.type === 'ultimate') {
-        continue;
-      }
-
       const cooldown = this.player.skillCooldowns.get(skill.id) || 0;
 
       if (cooldown <= 0) {
@@ -452,6 +446,40 @@ export class SkillSystem {
   }
 
   /**
+   * Manually cast an ultimate skill by index (0 or 1)
+   * Returns true if the skill was cast successfully, false otherwise
+   */
+  useUltimateByIndex(index: number, enemies: Phaser.Physics.Arcade.Group): boolean {
+    if (!this.player.active) return false;
+
+    const ultimate = this.player.ultimateSkills[index];
+    if (!ultimate) {
+      console.warn(`[SkillSystem] No ultimate skill at index ${index}`);
+      return false;
+    }
+
+    // Check cooldown
+    const cooldown = this.player.skillCooldowns.get(ultimate.id) || 0;
+    if (cooldown > 0) {
+      console.log(`[SkillSystem] Ultimate ${ultimate.id} is on cooldown: ${cooldown}ms`);
+      return false;
+    }
+
+    // Find target for ultimate
+    const target = this.findTarget(ultimate, enemies);
+
+    if (!target) {
+      console.log(`[SkillSystem] No valid target for ultimate`);
+      return false;
+    }
+
+    // Cast the ultimate
+    this.castSkill(ultimate, target);
+    console.log(`[SkillSystem] Ultimate ${ultimate.name} cast!`);
+    return true;
+  }
+
+  /**
    * Manually cast an ultimate skill by skill ID
    * Returns true if the skill was cast successfully, false otherwise
    * @param skillId The ID of the ultimate skill to cast
@@ -460,16 +488,10 @@ export class SkillSystem {
   useUltimate(skillId: string, enemies: Phaser.Physics.Arcade.Group): boolean {
     if (!this.player.active) return false;
 
-    // Find the skill
-    const skill = this.player.skills.find(s => s.id === skillId);
+    // Find the skill in ultimate skills array
+    const skill = this.player.ultimateSkills.find(s => s.id === skillId);
     if (!skill) {
-      console.warn(`[SkillSystem] Skill not found: ${skillId}`);
-      return false;
-    }
-
-    // Verify it's an ultimate
-    if (skill.type !== 'ultimate') {
-      console.warn(`[SkillSystem] Skill ${skillId} is not an ultimate skill`);
+      console.warn(`[SkillSystem] Ultimate skill not found: ${skillId}`);
       return false;
     }
 

@@ -93,10 +93,10 @@ export class UpgradeSelectUI {
   private generateOptions(): UpgradeOption[] {
     const options: UpgradeOption[] = [];
     const player = (this.scene as any).player;
-    const currentSkills = player?.skills || [];
 
-    // 选项1：新技能（如果技能数量少于6个）
-    if (currentSkills.length < 6) {
+    // 选项1：新技能（如果基础技能槽位未满）
+    if (player.canLearnBasicSkill()) {
+      const currentSkills = player.getAllSkills();
       const existingIds = currentSkills.map((s: Skill) => s.id);
       const newSkill = getRandomSkill(existingIds);
       if (newSkill) {
@@ -369,8 +369,21 @@ export class UpgradeSelectUI {
 
     if (option.type === 'new_skill') {
       const skill = option.data as Skill;
-      player.skills.push(skill);
-      player.skillCooldowns.set(skill.id, 0);
+
+      // Check skill type and available slots
+      if (skill.type === 'ultimate') {
+        if (!player.canLearnUltimateSkill()) {
+          console.warn('[UpgradeSelectUI] Ultimate skill slots full');
+          return;
+        }
+        player.addUltimateSkill(skill);
+      } else {
+        if (!player.canLearnBasicSkill()) {
+          console.warn('[UpgradeSelectUI] Basic skill slots full');
+          return;
+        }
+        player.addBasicSkill(skill);
+      }
     } else if (option.type === 'skill_enhancer') {
       const enhancer = option.data as SkillEnhancer & { skillId?: string };
       this.enhancementSystem.applyEnhancer(enhancer, enhancer.skillId);

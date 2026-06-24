@@ -82,9 +82,15 @@ export class EnhancementSystem {
     const ultimate = getRandomUltimate(this.unlockedUltimates);
     if (!ultimate) return null;
 
+    // Check if player has room for another ultimate
+    if (!this.player.canLearnUltimateSkill()) {
+      console.warn('[EnhancementSystem] Ultimate skill slots full');
+      return null;
+    }
+
     this.unlockedUltimates.push(ultimate.id);
 
-    // 克隆大招并添加到玩家技能列表
+    // 克隆大招并添加到玩家大招槽位
     const ultimateCopy = {
       ...ultimate,
       effects: [...ultimate.effects],
@@ -92,8 +98,7 @@ export class EnhancementSystem {
       baseValues: { ...ultimate.baseValues },
     };
 
-    this.player.skills.push(ultimateCopy);
-    this.player.skillCooldowns.set(ultimate.id, 0);
+    this.player.addUltimateSkill(ultimateCopy);
 
     return ultimateCopy;
   }
