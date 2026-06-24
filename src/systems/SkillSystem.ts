@@ -343,18 +343,23 @@ export class SkillSystem {
 
       case 'tick_speed_double':
         // Double the tick speed of all DoT effects on enemy
-        // This means DoTs will tick twice as fast, dealing damage more frequently
-        for (const effect of enemy.statusEffects) {
-          if (effect.type === 'burn' || effect.type === 'poison') {
-            // Reduce duration by half (same total damage, faster ticks)
-            effect.duration = Math.floor(effect.duration / 2);
-            effect.remainingTime = Math.floor(effect.remainingTime / 2);
-          }
-        }
-        // Visual feedback
-        enemy.setTint(0x88ff88);
-        this.scene.time.delayedCall(200, () => {
-          if (enemy.active) enemy.clearTint();
+        // Add tick_speed_up status effect which doubles tick rate
+        enemy.addStatusEffect({
+          type: 'tick_speed_up',
+          value: 2.0,
+          duration: synergy.duration || 5000,
+          remainingTime: synergy.duration || 5000,
+          source: 'synergy_tick_speed_double',
+        });
+        // Visual feedback - cyan pulse
+        const cyanFlash = this.scene.add.circle(enemy.x, enemy.y, 20, 0x00ffff, 0.6);
+        cyanFlash.setDepth(100);
+        this.scene.tweens.add({
+          targets: cyanFlash,
+          alpha: 0,
+          scale: 1.5,
+          duration: 300,
+          onComplete: () => cyanFlash.destroy(),
         });
         break;
 
@@ -365,9 +370,8 @@ export class SkillSystem {
 
       case 'defense_reduce':
         // Reduce enemy defense - make them take more damage from subsequent attacks
-        // Apply a debuff that increases damage taken
         enemy.addStatusEffect({
-          type: 'root', // Re-purpose as defense break marker
+          type: 'defense_break',
           value: synergy.value || 0.5, // 50% more damage taken
           duration: synergy.duration || 5000,
           remainingTime: synergy.duration || 5000,
@@ -375,8 +379,6 @@ export class SkillSystem {
         });
         // Immediate damage
         enemy.takeDamage(baseDamage);
-        // Visual
-        enemy.setTint(0xff8888);
         break;
 
       case 'heal_zone':

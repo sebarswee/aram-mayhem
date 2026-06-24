@@ -4,7 +4,7 @@ import { COUNTER_RELATIONS, ELEMENT_COLORS, getCounterBonus } from '@/data/eleme
 
 // Status effect interface
 export interface StatusEffect {
-  type: 'burn' | 'freeze' | 'stun' | 'poison' | 'slow' | 'root';
+  type: 'burn' | 'freeze' | 'stun' | 'poison' | 'slow' | 'root' | 'defense_break' | 'tick_speed_up';
   value: number;
   duration: number;
   remainingTime: number;
@@ -65,6 +65,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
   // Status effects
   public statusEffects: StatusEffect[] = [];
+
+  // Tick speed multiplier for DoT effects (default 1.0, 2.0 = double speed)
+  public tickSpeedMultiplier: number = 1.0;
 
   // Death explosion params (set by synergy effects)
   public deathExplosionParams?: { damage: number; radius: number };
@@ -247,12 +250,18 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private updateStatusEffects(time: number): void {
     const delta = this.scene.game.loop.delta;
 
+    // Check for tick_speed_up effect and update multiplier
+    const tickSpeedUp = this.statusEffects.find(e => e.type === 'tick_speed_up');
+    this.tickSpeedMultiplier = tickSpeedUp ? 2.0 : 1.0;
+
     this.statusEffects = this.statusEffects.filter(effect => {
       effect.remainingTime -= delta;
 
       // Process tick-based effects
       if (effect.type === 'burn' || effect.type === 'poison') {
-        const tickInterval = effect.type === 'burn' ? 500 : 1000;
+        // Base tick interval, reduced by tickSpeedMultiplier
+        const baseTickInterval = effect.type === 'burn' ? 500 : 1000;
+        const tickInterval = baseTickInterval / this.tickSpeedMultiplier;
         const key = `${this.instanceId}_${effect.type}`;
 
         if (!this.lastDotTickTime[key]) {
@@ -291,6 +300,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       case 'poison':
         this.setTint(0x88ff88);
         break;
+      case 'defense_break':
+        this.setTint(0xff8888); // Red tint for defense break
+        break;
+      case 'tick_speed_up':
+        // Visual handled by existing DoT effects
+        break;
       default:
         break;
     }
@@ -304,6 +319,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       case 'freeze':
       case 'stun':
       case 'poison':
+      case 'defense_break':
         // Restore element tint
         this.applyElementTint();
         break;
@@ -405,6 +421,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       finalDamage = finalDamage * (1 - damageReduction);
     }
 
+    // Apply defense break (increase damage taken)
+    const defenseBreak = this.getDefenseBreakBonus();
+    if (defenseBreak > 0) {
+      finalDamage = finalDamage * (1 + defenseBreak);
+    }
+
     this.currentHp -= finalDamage;
 
     // 受伤闪烁
@@ -433,6 +455,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       }
     }
     return 0;
+  }
+
+  /**
+   * Get defense break bonus (increased damage taken)
+   */
+  private getDefenseBreakBonus(): number {
+    const defenseBreak = this.statusEffects.find(e => e.type === 'defense_break');
+    return defenseBreak?.value || 0;
   }
 
   /**
