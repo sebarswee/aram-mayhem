@@ -7,6 +7,8 @@ import { SkillSystem } from '@/systems/SkillSystem';
 import { CollisionSystem } from '@/systems/CollisionSystem';
 import { ExpSystem } from '@/systems/ExpSystem';
 import { EnhancementSystem } from '@/systems/EnhancementSystem';
+import { ElementSystem } from '@/systems/ElementSystem';
+import { DropSystem } from '@/systems/DropSystem';
 import { HUD } from '@/ui/HUD';
 import { SkillSelectUI } from '@/ui/SkillSelectUI';
 import { UpgradeSelectUI } from '@/ui/UpgradeSelectUI';
@@ -34,6 +36,8 @@ export class BattleScene extends Phaser.Scene {
   private collisionSystem!: CollisionSystem;
   private expSystem!: ExpSystem;
   private enhancementSystem!: EnhancementSystem;
+  private elementSystem!: ElementSystem;
+  private dropSystem!: DropSystem;
 
   // UI
   private hud!: HUD;
@@ -88,8 +92,13 @@ export class BattleScene extends Phaser.Scene {
     const joystickMode = window.gameSettings?.joystickMode || 'follow';
     this.inputSystem = new InputSystem(this, joystickMode);
     this.enemySystem = new EnemySystem(this, this.player);
+    this.elementSystem = new ElementSystem();
     this.skillSystem = new SkillSystem(this, this.player);
+    this.skillSystem.setElementSystem(this.elementSystem);
+    this.dropSystem = new DropSystem(this, this.player);
     this.collisionSystem = new CollisionSystem(this, this.player, this.enemySystem, this.skillSystem);
+    this.collisionSystem.setElementSystem(this.elementSystem);
+    this.collisionSystem.setDropSystem(this.dropSystem);
     this.expSystem = new ExpSystem(this, this.gameState);
     this.enhancementSystem = new EnhancementSystem(this, this.player);
 
@@ -149,7 +158,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private setupEvents(): void {
-    // 敌人击杀
+    // 敌人击杀 - DropSystem handles drop spawning via its own listener
     this.events.on('enemyKilled', (enemy: { getExpValue: () => number }) => {
       this.gameState.kills++;
       const exp = enemy.getExpValue();
@@ -340,6 +349,9 @@ export class BattleScene extends Phaser.Scene {
     this.enemySystem?.destroy();
     this.skillSystem?.destroy();
     this.collisionSystem?.destroy();
+    this.enhancementSystem?.destroy();
+    this.elementSystem?.destroy();
+    this.dropSystem?.destroy();
     this.hud?.destroy();
     this.skillSelectUI?.destroy();
     this.upgradeSelectUI?.destroy();
