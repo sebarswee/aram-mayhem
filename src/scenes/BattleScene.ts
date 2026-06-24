@@ -403,18 +403,22 @@ export class BattleScene extends Phaser.Scene {
     this.enemySystem.resume();
     this.physics.resume();
 
-    // 最后取消玩家无敌
-    this.player.isInvincible = false;
+    // 给玩家短暂无敌时间（1.5秒），防止恢复后立即被包围
+    this.player.isInvincible = true;
+    this.time.delayedCall(1500, () => {
+      if (this.player.active) {
+        this.player.isInvincible = false;
+      }
+    });
   }
 
   /**
    * 推开靠近玩家的敌人，防止恢复后玩家卡在敌人体内
    */
   private pushEnemiesAwayFromPlayer(): void {
-    const minDistance = 50; // 最小安全距离
-    const pushForce = 100;
-
+    const minDistance = 100; // 增大最小安全距离
     const enemies = this.enemySystem.getEnemies().getChildren() as any[];
+
     for (const enemy of enemies) {
       if (!enemy.active) continue;
 
@@ -429,8 +433,8 @@ export class BattleScene extends Phaser.Scene {
           this.player.x, this.player.y,
           enemy.x, enemy.y
         );
-        // 推到最小距离外
-        const pushDistance = minDistance - distance + 10;
+        // 推到最小距离外，增加额外缓冲
+        const pushDistance = minDistance - distance + 30;
         enemy.x += Math.cos(angle) * pushDistance;
         enemy.y += Math.sin(angle) * pushDistance;
       }
