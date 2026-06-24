@@ -2,8 +2,8 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:
+    branches: [ main ]    # 只有 main 分支推送才部署
+  workflow_dispatch:       # 也支持手动触发
 
 permissions:
   contents: read

@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { Skill, SkillEnhancer, StatBoost, UpgradeOption, SkillUpgradeData, SkillUpgradeOption as SkillUpgradeOptionType, SkillEvolutionBranch } from '@/types';
 import { EnhancementSystem } from '@/systems/EnhancementSystem';
 import { SkillUpgradeSystem } from '@/systems/SkillUpgradeSystem';
-import { getRandomSkill, cloneSkill } from '@/data/skills';
+import { getRandomSkill, cloneSkill, getRandomPassiveSkill } from '@/data/skills';
 import { getElementColor, ELEMENT_NAMES } from '@/data/elements';
 
 /**
@@ -151,6 +151,15 @@ export class UpgradeSelectUI {
       options.push({ type: 'stat_boost', data: statBoost });
     }
 
+    // 选项5：被动技能（30%概率出现）
+    if (Math.random() < 0.3) {
+      const existingPassiveIds = player.passiveSkills.map((s: Skill) => s.id);
+      const passiveSkill = getRandomPassiveSkill(existingPassiveIds);
+      if (passiveSkill) {
+        options.push({ type: 'passive_skill', data: cloneSkill(passiveSkill) });
+      }
+    }
+
     // 确保至少有3个选项
     while (options.length < 3) {
       const fallbackStat = this.enhancementSystem.getAvailableStatBoosts()[
@@ -235,6 +244,14 @@ export class UpgradeSelectUI {
       description = boost.description;
       icon = '📈';
       rarityText = '属性';
+    } else if (option.type === 'passive_skill') {
+      const passive = option.data as Skill;
+      color = getElementColor(passive.elements[0]);
+      title = passive.name;
+      description = passive.description;
+      icon = '🔮';
+      rarityText = '被动技能';
+      elementInfo = passive.elements.map(e => ELEMENT_NAMES[e]).join('·');
     }
 
     // 卡片背景
@@ -432,6 +449,9 @@ export class UpgradeSelectUI {
     } else if (option.type === 'stat_boost') {
       const boost = option.data as StatBoost;
       this.enhancementSystem.applyStatBoost(boost);
+    } else if (option.type === 'passive_skill') {
+      const passive = option.data as Skill;
+      player.addPassiveSkill(passive);
     }
 
     this.hide();

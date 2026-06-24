@@ -31,6 +31,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   public stats: PlayerStats;
   public skills: Skill[] = [];
   public ultimateSkills: Skill[] = []; // Separate slot for ultimate skills
+  public passiveSkills: Skill[] = []; // Passive skills slot
   public skillCooldowns: Map<string, number> = new Map();
 
   // Skill slot limits
@@ -158,6 +159,73 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
    */
   getAllSkills(): Skill[] {
     return [...this.skills, ...this.ultimateSkills];
+  }
+
+  // ==================== Passive Skills ====================
+
+  /**
+   * Add a passive skill to the player
+   */
+  addPassiveSkill(skill: Skill): boolean {
+    this.passiveSkills.push(skill);
+    // Apply passive effect immediately
+    this.applyPassiveEffect(skill);
+    return true;
+  }
+
+  /**
+   * Apply a passive skill effect
+   */
+  private applyPassiveEffect(skill: Skill): void {
+    if (!skill.passiveEffect) return;
+
+    const effect = skill.passiveEffect;
+    switch (effect.type) {
+      case 'max_hp':
+        this.stats.maxHp *= (1 + effect.value);
+        this.stats.currentHp *= (1 + effect.value);
+        break;
+      case 'lifesteal':
+        this.stats.lifesteal += effect.value * 100;
+        break;
+      case 'dodge':
+        // Store dodge chance in stats (need to add to PlayerStats)
+        (this.stats as any).dodgeChance = ((this.stats as any).dodgeChance || 0) + effect.value;
+        break;
+      case 'crit_boost':
+        this.stats.critRate += effect.value;
+        this.stats.critDamage += effect.value;
+        break;
+      case 'speed':
+        this.stats.speed *= (1 + effect.value);
+        break;
+      case 'cooldown_reduction':
+        this.stats.cooldownReduction = (this.stats.cooldownReduction || 0) + effect.value;
+        break;
+      case 'regen':
+        // Store regen value for update loop
+        (this.stats as any).hpRegen = ((this.stats as any).hpRegen || 0) + effect.value;
+        break;
+      case 'element_damage':
+        this.stats.skillDamageBonus = (this.stats.skillDamageBonus || 0) + effect.value;
+        break;
+      case 'luck':
+        (this.stats as any).luck = ((this.stats as any).luck || 0) + effect.value;
+        break;
+      case 'thorns':
+        this.addReflectEffect({ value: effect.value, duration: 999999999 });
+        break;
+      case 'shield_boost':
+        (this.stats as any).shieldBoost = ((this.stats as any).shieldBoost || 0) + effect.value;
+        break;
+    }
+  }
+
+  /**
+   * Get all passive skills
+   */
+  getPassiveSkills(): Skill[] {
+    return this.passiveSkills;
   }
 
   // ==================== Movement ====================
@@ -630,6 +698,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     // 更新状态效果
     this.updateStatusEffects(delta);
+
+    // HP 回复（被动技能）
+    const hpRegen = (this.stats as any).hpRegen || 0;
+    if (hpRegen > 0) {
+      const healAmount = hpRegen * (delta / 1000);
+      this.stats.currentHp = Math.min(this.stats.maxHp, this.stats.currentHp + healAmount);
+    }
 
     // 更新发光效果位置
     if (this.glowSprite) {

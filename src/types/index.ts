@@ -3,7 +3,7 @@ export type Element = 'fire' | 'water' | 'ice' | 'lightning' | 'holy' | 'shadow'
 
 export type SkillCategory = 'projectile' | 'area' | 'buff' | 'summon';
 
-export type SkillType = 'basic' | 'ultimate';
+export type SkillType = 'basic' | 'ultimate' | 'passive';
 
 export type SkillRange = 'melee' | 'mid' | 'long';
 
@@ -138,6 +138,12 @@ export interface Skill {
     cooldown: number;
     projectileCount: number;
   };
+  // 被动技能效果
+  passiveEffect?: {
+    type: string;
+    value: number;
+    element?: Element;  // 元素增强类被动需要
+  };
   // 连锁属性（兼容旧系统）
   chainCount?: number;
   chainRange?: number;
@@ -175,7 +181,7 @@ export interface StatBoost {
 }
 
 // 升级选项类型
-export type UpgradeOptionType = 'new_skill' | 'skill_upgrade' | 'skill_enhancer' | 'stat_boost';
+export type UpgradeOptionType = 'new_skill' | 'skill_upgrade' | 'skill_enhancer' | 'stat_boost' | 'passive_skill';
 
 // 技能升级数据
 export interface SkillUpgradeData {
