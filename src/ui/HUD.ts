@@ -275,47 +275,181 @@ export class HUD {
   }
 
   /**
-   * 显示羁绊通知
+   * 显示羁绊通知（增强版）
    */
   showSynergyNotification(synergy: SynergyResult): void {
     const width = this.scene.scale.width;
     const height = this.scene.scale.height;
 
-    // 创建羁绊名称文字
-    const fontSize = Math.min(24, width / 25);
-    const text = this.scene.add.text(
-      width / 2,
-      height / 3,
-      `羁绊触发：${synergy.name}`,
-      {
-        fontSize: `${fontSize}px`,
-        color: '#ffcc00',
-        fontStyle: 'bold',
-        stroke: '#000000',
-        strokeThickness: 4,
-      }
-    );
-    text.setOrigin(0.5, 0.5);
-    text.setScrollFactor(0);
-    text.setDepth(200);
+    // 创建容器
+    const container = this.scene.add.container(width / 2, height / 3);
+    container.setScrollFactor(0);
+    container.setDepth(200);
+    container.setAlpha(0);
 
-    // 淡入淡出动画
+    // 背景光晕
+    const bgGlow = this.scene.add.graphics();
+    const color1 = getElementColor(synergy.elements[0]);
+    const color2 = getElementColor(synergy.elements[1]);
+    bgGlow.fillStyle(0x000000, 0.7);
+    bgGlow.fillRoundedRect(-150, -50, 300, 100, 15);
+    bgGlow.lineStyle(3, 0xffcc00, 1);
+    bgGlow.strokeRoundedRect(-150, -50, 300, 100, 15);
+    container.add(bgGlow);
+
+    // 元素图标/圆圈
+    const circle1 = this.scene.add.circle(-80, -10, 25, color1, 0.9);
+    circle1.setStrokeStyle(2, 0xffffff, 0.8);
+    container.add(circle1);
+
+    const circle2 = this.scene.add.circle(80, -10, 25, color2, 0.9);
+    circle2.setStrokeStyle(2, 0xffffff, 0.8);
+    container.add(circle2);
+
+    // 元素符号
+    const elementSymbols: Record<string, string> = {
+      fire: '🔥',
+      water: '💧',
+      ice: '❄️',
+      lightning: '⚡',
+      holy: '✨',
+      shadow: '🌑',
+      grass: '🌿',
+      earth: '🪨',
+    };
+    const symbol1 = elementSymbols[synergy.elements[0]] || '●';
+    const symbol2 = elementSymbols[synergy.elements[1]] || '●';
+
+    const elem1Text = this.scene.add.text(-80, -10, symbol1, { fontSize: '24px' });
+    elem1Text.setOrigin(0.5, 0.5);
+    container.add(elem1Text);
+
+    const elem2Text = this.scene.add.text(80, -10, symbol2, { fontSize: '24px' });
+    elem2Text.setOrigin(0.5, 0.5);
+    container.add(elem2Text);
+
+    // 连接线动画效果
+    const connector = this.scene.add.graphics();
+    connector.lineStyle(3, 0xffcc00, 0.8);
+    connector.lineBetween(-55, -10, 55, -10);
+    container.add(connector);
+
+    // 羁绊名称（大字体）
+    const titleFontSize = Math.min(28, width / 20);
+    const titleText = this.scene.add.text(0, -45, `羁绊触发`, {
+      fontSize: '14px',
+      color: '#aaaaaa',
+    });
+    titleText.setOrigin(0.5, 0.5);
+    container.add(titleText);
+
+    const nameText = this.scene.add.text(0, 15, synergy.name, {
+      fontSize: `${titleFontSize}px`,
+      color: '#ffcc00',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3,
+    });
+    nameText.setOrigin(0.5, 0.5);
+    container.add(nameText);
+
+    // 效果描述
+    const effectDesc = this.getEffectDescription(synergy);
+    const descText = this.scene.add.text(0, 45, effectDesc, {
+      fontSize: '12px',
+      color: '#ffffff',
+    });
+    descText.setOrigin(0.5, 0.5);
+    container.add(descText);
+
+    // 粒子效果
+    const particles = this.scene.add.particles(container.x, container.y, 'particle_glow', {
+      speed: { min: 50, max: 100 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 0.4, end: 0 },
+      alpha: { start: 0.8, end: 0 },
+      lifespan: 600,
+      quantity: 20,
+      tint: [color1, color2, 0xffcc00],
+      emitting: false,
+    });
+    particles.setDepth(199);
+    particles.explode();
+
+    // 动画：缩放弹入
+    container.setScale(0.5);
+
     this.scene.tweens.add({
-      targets: text,
-      alpha: { from: 0, to: 1 },
+      targets: container,
+      alpha: 1,
+      scale: 1,
       duration: 200,
+      ease: 'Back.easeOut',
       onComplete: () => {
-        // 1秒后淡出
-        this.scene.time.delayedCall(1000, () => {
+        // 停留 1.5 秒后淡出
+        this.scene.time.delayedCall(1500, () => {
           this.scene.tweens.add({
-            targets: text,
+            targets: container,
             alpha: 0,
+            scale: 0.8,
+            y: container.y - 30,
             duration: 300,
-            onComplete: () => text.destroy(),
+            onComplete: () => {
+              container.destroy();
+              particles.destroy();
+            },
           });
         });
       },
     });
+
+    // 额外：屏幕边缘闪光效果
+    const flash = this.scene.add.rectangle(0, 0, width, height, 0xffcc00, 0.15);
+    flash.setOrigin(0, 0);
+    flash.setScrollFactor(0);
+    flash.setDepth(198);
+    this.scene.tweens.add({
+      targets: flash,
+      alpha: 0,
+      duration: 400,
+      onComplete: () => flash.destroy(),
+    });
+  }
+
+  /**
+   * 获取羁绊效果的简短描述
+   */
+  private getEffectDescription(synergy: SynergyResult): string {
+    const effectDescriptions: Record<string, string> = {
+      'true_damage_percent': `真实伤害 +${Math.floor((synergy.value || 0.2) * 100)}%`,
+      'freeze': '冻结敌人',
+      'chain_boost': `连锁伤害 +${Math.floor((synergy.value || 1.5) * 100 - 100)}%`,
+      'spread_debuff': '传播负面效果',
+      'slow': `减速 ${(synergy.value || 0.7) * 100}%`,
+      'dispel_and_damage': '驱散 + 伤害',
+      'damage_increase': `伤害提升 +${Math.floor((synergy.value || 0.3) * 100)}%`,
+      'double_damage': '双倍伤害',
+      'explosion': '范围爆炸',
+      'burn_spread': '火焰蔓延',
+      'lava_zone': '熔岩区域',
+      'damage_to_shield': '伤害转化为护盾',
+      'damage_boost_no_heal': '高伤禁疗',
+      'cooldown_refresh': '冷却缩减 50%',
+      'root': '定身',
+      'knockup': '击飞',
+      'refract_damage': '伤害折射',
+      'death_explosion': '死亡爆炸',
+      'tick_speed_double': 'DoT 加速',
+      'split_3': '分裂 3 发',
+      'stun': '眩晕',
+      'guaranteed_crit': '必定暴击',
+      'lifesteal': `生命偷取 ${Math.floor((synergy.value || 0.3) * 100)}%`,
+      'defense_reduce': `防御削减 ${Math.floor((synergy.value || 0.5) * 100)}%`,
+      'heal_zone': '治疗区域',
+      'barrier': '护盾屏障',
+      'true_damage_confuse': '真实伤害 + 混乱',
+    };
+    return effectDescriptions[synergy.effect] || synergy.effect;
   }
 
   update(): void {

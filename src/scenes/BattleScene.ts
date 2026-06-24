@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { Player } from '@/entities/Player';
-import { GameState, Skill } from '@/types';
+import { GameState, Skill, SynergyResult } from '@/types';
 import { InputSystem } from '@/systems/InputSystem';
 import { EnemySystem } from '@/systems/EnemySystem';
 import { SkillSystem } from '@/systems/SkillSystem';
@@ -226,6 +226,11 @@ export class BattleScene extends Phaser.Scene {
     // 玩家死亡
     this.player.on('death', () => {
       this.gameOver();
+    });
+
+    // 羁绊触发通知 - 连接 SkillSystem 和 HUD
+    this.skillSystem.getSynergyEvents().on('synergy_triggered', (data: { synergy: SynergyResult }) => {
+      this.hud.showSynergyNotification(data.synergy);
     });
   }
 
