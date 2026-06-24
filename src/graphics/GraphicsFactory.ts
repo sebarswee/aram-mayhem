@@ -65,23 +65,68 @@ export class GraphicsFactory {
    * 创建敌人精灵
    */
   private createEnemySprites(): void {
-    // 史莱姆 - 绿色果冻状
-    this.createSlimeSprite('enemy_slime', 0x44dd66);
+    // === 普通敌人 (8种元素) ===
+    // 火焰史莱姆
+    this.createSlimeSprite('flame_slime', 0xff4400);
 
-    // 蝙蝠 - 紫色飞行
-    this.createBatSprite('enemy_bat', 0x8844aa);
+    // 水元素
+    this.createElementalSprite('water_elemental', 0x4488ff);
 
-    // 骷髅 - 灰白色
-    this.createSkeletonSprite('enemy_skeleton', 0xccccaa);
+    // 冰霜幽灵
+    this.createGhostSprite('frost_ghost', 0x88ddff);
 
-    // 精英兽人 - 深红色大块头
-    this.createOrcSprite('enemy_orc', 0xdd4444);
+    // 雷电精灵
+    this.createSpiritSprite('thunder_spirit', 0xffff00);
 
-    // 精英法师 - 紫色法袍
-    this.createMageSprite('enemy_mage', 0x8844ff);
+    // 圣光精灵
+    this.createSpiritSprite('holy_sprite', 0xffcc00);
 
-    // Boss - 巨型暗黑骑士
-    this.createBossSprite('enemy_boss', 0x2a0a3a);
+    // 暗影魔
+    this.createDemonSprite('shadow_demon', 0x8800ff);
+
+    // 藤蔓怪
+    this.createVineMonsterSprite('vine_monster', 0x44ff44);
+
+    // 岩石巨人
+    this.createGolemSprite('rock_golem', 0xaa8844);
+
+    // === 精英敌人 (4种) ===
+    // 炎魔精英
+    this.createEliteFlameLordSprite('elite_flame_lord', 0xff2200);
+
+    // 霜巨人精英
+    this.createEliteFrostTitanSprite('elite_frost_titan', 0x66ccff);
+
+    // 雷龙精英
+    this.createEliteStormDrakeSprite('elite_storm_drake', 0xcccc00);
+
+    // 暗影领主
+    this.createEliteShadowLordSprite('elite_shadow_lord', 0x6600cc);
+
+    // === Boss敌人 (8种) ===
+    // 炎魔
+    this.createBossFlameLordSprite('boss_flame_lord', 0xff0000);
+
+    // 霜巨人
+    this.createBossFrostGiantSprite('boss_frost_giant', 0x44aaff);
+
+    // 雷龙
+    this.createBossThunderDragonSprite('boss_thunder_dragon', 0xaaaa00);
+
+    // 暗影之王
+    this.createBossShadowKingSprite('boss_shadow_king', 0x4400aa);
+
+    // 自然守护者
+    this.createBossNatureGuardianSprite('boss_nature_guardian', 0x22cc22);
+
+    // 巨像领主
+    this.createBossGolemLordSprite('boss_golem_lord', 0x886622);
+
+    // 堕落天使
+    this.createBossFallenAngelSprite('boss_fallen_angel', 0xccaa00);
+
+    // 九头蛇
+    this.createBossHydraSprite('boss_hydra', 0x2266cc);
   }
 
   /**

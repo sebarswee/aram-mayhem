@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { Skill, SkillEnhancer, StatBoost, UpgradeOption } from '@/types';
 import { EnhancementSystem } from '@/systems/EnhancementSystem';
 import { getRandomSkill, cloneSkill } from '@/data/skills';
+import { getElementColor, ELEMENT_NAMES } from '@/data/elements';
 
 /**
  * 升级选择界面
@@ -157,22 +158,18 @@ export class UpgradeSelectUI {
     let title = '';
     let description = '';
     let icon = '⭐';
+    let elementInfo = '';
 
     if (option.type === 'new_skill') {
       const skill = option.data as Skill;
-      const elementColors: Record<string, number> = {
-        fire: 0xff4400,
-        ice: 0x44ccff,
-        lightning: 0xffff00,
-        physical: 0xaaaaaa,
-        shadow: 0x8800ff,
-        holy: 0xffcc00,
-      };
-      color = elementColors[skill.elements[0]] || 0xffffff;
+      // 使用统一的元素颜色
+      color = getElementColor(skill.elements[0]);
       title = skill.name;
       description = skill.description;
       icon = this.getSkillIcon(skill);
       rarityText = '新技能';
+      // 显示元素信息
+      elementInfo = skill.elements.map(e => ELEMENT_NAMES[e]).join('·');
     } else if (option.type === 'skill_enhancer') {
       const enhancer = option.data as SkillEnhancer & { skillId?: string };
       const rarityColors: Record<string, number> = {
@@ -187,6 +184,12 @@ export class UpgradeSelectUI {
       description = enhancer.description;
       icon = this.getEnhancerIcon(enhancer);
       rarityText = this.getRarityText(enhancer.rarity);
+      // 显示元素限制信息
+      if (enhancer.skillElements && enhancer.skillElements.length > 0) {
+        elementInfo = '限定: ' + enhancer.skillElements.map(e => ELEMENT_NAMES[e]).join('·');
+      } else if (enhancer.excludeElements && enhancer.excludeElements.length > 0) {
+        elementInfo = '排除: ' + enhancer.excludeElements.map(e => ELEMENT_NAMES[e]).join('·');
+      }
     } else if (option.type === 'stat_boost') {
       const boost = option.data as StatBoost;
       title = boost.name;
@@ -205,6 +208,7 @@ export class UpgradeSelectUI {
     const iconFontSize = Math.min(40, width / 4);
     const titleFontSize = Math.min(16, width / 10);
     const descFontSize = Math.min(11, width / 14);
+    const elementFontSize = Math.min(10, width / 16);
 
     // 稀有度标签
     const rarityLabel = this.scene.add.text(0, -height / 2 + 15, rarityText, {
@@ -230,10 +234,22 @@ export class UpgradeSelectUI {
     titleText.setOrigin(0.5);
     card.add(titleText);
 
+    // 元素信息（如果有）
+    let yOffset = isSmallScreen ? -height / 2 + 90 : 50;
+    if (elementInfo) {
+      const elementText = this.scene.add.text(0, yOffset, elementInfo, {
+        fontSize: `${elementFontSize}px`,
+        color: `#${color.toString(16).padStart(6, '0')}`,
+      });
+      elementText.setOrigin(0.5);
+      card.add(elementText);
+      yOffset += 15;
+    }
+
     // 描述 - 截断长文本
     const descMaxWidth = width - 15;
     const descText = this.truncateText(description, descMaxWidth, descFontSize, isSmallScreen ? 2 : 3);
-    const desc = this.scene.add.text(0, isSmallScreen ? -height / 2 + 95 : 60, descText, {
+    const desc = this.scene.add.text(0, yOffset, descText, {
       fontSize: `${descFontSize}px`,
       color: '#cccccc',
       wordWrap: { width: descMaxWidth },

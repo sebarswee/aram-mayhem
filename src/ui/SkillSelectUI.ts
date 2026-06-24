@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { Skill } from '@/types';
+import { ELEMENT_COLORS, getElementColor, ELEMENT_NAMES } from '@/data/elements';
 
 /**
  * 开局技能选择界面
@@ -102,16 +103,8 @@ export class SkillSelectUI {
     // 卡片背景
     const card = this.scene.add.container(x, y);
 
-    // 根据元素选择颜色
-    const elementColors: Record<string, number> = {
-      fire: 0xff4400,
-      ice: 0x44ccff,
-      lightning: 0xffff00,
-      physical: 0xaaaaaa,
-      shadow: 0x8800ff,
-      holy: 0xffcc00,
-    };
-    const color = elementColors[skill.elements[0]] || 0xffffff;
+    // 使用统一的元素颜色
+    const color = getElementColor(skill.elements[0]);
 
     // 卡片框
     const bg = this.scene.add.rectangle(0, 0, width, height, 0x222233, 1);
@@ -123,6 +116,7 @@ export class SkillSelectUI {
     const nameFontSize = Math.min(16, width / 9);
     const typeFontSize = Math.min(11, width / 13);
     const descFontSize = Math.min(10, width / 15);
+    const elementFontSize = Math.min(10, width / 15);
 
     // 技能图标区域
     const iconBg = this.scene.add.rectangle(0, -height / 2 + 35, width - 10, 50, color, 0.3);
@@ -144,8 +138,17 @@ export class SkillSelectUI {
     name.setOrigin(0.5);
     card.add(name);
 
+    // 元素类型标签
+    const elementNames = skill.elements.map(e => ELEMENT_NAMES[e]).join('·');
+    const elementText = this.scene.add.text(0, -height / 2 + 88, elementNames, {
+      fontSize: `${elementFontSize}px`,
+      color: `#${color.toString(16).padStart(6, '0')}`,
+    });
+    elementText.setOrigin(0.5);
+    card.add(elementText);
+
     // 技能类型
-    const typeText = this.scene.add.text(0, -height / 2 + 88, this.getSkillTypeText(skill), {
+    const typeText = this.scene.add.text(0, -height / 2 + 102, this.getSkillTypeText(skill), {
       fontSize: `${typeFontSize}px`,
       color: '#888888',
     });
@@ -155,7 +158,7 @@ export class SkillSelectUI {
     // 技能描述 - 限制最大行数，超出显示省略号
     const descMaxWidth = width - 15;
     const descText = this.truncateText(skill.description, descMaxWidth, descFontSize, 3);
-    const desc = this.scene.add.text(0, -height / 2 + 105, descText, {
+    const desc = this.scene.add.text(0, -height / 2 + 115, descText, {
       fontSize: `${descFontSize}px`,
       color: '#cccccc',
       wordWrap: { width: descMaxWidth },
