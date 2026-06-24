@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { Player } from '@/entities/Player';
 import { Enemy } from '@/entities/Enemy';
-import { Projectile } from '@/entities/Projectile';
+import { Projectile, ProjectileConfig } from '@/entities/Projectile';
 import { Food } from '@/entities/Food';
 import { ExpOrb } from '@/entities/ExpOrb';
 import { EnemySystem } from '@/systems/EnemySystem';
@@ -9,7 +9,7 @@ import { SkillSystem } from '@/systems/SkillSystem';
 import { ElementSystem } from '@/systems/ElementSystem';
 import { DropSystem } from '@/systems/DropSystem';
 import { SkillEffects } from '@/graphics/SkillEffects';
-import { Element } from '@/types';
+import { Element, Skill } from '@/types';
 
 export class CollisionSystem {
   private scene: Phaser.Scene;
@@ -166,6 +166,11 @@ export class CollisionSystem {
       // Decrease pierce count, don't destroy projectile
       proj.config.pierceCount = pierceCount - 1;
     } else {
+      // Check for split enhancement before destroying
+      const splitCount = this.getSplitCount(proj.config.skill);
+      if (splitCount > 0) {
+        this.createSplitProjectiles(proj, splitCount);
+      }
       // No more piercing, destroy projectile
       proj.destroy();
     }
@@ -173,6 +178,70 @@ export class CollisionSystem {
     // If enemy killed, emit event
     if (killed) {
       this.scene.events.emit('enemyKilled', enem);
+    }
+  }
+
+  /**
+   * Get split count from skill enhancements
+   */
+  private getSplitCount(skill: Skill): number {
+    let splitCount = 0;
+    for (const enhancement of skill.enhancements) {
+      if (enhancement.type === 'split') {
+        // split_1 = 2 projectiles, split_2 = 3 projectiles
+        splitCount = Math.max(splitCount, enhancement.value);
+      }
+    }
+    return splitCount;
+  }
+
+  /**
+   * Create split projectiles when original projectile is destroyed
+   */
+  private createSplitProjectiles(originalProj: Projectile, splitCount: number): void {
+    const baseAngle = originalProj.rotation;
+    const spreadAngle = Math.PI / 2; // 90 degree spread
+    const splitDamage = Math.floor(originalProj.getDamage() * 0.6); // Split projectiles deal 60% damage
+
+    for (let i = 0; i < splitCount; i++) {
+      // Calculate angle for each split projectile
+      const angleOffset = (i - (splitCount - 1) / 2) * (spreadAngle / splitCount);
+      const angle = baseAngle + angleOffset;
+
+      const config: ProjectileConfig = {
+        skill: originalProj.config.skill,
+        damage: splitDamage,
+        speed: originalProj.config.speed,
+        range: originalProj.config.range * 0.3, // Split projectiles have shorter range
+        isFromPlayer: true,
+        color: originalProj.config.color,
+        creationTime: Date.now(),
+        // Split projectiles don't chain or pierce
+        chainRemaining: 0,
+        chainRange: 0,
+        chainDamageDecay: 0,
+        previousTargets: new Set<string>(),
+        pierceCount: 0,
+        hitEnemies: new Set<string>(),
+      };
+
+      const splitProj = new Projectile(
+        this.scene,
+        originalProj.x,
+        originalProj.y,
+        config
+      );
+
+      this.skillSystem.getProjectiles().add(splitProj);
+      splitProj.fire(angle);
+
+      // Visual effect for split
+      this.scene.tweens.add({
+        targets: splitProj,
+        scale: { from: 0.5, to: 1 },
+        alpha: { from: 0.5, to: 1 },
+        duration: 100,
+      });
     }
   }
 
