@@ -2,9 +2,14 @@ import Phaser from 'phaser';
 import { Player } from '@/entities/Player';
 import { Enemy } from '@/entities/Enemy';
 import { Projectile } from '@/entities/Projectile';
+import { Food } from '@/entities/Food';
+import { ExpOrb } from '@/entities/ExpOrb';
 import { EnemySystem } from '@/systems/EnemySystem';
 import { SkillSystem } from '@/systems/SkillSystem';
+import { ElementSystem } from '@/systems/ElementSystem';
+import { DropSystem } from '@/systems/DropSystem';
 import { SkillEffects } from '@/graphics/SkillEffects';
+import { Element } from '@/types';
 
 export class CollisionSystem {
   private scene: Phaser.Scene;
@@ -12,6 +17,8 @@ export class CollisionSystem {
   private enemySystem: EnemySystem;
   private skillSystem: SkillSystem;
   private skillEffects: SkillEffects;
+  private elementSystem: ElementSystem | null = null;
+  private dropSystem: DropSystem | null = null;
 
   constructor(
     scene: Phaser.Scene,
@@ -28,8 +35,24 @@ export class CollisionSystem {
     this.setupCollisions();
   }
 
+  /**
+   * Set the ElementSystem reference (optional, can be set later)
+   */
+  setElementSystem(elementSystem: ElementSystem): void {
+    this.elementSystem = elementSystem;
+  }
+
+  /**
+   * Set the DropSystem reference (optional, can be set later)
+   */
+  setDropSystem(dropSystem: DropSystem): void {
+    this.dropSystem = dropSystem;
+    // Setup food and exp orb collisions once dropSystem is available
+    this.setupDropCollisions();
+  }
+
   private setupCollisions(): void {
-    // 1. 投射物 vs 敌人
+    // 1. Projectile vs Enemy
     this.scene.physics.add.overlap(
       this.skillSystem.getProjectiles(),
       this.enemySystem.getEnemies(),
@@ -38,11 +61,37 @@ export class CollisionSystem {
       this
     );
 
-    // 2. 敌人 vs 玩家
+    // 2. Enemy vs Player
     this.scene.physics.add.overlap(
       this.player,
       this.enemySystem.getEnemies(),
       this.handleEnemyHitPlayer as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
+      undefined,
+      this
+    );
+  }
+
+  /**
+   * Setup collision handlers for food and exp orbs
+   * Called after dropSystem is set
+   */
+  private setupDropCollisions(): void {
+    if (!this.dropSystem) return;
+
+    // Player vs Food (pickup)
+    this.scene.physics.add.overlap(
+      this.player,
+      this.dropSystem.getFoods(),
+      this.handleFoodPickup as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
+      undefined,
+      this
+    );
+
+    // Player vs ExpOrb (pickup)
+    this.scene.physics.add.overlap(
+      this.player,
+      this.dropSystem.getExpOrbs(),
+      this.handleExpOrbPickup as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
       undefined,
       this
     );
@@ -55,8 +104,8 @@ export class CollisionSystem {
     const proj = projectile as Projectile;
     const enem = enemy as Enemy;
 
-    // 碰撞保护：投射物创建后 50ms 内不触发碰撞
-    // 这是为了防止投射物在玩家位置创建时立即与附近的敌人碰撞
+    // Collision protection: projectile created within 50ms doesn't trigger collision
+    // This prevents projectiles from colliding immediately with nearby enemies at creation position
     const creationTime = proj.config.creationTime || 0;
     const age = Date.now() - creationTime;
     if (age < 50) {
@@ -65,12 +114,12 @@ export class CollisionSystem {
 
     if (!proj.active || !enem.active) return;
 
-    // 检查是否已经命中过这个敌人（穿透时避免重复）
+    // Check if already hit this enemy (avoid duplicate hits when piercing)
     if (proj.config.hitEnemies && proj.config.hitEnemies.has(enem.instanceId)) {
       return;
     }
 
-    // 记录此敌人已被打击
+    // Record this enemy as hit
     if (proj.config.previousTargets) {
       proj.config.previousTargets.add(enem.instanceId);
     }
@@ -78,18 +127,21 @@ export class CollisionSystem {
       proj.config.hitEnemies.add(enem.instanceId);
     }
 
-    // 造成伤害
+    // Deal damage
     const damage = proj.getDamage();
     const killed = enem.takeDamage(damage);
 
-    // 触发生命偷取
+    // Trigger lifesteal
     this.applyLifesteal(damage);
 
-    // 应用技能效果（冰冻、减速、灼烧等）
-    const effects = proj.getEffects();
-    this.applyEffects(enem, effects);
+    // Get skill element for synergy check
+    const skillElement = proj.config.skill.elements[0] as Element | undefined;
 
-    // 检查是否可以连锁
+    // Apply skill effects (burn, freeze, stun, poison, etc.)
+    const effects = proj.getEffects();
+    this.applyEffects(enem, effects, skillElement);
+
+    // Check chain lightning
     const chainRemaining = proj.config.chainRemaining;
     const chainRange = proj.config.chainRange;
     const chainDecay = proj.config.chainDamageDecay;
@@ -103,28 +155,29 @@ export class CollisionSystem {
         chainRemaining,
         chainRange,
         chainDecay || 0.8,
-        previousTargets
+        previousTargets,
+        skillElement
       );
     }
 
-    // 检查穿透
+    // Check piercing
     const pierceCount = proj.config.pierceCount || 0;
     if (pierceCount > 0) {
-      // 减少穿透次数，不销毁投射物
+      // Decrease pierce count, don't destroy projectile
       proj.config.pierceCount = pierceCount - 1;
     } else {
-      // 没有穿透了，销毁投射物
+      // No more piercing, destroy projectile
       proj.destroy();
     }
 
-    // 如果击杀敌人，发出事件
+    // If enemy killed, emit event
     if (killed) {
       this.scene.events.emit('enemyKilled', enem);
     }
   }
 
   /**
-   * 触发生命偷取
+   * Trigger lifesteal
    */
   private applyLifesteal(damage: number): void {
     const lifestealPercent = this.player.stats.lifesteal || 0;
@@ -135,7 +188,7 @@ export class CollisionSystem {
   }
 
   /**
-   * 处理闪电连锁
+   * Handle chain lightning
    */
   private processChainLightning(
     currentEnemy: Enemy,
@@ -144,7 +197,8 @@ export class CollisionSystem {
     chainRemaining: number,
     chainRange: number,
     chainDecay: number,
-    previousTargets: Set<string>
+    previousTargets: Set<string>,
+    skillElement?: Element
   ): void {
     if (chainRemaining <= 0) return;
 
@@ -157,10 +211,10 @@ export class CollisionSystem {
 
     if (!nextTarget) return;
 
-    // 添加到已打击列表
+    // Add to hit list
     previousTargets.add(nextTarget.instanceId);
 
-    // 创建闪电视觉效果
+    // Create lightning visual effect
     this.createChainLightning(
       currentEnemy.x,
       currentEnemy.y,
@@ -168,22 +222,22 @@ export class CollisionSystem {
       nextTarget.y
     );
 
-    // 延迟打击下一个目标
+    // Delayed hit on next target
     this.scene.time.delayedCall(80, () => {
       if (!nextTarget.active) return;
 
       const chainDamage = Math.floor(currentDamage * chainDecay);
       const killed = nextTarget.takeDamage(chainDamage);
-      this.applyEffects(nextTarget, effects);
+      this.applyEffects(nextTarget, effects, skillElement);
 
-      // 触发生命偷取
+      // Trigger lifesteal
       this.applyLifesteal(chainDamage);
 
       if (killed) {
         this.scene.events.emit('enemyKilled', nextTarget);
       }
 
-      // 继续连锁
+      // Continue chain
       this.processChainLightning(
         nextTarget,
         chainDamage,
@@ -191,13 +245,14 @@ export class CollisionSystem {
         chainRemaining - 1,
         chainRange,
         chainDecay,
-        previousTargets
+        previousTargets,
+        skillElement
       );
     });
   }
 
   /**
-   * 寻找连锁目标
+   * Find chain lightning target
    */
   private findChainTarget(
     x: number,
@@ -212,7 +267,7 @@ export class CollisionSystem {
     for (const enemy of enemies) {
       if (!enemy.active) continue;
 
-      // 检查是否已经打击过
+      // Check if already hit
       if (previousTargets.has(enemy.instanceId)) continue;
 
       const distance = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
@@ -226,27 +281,27 @@ export class CollisionSystem {
   }
 
   /**
-   * 创建连锁闪电视觉效果
+   * Create chain lightning visual effect
    */
   private createChainLightning(x1: number, y1: number, x2: number, y2: number): void {
     const graphics = this.scene.add.graphics();
     graphics.setDepth(100);
 
-    // 绘制主闪电
+    // Main lightning bolt
     graphics.lineStyle(4, 0xffff00, 1);
     this.drawLightningBolt(graphics, x1, y1, x2, y2);
 
-    // 绘制发光效果
+    // Glow effect
     graphics.lineStyle(8, 0xffff88, 0.5);
     this.drawLightningBolt(graphics, x1, y1, x2, y2);
 
-    // 添加起点和终点的闪光
+    // Flash at start and end points
     const flash1 = this.scene.add.circle(x1, y1, 15, 0xffff88, 0.8);
     const flash2 = this.scene.add.circle(x2, y2, 15, 0xffff88, 0.8);
     flash1.setDepth(101);
     flash2.setDepth(101);
 
-    // 淡出动画
+    // Fade out animation
     this.scene.tweens.add({
       targets: [graphics, flash1, flash2],
       alpha: 0,
@@ -260,7 +315,7 @@ export class CollisionSystem {
   }
 
   /**
-   * 绘制锯齿状闪电
+   * Draw jagged lightning bolt
    */
   private drawLightningBolt(
     graphics: Phaser.GameObjects.Graphics,
@@ -287,229 +342,28 @@ export class CollisionSystem {
   }
 
   /**
-   * 应用技能效果到敌人
+   * Apply skill effects to enemy
+   * Uses Enemy.addStatusEffect() for all status types
    */
-  private applyEffects(enemy: Enemy, effects: { type: string; value?: number; duration?: number }[]): void {
+  private applyEffects(
+    enemy: Enemy,
+    effects: { type: string; value?: number; duration?: number }[],
+    skillElement?: Element
+  ): void {
     for (const effect of effects) {
-      if (effect.type === 'burn' && effect.value && effect.duration) {
-        this.applyBurn(enemy, effect.value, effect.duration);
-      } else if (effect.type === 'freeze' && effect.duration) {
-        this.applyFreeze(enemy, effect.value || 0.3, effect.duration);
-      } else if (effect.type === 'stun' && effect.duration) {
-        this.applyStun(enemy, effect.duration);
-      } else if (effect.type === 'poison' && effect.value && effect.duration) {
-        this.applyPoison(enemy, effect.value, effect.duration);
-      }
-    }
-  }
-
-  /**
-   * 灼烧效果 - 持续伤害
-   */
-  private applyBurn(enemy: Enemy, damagePerSec: number, duration: number): void {
-    const tickDamage = damagePerSec;
-    const ticks = Math.floor(duration / 1000);
-
-    let ticksRemaining = ticks;
-    const burnTimer = this.scene.time.addEvent({
-      delay: 1000,
-      callback: () => {
-        if (enemy.active) {
-          enemy.takeDamage(tickDamage);
-        }
-        ticksRemaining--;
-        if (ticksRemaining <= 0) {
-          burnTimer.destroy();
-        }
-      },
-      repeat: ticks - 1,
-    });
-  }
-
-  /**
-   * 冰冻效果 - 减速
-   */
-  private applyFreeze(enemy: Enemy, slowAmount: number, duration: number): void {
-    // 确保敌人和 config 存在
-    if (!enemy || !enemy.config) {
-      return;
+      enemy.addStatusEffect({
+        type: effect.type as any,
+        value: effect.value || 0,
+        duration: effect.duration || 1000,
+        remainingTime: effect.duration || 1000,
+        source: 'skill',
+      });
     }
 
-    const originalSpeed = enemy.config.speed;
-    enemy.config.speed *= (1 - slowAmount);
-
-    // 视觉效果 - 变蓝（使用白色tint，对于有色纹理效果减弱但仍可见）
-    enemy.setTint(0x88ddff);
-
-    // 添加冰冻光环效果
-    const freezeRing = this.scene.add.graphics();
-    freezeRing.lineStyle(3, 0x88ddff, 0.8);
-    freezeRing.strokeCircle(0, 0, 25);
-    freezeRing.setPosition(enemy.x, enemy.y);
-    freezeRing.setDepth(31);
-
-    // 光环跟随敌人
-    const followEvent = this.scene.time.addEvent({
-      delay: 50,
-      callback: () => {
-        if (!enemy.active) {
-          followEvent.destroy();
-          freezeRing.destroy();
-          return;
-        }
-        freezeRing.setPosition(enemy.x, enemy.y);
-      },
-      repeat: -1,
-    });
-
-    this.scene.time.delayedCall(duration, () => {
-      followEvent.destroy();
-      freezeRing.destroy();
-      if (enemy.active && enemy.config) {
-        enemy.config.speed = originalSpeed;
-        enemy.clearTint();
-      }
-    });
-  }
-
-  /**
-   * 眩晕效果 - 完全停止
-   */
-  private applyStun(enemy: Enemy, duration: number): void {
-    // 确保敌人和 config 存在
-    if (!enemy || !enemy.config) return;
-
-    const originalSpeed = enemy.config.speed;
-    enemy.config.speed = 0;
-
-    // 添加眩晕星星效果
-    const stunStars = this.scene.add.graphics();
-    stunStars.fillStyle(0xffff00, 1);
-    for (let i = 0; i < 3; i++) {
-      const angle = (i * 120 + Date.now() / 50) * Math.PI / 180;
-      const x = Math.cos(angle) * 20;
-      const y = Math.sin(angle) * 20 - 15;
-      this.drawStar(stunStars, x, y, 5, 4, 2);
+    // Apply element mark for synergy check
+    if (this.elementSystem && skillElement) {
+      this.elementSystem.checkSynergy(enemy.instanceId, skillElement, 'skill');
     }
-    stunStars.setPosition(enemy.x, enemy.y);
-    stunStars.setDepth(31);
-
-    // 星星旋转动画
-    const rotateEvent = this.scene.time.addEvent({
-      delay: 50,
-      callback: () => {
-        if (!enemy.active) {
-          rotateEvent.destroy();
-          stunStars.destroy();
-          return;
-        }
-        stunStars.setPosition(enemy.x, enemy.y);
-        stunStars.clear();
-        stunStars.fillStyle(0xffff00, 1);
-        for (let i = 0; i < 3; i++) {
-          const angle = (i * 120 + Date.now() / 50) * Math.PI / 180;
-          const x = Math.cos(angle) * 20;
-          const y = Math.sin(angle) * 20 - 15;
-          this.drawStar(stunStars, x, y, 5, 4, 2);
-        }
-      },
-      repeat: -1,
-    });
-
-    // 视觉效果 - 闪烁
-    this.scene.tweens.add({
-      targets: enemy,
-      alpha: 0.5,
-      duration: 100,
-      yoyo: true,
-      repeat: Math.floor(duration / 200),
-      onComplete: () => {
-        rotateEvent.destroy();
-        stunStars.destroy();
-        if (enemy.active && enemy.config) {
-          enemy.config.speed = originalSpeed;
-          enemy.setAlpha(1);
-        }
-      },
-    });
-  }
-
-  /**
-   * 绘制星星
-   */
-  private drawStar(graphics: Phaser.GameObjects.Graphics, x: number, y: number, points: number, outerRadius: number, innerRadius: number): void {
-    const step = Math.PI / points;
-    graphics.beginPath();
-    for (let i = 0; i < 2 * points; i++) {
-      const radius = i % 2 === 0 ? outerRadius : innerRadius;
-      const angle = i * step - Math.PI / 2;
-      const px = x + Math.cos(angle) * radius;
-      const py = y + Math.sin(angle) * radius;
-      if (i === 0) {
-        graphics.moveTo(px, py);
-      } else {
-        graphics.lineTo(px, py);
-      }
-    }
-    graphics.closePath();
-    graphics.fillPath();
-  }
-
-  /**
-   * 毒效果 - 持续伤害 + 变绿
-   */
-  private applyPoison(enemy: Enemy, damagePerSec: number, duration: number): void {
-    if (!enemy || !enemy.config) return;
-
-    const tickDamage = damagePerSec;
-    const ticks = Math.floor(duration / 1000);
-
-    // 视觉效果 - 绿色光环
-    enemy.setTint(0x44ff44);
-
-    // 毒雾效果
-    const poisonCloud = this.scene.add.graphics();
-    poisonCloud.fillStyle(0x44ff44, 0.3);
-    poisonCloud.fillCircle(0, 0, 20);
-    poisonCloud.setPosition(enemy.x, enemy.y);
-    poisonCloud.setDepth(31);
-
-    // 光环跟随敌人
-    const followEvent = this.scene.time.addEvent({
-      delay: 50,
-      callback: () => {
-        if (!enemy.active) {
-          followEvent.destroy();
-          poisonCloud.destroy();
-          return;
-        }
-        poisonCloud.setPosition(enemy.x, enemy.y);
-        // 脉动效果
-        const scale = 1 + Math.sin(Date.now() / 200) * 0.2;
-        poisonCloud.setScale(scale);
-      },
-      repeat: -1,
-    });
-
-    let ticksRemaining = ticks;
-    const poisonTimer = this.scene.time.addEvent({
-      delay: 1000,
-      callback: () => {
-        if (enemy.active) {
-          enemy.takeDamage(tickDamage);
-        }
-        ticksRemaining--;
-        if (ticksRemaining <= 0) {
-          poisonTimer.destroy();
-          followEvent.destroy();
-          poisonCloud.destroy();
-          if (enemy.active) {
-            enemy.clearTint();
-          }
-        }
-      },
-      repeat: ticks - 1,
-    });
   }
 
   private handleEnemyHitPlayer(
@@ -521,16 +375,16 @@ export class CollisionSystem {
 
     if (!ply.active || !enem.active) return;
 
-    // 计算实际距离，确保真正碰撞
+    // Calculate actual distance to ensure real collision
     const distance = Phaser.Math.Distance.Between(ply.x, ply.y, enem.x, enem.y);
-    const collisionDistance = 30; // 合理的碰撞距离
+    const collisionDistance = 30; // Reasonable collision distance
 
     if (distance > collisionDistance) return;
 
-    // 敌人碰撞伤害
+    // Enemy collision damage
     ply.takeDamage(enem.config.damage);
 
-    // 击退敌人
+    // Knockback enemy
     const angle = Phaser.Math.Angle.Between(
       ply.x,
       ply.y,
@@ -542,7 +396,7 @@ export class CollisionSystem {
       Math.sin(angle) * 200
     );
 
-    // 短暂无敌后恢复追踪
+    // Resume chasing after brief invulnerability
     this.scene.time.delayedCall(300, () => {
       if (enem.active) {
         enem.setTarget(ply);
@@ -550,7 +404,39 @@ export class CollisionSystem {
     });
   }
 
+  /**
+   * Handle food pickup collision
+   */
+  private handleFoodPickup(
+    player: Phaser.GameObjects.GameObject,
+    food: Phaser.GameObjects.GameObject
+  ): void {
+    const ply = player as Player;
+    const foodItem = food as Food;
+
+    if (!ply.active || !foodItem.active) return;
+
+    // Food handles its own pickup logic and destruction
+    foodItem.onPickup(ply);
+  }
+
+  /**
+   * Handle exp orb pickup collision
+   */
+  private handleExpOrbPickup(
+    player: Phaser.GameObjects.GameObject,
+    orb: Phaser.GameObjects.GameObject
+  ): void {
+    const ply = player as Player;
+    const expOrb = orb as ExpOrb;
+
+    if (!ply.active || !expOrb.active) return;
+
+    // ExpOrb handles its own pickup logic and destruction
+    expOrb.onPickup();
+  }
+
   destroy(): void {
-    // Phaser会自动清理overlap
+    // Phaser automatically cleans up overlap handlers
   }
 }
