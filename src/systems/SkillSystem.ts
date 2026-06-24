@@ -723,10 +723,10 @@ export class SkillSystem {
       ) as Phaser.Physics.Arcade.Body[];
 
       for (const body of bodies) {
-        const enemy = body.gameObject as Enemy;
-        // 确保是敌人对象且拥有 config 属性
-        if (enemy && enemy.active && enemy.config) {
-          this.applyDamageToEnemy(enemy, damage, skill);
+        const obj = body.gameObject;
+        // Ensure it's actually an Enemy instance (not player, orb, food, etc.)
+        if (obj && obj instanceof Enemy && obj.active) {
+          this.applyDamageToEnemy(obj, damage, skill);
         }
       }
     }
@@ -777,14 +777,14 @@ export class SkillSystem {
         ) as Phaser.Physics.Arcade.Body[];
 
         for (const body of enemies) {
-          const enemy = body.gameObject as Enemy;
-          if (enemy && enemy.active && enemy.config) {
-            this.applyDamageToEnemy(enemy, damage, skill);
+          const obj = body.gameObject;
+          if (obj && obj instanceof Enemy && obj.active) {
+            this.applyDamageToEnemy(obj, damage, skill);
 
             // 攻击视觉效果
             const beam = this.scene.add.graphics();
             beam.lineStyle(2, 0xffff00, 0.8);
-            beam.lineBetween(spirit.x, spirit.y, enemy.x, enemy.y);
+            beam.lineBetween(spirit.x, spirit.y, obj.x, obj.y);
             this.scene.time.delayedCall(100, () => beam.destroy());
             break; // 每次只攻击一个
           }
@@ -867,19 +867,19 @@ export class SkillSystem {
         ) as Phaser.Physics.Arcade.Body[];
 
         for (const body of bodies) {
-          const enemy = body.gameObject as Enemy;
-          if (enemy && enemy.active && enemy.config) {
+          const obj = body.gameObject;
+          if (obj && obj instanceof Enemy && obj.active) {
             // 伤害
             const tickDamage = Math.floor(damage * 0.4);
             // Apply with element for counter bonus
             const skillElement = skill.elements[0] || skill.element;
-            enemy.takeDamage(tickDamage, skillElement);
+            obj.takeDamage(tickDamage, skillElement);
             this.applyLifesteal(tickDamage);
 
             // 吸引效果 - 向中心移动
-            const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, centerX, centerY);
-            enemy.x += Math.cos(angle) * 20;
-            enemy.y += Math.sin(angle) * 20;
+            const angle = Phaser.Math.Angle.Between(obj.x, obj.y, centerX, centerY);
+            obj.x += Math.cos(angle) * 20;
+            obj.y += Math.sin(angle) * 20;
           }
         }
       },
@@ -898,9 +898,9 @@ export class SkillSystem {
     ) as Phaser.Physics.Arcade.Body[];
 
     for (const body of bodies) {
-      const enemy = body.gameObject as Enemy;
-      if (enemy && enemy.active && enemy.config) {
-        this.applyDamageToEnemy(enemy, damage, skill);
+      const obj = body.gameObject;
+      if (obj && obj instanceof Enemy && obj.active) {
+        this.applyDamageToEnemy(obj, damage, skill);
       }
     }
   }
@@ -917,9 +917,9 @@ export class SkillSystem {
     ) as Phaser.Physics.Arcade.Body[];
 
     for (const body of bodies) {
-      const enemy = body.gameObject as Enemy;
-      if (enemy && enemy.active && enemy.config) {
-        this.applyDamageToEnemy(enemy, damage, skill);
+      const obj = body.gameObject;
+      if (obj && obj instanceof Enemy && obj.active) {
+        this.applyDamageToEnemy(obj, damage, skill);
       }
     }
 
@@ -941,19 +941,19 @@ export class SkillSystem {
     ) as Phaser.Physics.Arcade.Body[];
 
     for (const body of bodies) {
-      const enemy = body.gameObject as Enemy;
-      if (enemy && enemy.active && enemy.config) {
-        this.applyDamageToEnemy(enemy, damage, skill);
+      const obj = body.gameObject;
+      if (obj && obj instanceof Enemy && obj.active) {
+        this.applyDamageToEnemy(obj, damage, skill);
 
         // 击退效果
         const angle = Phaser.Math.Angle.Between(
           this.player.x,
           this.player.y,
-          enemy.x,
-          enemy.y
+          obj.x,
+          obj.y
         );
-        enemy.x += Math.cos(angle) * 50;
-        enemy.y += Math.sin(angle) * 50;
+        obj.x += Math.cos(angle) * 50;
+        obj.y += Math.sin(angle) * 50;
       }
     }
   }
@@ -986,14 +986,14 @@ export class SkillSystem {
         ) as Phaser.Physics.Arcade.Body[];
 
         for (const body of bodies) {
-          const enemy = body.gameObject as Enemy;
-          if (enemy && enemy.active && enemy.config) {
+          const obj = body.gameObject;
+          if (obj && obj instanceof Enemy && obj.active) {
             const tickDamage = Math.floor(damage * 0.3); // 每次造成30%伤害
             // Apply with element for counter bonus
             const skillElement = skill.elements[0] || skill.element;
-            enemy.takeDamage(tickDamage, skillElement);
+            obj.takeDamage(tickDamage, skillElement);
             // Apply freeze effect from skill
-            this.applyEffects(enemy, skill.effects);
+            this.applyEffects(obj, skill.effects);
             this.applyLifesteal(tickDamage);
           }
         }
@@ -1036,9 +1036,9 @@ export class SkillSystem {
         ) as Phaser.Physics.Arcade.Body[];
 
         for (const body of bodies) {
-          const enemy = body.gameObject as Enemy;
-          if (enemy && enemy.active && enemy.config) {
-            this.applyDamageToEnemy(enemy, damage, skill);
+          const obj = body.gameObject;
+          if (obj && obj instanceof Enemy && obj.active) {
+            this.applyDamageToEnemy(obj, damage, skill);
           }
         }
       },
@@ -1074,14 +1074,14 @@ export class SkillSystem {
         ) as Phaser.Physics.Arcade.Body[];
 
         for (const body of bodies) {
-          const enemy = body.gameObject as Enemy;
-          if (enemy && enemy.active && enemy.config) {
+          const obj = body.gameObject;
+          if (obj && obj instanceof Enemy && obj.active) {
             const tickDamage = Math.floor(damage * 0.3); // 每次造成30%伤害
             // Apply with element for counter bonus
             const skillElement = skill.elements[0] || skill.element;
-            enemy.takeDamage(tickDamage, skillElement);
+            obj.takeDamage(tickDamage, skillElement);
             // 中毒效果 - 变绿
-            enemy.setTint(0x44ff44);
+            obj.setTint(0x44ff44);
             this.applyLifesteal(tickDamage);
           }
         }
@@ -1182,9 +1182,9 @@ export class SkillSystem {
     const enemies: Enemy[] = [];
     const bodies = this.scene.physics.overlapCirc(x, y, range) as Phaser.Physics.Arcade.Body[];
     for (const body of bodies) {
-      const enemy = body.gameObject as Enemy;
-      if (enemy && enemy.active && enemy.config) {
-        enemies.push(enemy);
+      const obj = body.gameObject;
+      if (obj && obj instanceof Enemy && obj.active) {
+        enemies.push(obj);
       }
     }
     return enemies;
