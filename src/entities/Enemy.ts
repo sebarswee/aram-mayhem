@@ -1,8 +1,42 @@
 import Phaser from 'phaser';
-import { EnemyConfig, EnemyType } from '@/types';
+import { EnemyConfig, EnemyType, Element, ElementMark } from '@/types';
+import { COUNTER_RELATIONS, ELEMENT_COLORS, getCounterBonus } from '@/data/elements';
+
+// Status effect interface
+export interface StatusEffect {
+  type: 'burn' | 'freeze' | 'stun' | 'poison' | 'slow' | 'root';
+  value: number;
+  duration: number;
+  remainingTime: number;
+  source: string; // source skill ID
+}
 
 // 敌人类型到精灵纹理的映射
 const ENEMY_TEXTURE_MAP: Record<string, string> = {
+  // Normal enemies (8 elements)
+  'flame_slime': 'enemy_slime',
+  'water_elemental': 'enemy_slime',
+  'frost_ghost': 'enemy_ghost',
+  'thunder_spirit': 'enemy_spirit',
+  'holy_sprite': 'enemy_spirit',
+  'shadow_demon': 'enemy_demon',
+  'vine_monster': 'enemy_plant',
+  'rock_golem': 'enemy_golem',
+  // Elite enemies
+  'elite_flame_lord': 'enemy_orc',
+  'elite_frost_titan': 'enemy_giant',
+  'elite_storm_drake': 'enemy_drake',
+  'elite_shadow_lord': 'enemy_demon',
+  // Boss enemies
+  'boss_flame_lord': 'enemy_boss',
+  'boss_frost_giant': 'enemy_boss',
+  'boss_thunder_dragon': 'enemy_boss',
+  'boss_shadow_king': 'enemy_boss',
+  'boss_nature_guardian': 'enemy_boss',
+  'boss_golem_lord': 'enemy_boss',
+  'boss_fallen_angel': 'enemy_boss',
+  'boss_hydra': 'enemy_boss',
+  // Legacy mappings
   'slime': 'enemy_slime',
   'bat': 'enemy_bat',
   'skeleton': 'enemy_skeleton',
@@ -11,12 +45,34 @@ const ENEMY_TEXTURE_MAP: Record<string, string> = {
   'boss': 'enemy_boss',
 };
 
+// Element-specific death effect colors
+const ELEMENT_DEATH_COLORS: Record<Element, number> = {
+  fire: 0xff4400,
+  water: 0x4488ff,
+  ice: 0x88ddff,
+  lightning: 0xffff00,
+  holy: 0xffcc00,
+  shadow: 0x8800ff,
+  grass: 0x44ff44,
+  earth: 0xaa8844,
+};
+
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
   public config: EnemyConfig;
   public currentHp: number;
   public instanceId: string; // 唯一实例ID（用于连锁判定）
+  public element: Element;
+
+  // Status effects
+  public statusEffects: StatusEffect[] = [];
+
+  // Element marks for synergy tracking
+  private elementMarks: Map<Element, ElementMark> = new Map();
+
   private target: Phaser.GameObjects.Sprite | null = null;
   private shadowGraphics: Phaser.GameObjects.Graphics | null = null;
+  private lastDotTickTime: Record<string, number> = {};
+  private elementTintApplied: boolean = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number, config: EnemyConfig) {
     // 根据敌人配置选择纹理
@@ -26,6 +82,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.config = config;
     this.currentHp = config.hp;
     this.instanceId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    this.element = config.element;
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -43,6 +100,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     // 创建阴影效果
     this.createShadow();
+
+    // Apply element color tint
+    this.applyElementTint();
   }
 
   private getScaleByType(type: EnemyType): number {
@@ -71,39 +131,239 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.shadowGraphics.fillEllipse(this.x, this.y + 10, 30 * this.scaleX, 10);
   }
 
+  private applyElementTint(): void {
+    const elementColor = ELEMENT_COLORS[this.element];
+    if (elementColor) {
+      this.setTint(elementColor);
+      this.elementTintApplied = true;
+    }
+  }
+
   setTarget(target: Phaser.GameObjects.Sprite): void {
     this.target = target;
   }
 
-  update(_delta: number): void {
+  update(time: number, _delta: number): void {
     if (!this.target || !this.active) return;
 
-    // 追踪目标
-    const speed = this.config.speed;
-    const angle = Phaser.Math.Angle.Between(
-      this.x,
-      this.y,
-      this.target.x,
-      this.target.y
-    );
+    // Update status effects (ticking)
+    this.updateStatusEffects(time);
 
-    this.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+    // Calculate actual speed considering slow effects
+    const speedMultiplier = this.getSpeedMultiplier();
+    const actualSpeed = this.config.speed * speedMultiplier;
+
+    // Check if immobilized (freeze, stun, or root)
+    const isImmobilized = this.isImmobilized();
+
+    if (!isImmobilized) {
+      // 追踪目标
+      const angle = Phaser.Math.Angle.Between(
+        this.x,
+        this.y,
+        this.target.x,
+        this.target.y
+      );
+
+      this.setVelocity(Math.cos(angle) * actualSpeed, Math.sin(angle) * actualSpeed);
+
+      // 根据移动方向轻微翻转
+      if (this.body?.velocity.x && this.body.velocity.x < 0) {
+        this.setFlipX(true);
+      } else if (this.body?.velocity.x && this.body.velocity.x > 0) {
+        this.setFlipX(false);
+      }
+    } else {
+      // Stop movement when immobilized
+      this.setVelocity(0, 0);
+    }
 
     // 更新阴影位置
     if (this.shadowGraphics) {
       this.updateShadow();
     }
+  }
 
-    // 根据移动方向轻微翻转
-    if (this.body?.velocity.x && this.body.velocity.x < 0) {
-      this.setFlipX(true);
-    } else if (this.body?.velocity.x && this.body.velocity.x > 0) {
-      this.setFlipX(false);
+  // ==================== Status Effect Methods ====================
+
+  /**
+   * Add a status effect to this enemy
+   */
+  addStatusEffect(effect: StatusEffect): void {
+    // Check if same type already exists
+    const existingIndex = this.statusEffects.findIndex(e => e.type === effect.type);
+
+    if (existingIndex >= 0) {
+      // Refresh duration if new one is stronger or longer
+      const existing = this.statusEffects[existingIndex];
+      if (effect.value >= existing.value || effect.duration >= existing.remainingTime) {
+        this.statusEffects[existingIndex] = { ...effect, remainingTime: effect.duration };
+      }
+    } else {
+      this.statusEffects.push({ ...effect, remainingTime: effect.duration });
+      this.applyStatusEffectVisual(effect.type);
     }
   }
 
-  takeDamage(amount: number): boolean {
-    this.currentHp -= amount;
+  /**
+   * Update all status effects - tick damage and expire
+   */
+  private updateStatusEffects(time: number): void {
+    const delta = this.scene.game.loop.delta;
+
+    this.statusEffects = this.statusEffects.filter(effect => {
+      effect.remainingTime -= delta;
+
+      // Process tick-based effects
+      if (effect.type === 'burn' || effect.type === 'poison') {
+        const tickInterval = effect.type === 'burn' ? 500 : 1000;
+        const key = `${this.instanceId}_${effect.type}`;
+
+        if (!this.lastDotTickTime[key]) {
+          this.lastDotTickTime[key] = time;
+        }
+
+        if (time - this.lastDotTickTime[key] >= tickInterval) {
+          this.takeDamage(effect.value);
+          this.lastDotTickTime[key] = time;
+        }
+      }
+
+      // Remove expired effects
+      if (effect.remainingTime <= 0) {
+        this.removeStatusEffectVisual(effect.type);
+        delete this.lastDotTickTime[`${this.instanceId}_${effect.type}`];
+        return false;
+      }
+
+      return true;
+    });
+  }
+
+  /**
+   * Apply visual effect for status type
+   */
+  private applyStatusEffectVisual(type: StatusEffect['type']): void {
+    switch (type) {
+      case 'freeze':
+        this.setTint(0x88ddff); // Blue tint
+        break;
+      case 'stun':
+        // Could add stars visual here
+        this.setTint(0xffff88);
+        break;
+      case 'poison':
+        this.setTint(0x88ff88);
+        break;
+      default:
+        break;
+    }
+  }
+
+  /**
+   * Remove visual effect for status type
+   */
+  private removeStatusEffectVisual(type: StatusEffect['type']): void {
+    switch (type) {
+      case 'freeze':
+      case 'stun':
+      case 'poison':
+        // Restore element tint
+        this.applyElementTint();
+        break;
+      default:
+        break;
+    }
+  }
+
+  /**
+   * Get speed multiplier from slow effects
+   */
+  private getSpeedMultiplier(): number {
+    const slowEffect = this.statusEffects.find(e => e.type === 'slow');
+    if (slowEffect) {
+      return 1 - slowEffect.value; // value is 0-1, so 0.3 slow = 0.7x speed
+    }
+    return 1;
+  }
+
+  /**
+   * Check if enemy is immobilized (freeze/stun/root)
+   */
+  private isImmobilized(): boolean {
+    return this.statusEffects.some(e =>
+      e.type === 'freeze' || e.type === 'stun' || e.type === 'root'
+    );
+  }
+
+  // ==================== Element Mark Methods ====================
+
+  /**
+   * Add an element mark to this enemy for synergy tracking
+   */
+  addElementMark(element: Element, source: string, duration: number = 5000): void {
+    const mark: ElementMark = {
+      element,
+      timestamp: Date.now(),
+      duration,
+      source,
+    };
+    this.elementMarks.set(element, mark);
+  }
+
+  /**
+   * Get all active element marks on this enemy
+   */
+  getElementMarks(): ElementMark[] {
+    const now = Date.now();
+    const activeMarks: ElementMark[] = [];
+
+    this.elementMarks.forEach((mark, element) => {
+      if (now - mark.timestamp < mark.duration) {
+        activeMarks.push(mark);
+      } else {
+        this.elementMarks.delete(element);
+      }
+    });
+
+    return activeMarks;
+  }
+
+  /**
+   * Check if enemy has a specific element mark
+   */
+  hasElementMark(element: Element): boolean {
+    const mark = this.elementMarks.get(element);
+    if (!mark) return false;
+
+    const now = Date.now();
+    if (now - mark.timestamp >= mark.duration) {
+      this.elementMarks.delete(element);
+      return false;
+    }
+
+    return true;
+  }
+
+  // ==================== Damage Methods ====================
+
+  /**
+   * Take damage, with optional element for counter bonus calculation
+   */
+  takeDamage(amount: number, attackerElement?: Element): boolean {
+    let finalDamage = amount;
+
+    // Apply counter damage bonus
+    if (attackerElement) {
+      const counterBonus = getCounterBonus(attackerElement, this.element);
+      if (counterBonus > 0) {
+        finalDamage = amount * (1 + counterBonus);
+        // Visual feedback for counter hit
+        this.showCounterEffect();
+      }
+    }
+
+    this.currentHp -= finalDamage;
 
     // 受伤闪烁
     this.scene.tweens.add({
@@ -121,9 +381,23 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     return false;
   }
 
+  /**
+   * Visual effect for counter hit
+   */
+  private showCounterEffect(): void {
+    // Flash white briefly
+    const originalTint = this.tintTopLeft;
+    this.setTint(0xffffff);
+    this.scene.time.delayedCall(100, () => {
+      if (this.active) {
+        this.setTint(originalTint);
+      }
+    });
+  }
+
   private die(): void {
-    // 创建死亡粒子效果
-    this.createDeathEffect();
+    // 创建元素特定死亡效果
+    this.createElementDeathEffect();
 
     // 清理阴影
     if (this.shadowGraphics) {
@@ -134,18 +408,174 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.destroy();
   }
 
-  private createDeathEffect(): void {
-    // 简单的爆炸粒子效果
+  /**
+   * Create element-specific death effect
+   */
+  private createElementDeathEffect(): void {
+    const color = ELEMENT_DEATH_COLORS[this.element] || 0xffffff;
+
+    switch (this.element) {
+      case 'fire':
+        this.createFireDeathEffect(color);
+        break;
+      case 'water':
+        this.createWaterDeathEffect(color);
+        break;
+      case 'ice':
+        this.createIceDeathEffect(color);
+        break;
+      case 'lightning':
+        this.createLightningDeathEffect(color);
+        break;
+      case 'holy':
+        this.createHolyDeathEffect(color);
+        break;
+      case 'shadow':
+        this.createShadowDeathEffect(color);
+        break;
+      case 'grass':
+        this.createGrassDeathEffect(color);
+        break;
+      case 'earth':
+        this.createEarthDeathEffect(color);
+        break;
+      default:
+        this.createDefaultDeathEffect(color);
+        break;
+    }
+  }
+
+  private createFireDeathEffect(color: number): void {
+    // Fire particle burst
+    const particles = this.scene.add.particles(this.x, this.y, 'particle_glow', {
+      speed: { min: 80, max: 200 },
+      scale: { start: 0.8, end: 0 },
+      alpha: { start: 1, end: 0 },
+      tint: color,
+      lifespan: 600,
+      quantity: 12,
+      emitting: false,
+    });
+    particles.explode();
+    this.scene.time.delayedCall(700, () => particles.destroy());
+  }
+
+  private createWaterDeathEffect(color: number): void {
+    // Water splash effect
+    const particles = this.scene.add.particles(this.x, this.y, 'particle_glow', {
+      speed: { min: 40, max: 120 },
+      scale: { start: 0.6, end: 0.1 },
+      alpha: { start: 0.8, end: 0 },
+      tint: color,
+      lifespan: 500,
+      quantity: 16,
+      emitting: false,
+    });
+    particles.explode();
+    this.scene.time.delayedCall(600, () => particles.destroy());
+  }
+
+  private createIceDeathEffect(color: number): void {
+    // Ice shatter effect
+    const particles = this.scene.add.particles(this.x, this.y, 'particle_glow', {
+      speed: { min: 100, max: 180 },
+      scale: { start: 0.5, end: 0 },
+      alpha: { start: 1, end: 0 },
+      tint: color,
+      lifespan: 400,
+      quantity: 20,
+      emitting: false,
+    });
+    particles.explode();
+    this.scene.time.delayedCall(500, () => particles.destroy());
+  }
+
+  private createLightningDeathEffect(color: number): void {
+    // Electric discharge effect
+    const particles = this.scene.add.particles(this.x, this.y, 'particle_glow', {
+      speed: { min: 150, max: 300 },
+      scale: { start: 0.4, end: 0 },
+      alpha: { start: 1, end: 0 },
+      tint: color,
+      lifespan: 300,
+      quantity: 24,
+      emitting: false,
+    });
+    particles.explode();
+    this.scene.time.delayedCall(400, () => particles.destroy());
+  }
+
+  private createHolyDeathEffect(color: number): void {
+    // Golden flash effect
+    const particles = this.scene.add.particles(this.x, this.y, 'particle_glow', {
+      speed: { min: 60, max: 140 },
+      scale: { start: 0.7, end: 0 },
+      alpha: { start: 1, end: 0 },
+      tint: color,
+      lifespan: 800,
+      quantity: 15,
+      emitting: false,
+    });
+    particles.explode();
+    this.scene.time.delayedCall(900, () => particles.destroy());
+  }
+
+  private createShadowDeathEffect(color: number): void {
+    // Purple mist effect
+    const particles = this.scene.add.particles(this.x, this.y, 'particle_glow', {
+      speed: { min: 30, max: 80 },
+      scale: { start: 0.9, end: 0 },
+      alpha: { start: 0.7, end: 0 },
+      tint: color,
+      lifespan: 1000,
+      quantity: 10,
+      emitting: false,
+    });
+    particles.explode();
+    this.scene.time.delayedCall(1100, () => particles.destroy());
+  }
+
+  private createGrassDeathEffect(color: number): void {
+    // Leaf scatter effect
+    const particles = this.scene.add.particles(this.x, this.y, 'particle_glow', {
+      speed: { min: 50, max: 100 },
+      scale: { start: 0.5, end: 0 },
+      alpha: { start: 1, end: 0 },
+      tint: color,
+      lifespan: 700,
+      quantity: 14,
+      emitting: false,
+    });
+    particles.explode();
+    this.scene.time.delayedCall(800, () => particles.destroy());
+  }
+
+  private createEarthDeathEffect(color: number): void {
+    // Rock debris effect
+    const particles = this.scene.add.particles(this.x, this.y, 'particle_glow', {
+      speed: { min: 70, max: 150 },
+      scale: { start: 0.6, end: 0.2 },
+      alpha: { start: 1, end: 0 },
+      tint: color,
+      lifespan: 600,
+      quantity: 18,
+      emitting: false,
+    });
+    particles.explode();
+    this.scene.time.delayedCall(700, () => particles.destroy());
+  }
+
+  private createDefaultDeathEffect(color: number): void {
+    // Default explosion effect
     const particles = this.scene.add.particles(this.x, this.y, 'particle_glow', {
       speed: { min: 50, max: 150 },
       scale: { start: 0.6, end: 0 },
       alpha: { start: 1, end: 0 },
-      tint: this.config.color,
+      tint: color,
       lifespan: 400,
       quantity: 8,
       emitting: false,
     });
-
     particles.explode();
     this.scene.time.delayedCall(500, () => particles.destroy());
   }
