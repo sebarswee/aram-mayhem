@@ -88,8 +88,74 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.lifetime = PROJECTILE_LIFETIME;
     this.lastTime = 0;  // 初始化为 0，第一次 update 时会设置
 
+    // 根据技能ID定制外观
+    this.applySkillSpecificVisual(element);
+
     // 创建尾迹粒子
     this.createTrailParticles(element);
+  }
+
+  /**
+   * 根据技能ID应用特定视觉效果
+   */
+  private applySkillSpecificVisual(element: string): void {
+    const skillId = this.config.skill.id;
+
+    // 根据技能ID定制外观
+    switch (skillId) {
+      case 'ignite':
+        // 点燃：更小、更亮的火焰，橙色
+        this.setScale(0.6);
+        this.setTint(0xff8800);
+        break;
+      case 'arc_lightning':
+        // 电弧：更小、更亮，带旋转
+        this.setScale(0.7);
+        this.setTint(0xffff88);
+        break;
+      case 'seed_bomb':
+        // 种子炸弹：更大、绿色圆形
+        this.setScale(1.2);
+        this.setTint(0x44aa44);
+        break;
+      case 'hex':
+        // 诅咒：紫色、带脉动
+        this.setScale(0.8);
+        this.setTint(0x8800ff);
+        this.scene.tweens.add({
+          targets: this,
+          alpha: 0.6,
+          duration: 100,
+          yoyo: true,
+          repeat: -1,
+        });
+        break;
+      case 'lightning_bolt':
+        // 闪电箭：带电弧尾迹
+        this.setTint(0xffff00);
+        break;
+      case 'shadow_bolt':
+        // 暗影箭：深紫色、拖尾
+        this.setTint(0x6600aa);
+        break;
+      case 'ice_shard':
+        // 冰刺：淡蓝色、尖锐
+        this.setTint(0x88ddff);
+        break;
+      case 'water_bullet':
+        // 水弹：透明蓝色
+        this.setTint(0x66aaff);
+        this.setAlpha(0.8);
+        break;
+      case 'vine_whip':
+        // 藤蔓鞭：绿色、细长
+        this.setScale(1.3, 0.7);
+        this.setTint(0x44ff44);
+        break;
+      default:
+        // 默认使用元素颜色
+        break;
+    }
   }
 
   private createTrailParticles(element: string): void {

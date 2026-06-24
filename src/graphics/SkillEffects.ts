@@ -197,6 +197,55 @@ export class SkillEffects {
       case 'time_stop':
         this.createTimeStopEffect(x, y, skill.rangeValue);
         break;
+      // 新增技能效果
+      case 'flame_wave':
+        this.createFlameWaveEffect(x, y, skill.rangeValue);
+        break;
+      case 'tidal_wave':
+        this.createTidalWaveEffect(x, y, skill.rangeValue);
+        break;
+      case 'thunder_apocalypse':
+        this.createThunderApocalypseEffect(x, y, skill.rangeValue);
+        break;
+      case 'dragon_breath':
+        this.createDragonBreathEffect(x, y, skill.rangeValue);
+        break;
+      case 'inferno':
+        this.createInfernoEffect(x, y, skill.rangeValue);
+        break;
+      case 'abyss_vortex':
+        this.createAbyssVortexEffect(x, y, skill.rangeValue);
+        break;
+      case 'frozen_domain':
+        this.createFrozenDomainEffect(x, y, skill.rangeValue);
+        break;
+      case 'absolute_zero':
+        this.createAbsoluteZeroEffect(x, y, skill.rangeValue);
+        break;
+      case 'judgment_light':
+        this.createJudgmentLightEffect(x, y, skill.rangeValue);
+        break;
+      case 'shadow_descent':
+        this.createShadowDescentEffect(x, y, skill.rangeValue);
+        break;
+      case 'death_decay':
+        this.createDeathDecayEffect(x, y, skill.rangeValue);
+        break;
+      case 'mountain_collapse':
+        this.createMountainCollapseEffect(x, y, skill.rangeValue);
+        break;
+      case 'earthquake':
+        this.createEarthquakeEffect(x, y, skill.rangeValue);
+        break;
+      case 'tsunami':
+        this.createTsunamiEffect(x, y, skill.rangeValue);
+        break;
+      case 'overgrowth':
+        this.createOvergrowthEffect(x, y, skill.rangeValue);
+        break;
+      case 'void_rift':
+        this.createVoidRiftEffect(x, y, skill.rangeValue);
+        break;
       default:
         this.createDefaultAreaEffect(x, y, skill.rangeValue, skill.elements[0]);
     }
@@ -791,6 +840,620 @@ export class SkillEffects {
           clock.destroy();
           hourHand.destroy();
           minuteHand.destroy();
+        },
+      });
+    });
+  }
+
+  // ==================== 新增技能视觉效果 ====================
+
+  /**
+   * 烈焰波效果 - 向前释放火焰波
+   */
+  private createFlameWaveEffect(x: number, y: number, radius: number): void {
+    // 火焰波纹
+    const wave = this.scene.add.graphics();
+    wave.fillStyle(0xff4400, 0.6);
+    wave.fillCircle(x, y, radius);
+    wave.setDepth(20);
+
+    // 火焰粒子
+    const particles = this.scene.add.particles(x, y, 'particle_fire', {
+      speed: { min: 80, max: 200 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 0.7, end: 0 },
+      alpha: { start: 1, end: 0 },
+      lifespan: 600,
+      quantity: 25,
+      emitting: false,
+    });
+    particles.explode();
+    particles.setDepth(21);
+
+    this.scene.tweens.add({
+      targets: wave,
+      scaleX: 2,
+      scaleY: 2,
+      alpha: 0,
+      duration: 400,
+      onComplete: () => {
+        wave.destroy();
+        particles.destroy();
+      },
+    });
+  }
+
+  /**
+   * 潮汐效果 - 水流推开
+   */
+  private createTidalWaveEffect(x: number, y: number, radius: number): void {
+    // 水波
+    const wave = this.scene.add.circle(x, y, radius, 0x4488ff, 0.5);
+    wave.setDepth(20);
+
+    // 水流粒子
+    const particles = this.scene.add.particles(x, y, 'particle_water', {
+      speed: { min: 100, max: 250 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 0.8, end: 0 },
+      alpha: { start: 0.8, end: 0 },
+      lifespan: 500,
+      quantity: 30,
+      emitting: false,
+    });
+    particles.explode();
+    particles.setDepth(21);
+
+    this.scene.tweens.add({
+      targets: wave,
+      scale: 1.5,
+      alpha: 0,
+      duration: 500,
+      onComplete: () => {
+        wave.destroy();
+        particles.destroy();
+      },
+    });
+  }
+
+  /**
+   * 雷霆万钧效果 - 全屏连锁雷击
+   */
+  private createThunderApocalypseEffect(x: number, y: number, radius: number): void {
+    // 风暴云
+    const cloud = this.scene.add.circle(x, y, radius, 0x333355, 0.3);
+    cloud.setDepth(20);
+
+    // 闪电随机击落（视觉效果）
+    const strikes: Phaser.GameObjects.Graphics[] = [];
+    for (let i = 0; i < 8; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = Math.random() * radius * 0.7;
+      const strikeX = x + Math.cos(angle) * dist;
+      const strikeY = y + Math.sin(angle) * dist;
+
+      const lightning = this.scene.add.graphics();
+      lightning.lineStyle(3, 0xffff00, 1);
+      lightning.lineBetween(strikeX, strikeY - 50, strikeX, strikeY);
+      lightning.setDepth(21);
+      strikes.push(lightning);
+
+      // 闪烁
+      this.scene.tweens.add({
+        targets: lightning,
+        alpha: 0,
+        delay: i * 100,
+        duration: 150,
+        onComplete: () => lightning.destroy(),
+      });
+    }
+
+    this.scene.time.delayedCall(1000, () => {
+      cloud.destroy();
+    });
+  }
+
+  /**
+   * 炎龙吐息效果 - 扇形火焰
+   */
+  private createDragonBreathEffect(x: number, y: number, radius: number): void {
+    // 火焰扇形
+    const breath = this.scene.add.graphics();
+    breath.fillStyle(0xff4400, 0.7);
+
+    // 扇形绘制
+    const points: { x: number; y: number }[] = [];
+    for (let i = -30; i <= 30; i += 5) {
+      const angle = (i * Math.PI) / 180;
+      points.push({
+        x: x + Math.cos(angle) * radius,
+        y: y + Math.sin(angle) * radius,
+      });
+    }
+    points.push({ x, y });
+
+    breath.beginPath();
+    breath.moveTo(x, y);
+    for (const p of points) {
+      breath.lineTo(p.x, p.y);
+    }
+    breath.closePath();
+    breath.fillPath();
+    breath.setDepth(20);
+
+    // 火焰粒子
+    const particles = this.scene.add.particles(x, y, 'particle_fire', {
+      speed: { min: 150, max: 300 },
+      angle: { min: -30, max: 30 },
+      scale: { start: 0.8, end: 0 },
+      alpha: { start: 1, end: 0 },
+      lifespan: 400,
+      quantity: 20,
+      emitting: false,
+    });
+    particles.explode();
+    particles.setDepth(21);
+
+    this.scene.tweens.add({
+      targets: breath,
+      alpha: 0,
+      duration: 600,
+      onComplete: () => {
+        breath.destroy();
+        particles.destroy();
+      },
+    });
+  }
+
+  /**
+   * 烈焰风暴效果 - 持续燃烧区域
+   */
+  private createInfernoEffect(x: number, y: number, radius: number): void {
+    // 火焰区域
+    const inferno = this.scene.add.circle(x, y, radius, 0xff4400, 0.3);
+    inferno.setDepth(20);
+
+    // 火焰粒子持续喷发
+    const particles = this.scene.add.particles(x, y, 'particle_fire', {
+      speed: { min: 50, max: 150 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 0.6, end: 0 },
+      alpha: { start: 0.8, end: 0 },
+      lifespan: 2000,
+      frequency: 100,
+      quantity: 3,
+    });
+    particles.setDepth(21);
+
+    this.scene.time.delayedCall(5000, () => {
+      particles.stop();
+      this.scene.tweens.add({
+        targets: [inferno, particles],
+        alpha: 0,
+        duration: 500,
+        onComplete: () => {
+          inferno.destroy();
+          particles.destroy();
+        },
+      });
+    });
+  }
+
+  /**
+   * 深渊漩涡效果 - 持续吸引
+   */
+  private createAbyssVortexEffect(x: number, y: number, radius: number): void {
+    // 漩涡核心
+    const vortex = this.scene.add.circle(x, y, 30, 0x2266cc, 1);
+    vortex.setDepth(21);
+
+    // 旋转环
+    const rings: Phaser.GameObjects.Arc[] = [];
+    for (let i = 0; i < 3; i++) {
+      const ring = this.scene.add.circle(x, y, radius - i * 30, 0x4488ff, 0.2 - i * 0.05);
+      ring.setDepth(20);
+      rings.push(ring);
+    }
+
+    // 旋转动画
+    this.scene.tweens.add({
+      targets: rings,
+      angle: 360,
+      duration: 1000,
+      repeat: 3,
+    });
+
+    this.scene.time.delayedCall(3000, () => {
+      this.scene.tweens.add({
+        targets: [vortex, ...rings],
+        alpha: 0,
+        scale: 0.5,
+        duration: 300,
+        onComplete: () => {
+          vortex.destroy();
+          rings.forEach(r => r.destroy());
+        },
+      });
+    });
+  }
+
+  /**
+   * 冰封领域效果 - 持续冻结
+   */
+  private createFrozenDomainEffect(x: number, y: number, radius: number): void {
+    // 冰霜区域
+    const domain = this.scene.add.circle(x, y, radius, 0x88ddff, 0.3);
+    domain.setDepth(20);
+
+    // 冰霜粒子
+    const particles = this.scene.add.particles(x, y, 'particle_ice', {
+      speed: { min: 30, max: 80 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 0.5, end: 0 },
+      alpha: { start: 0.7, end: 0 },
+      lifespan: 2000,
+      frequency: 80,
+      quantity: 2,
+    });
+    particles.setDepth(21);
+
+    this.scene.time.delayedCall(4000, () => {
+      particles.stop();
+      this.scene.tweens.add({
+        targets: [domain, particles],
+        alpha: 0,
+        duration: 500,
+        onComplete: () => {
+          domain.destroy();
+          particles.destroy();
+        },
+      });
+    });
+  }
+
+  /**
+   * 绝对零度效果 - 极寒爆发
+   */
+  private createAbsoluteZeroEffect(x: number, y: number, radius: number): void {
+    // 极寒核心
+    const core = this.scene.add.circle(x, y, 50, 0xffffff, 1);
+    core.setDepth(21);
+
+    // 冰霜爆发
+    const wave = this.scene.add.circle(x, y, radius, 0x88ffff, 0.8);
+    wave.setDepth(20);
+
+    // 冰晶粒子
+    const particles = this.scene.add.particles(x, y, 'particle_ice', {
+      speed: { min: 200, max: 400 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 1, end: 0 },
+      alpha: { start: 1, end: 0 },
+      lifespan: 600,
+      quantity: 40,
+      emitting: false,
+    });
+    particles.explode();
+    particles.setDepth(22);
+
+    this.scene.tweens.add({
+      targets: [core, wave],
+      scale: 1.5,
+      alpha: 0,
+      duration: 800,
+      onComplete: () => {
+        core.destroy();
+        wave.destroy();
+        particles.destroy();
+      },
+    });
+  }
+
+  /**
+   * 审判之光效果 - 圣光审判
+   */
+  private createJudgmentLightEffect(x: number, y: number, radius: number): void {
+    // 圣光柱
+    const beam = this.scene.add.rectangle(x, y, 80, radius * 2, 0xffcc00, 0.6);
+    beam.setDepth(20);
+
+    // 光芒射线
+    const rays = this.scene.add.graphics();
+    rays.lineStyle(4, 0xffffff, 0.8);
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      rays.lineBetween(x, y, x + Math.cos(angle) * radius, y + Math.sin(angle) * radius);
+    }
+    rays.setDepth(21);
+
+    // 金色粒子
+    const particles = this.scene.add.particles(x, y, 'particle_holy', {
+      speed: { min: 100, max: 200 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 0.8, end: 0 },
+      alpha: { start: 1, end: 0 },
+      lifespan: 500,
+      quantity: 30,
+      emitting: false,
+    });
+    particles.explode();
+    particles.setDepth(22);
+
+    this.scene.tweens.add({
+      targets: [beam, rays],
+      alpha: 0,
+      duration: 600,
+      onComplete: () => {
+        beam.destroy();
+        rays.destroy();
+        particles.destroy();
+      },
+    });
+  }
+
+  /**
+   * 暗影降临效果 - 暗影笼罩
+   */
+  private createShadowDescentEffect(x: number, y: number, radius: number): void {
+    // 暗影区域
+    const shadow = this.scene.add.circle(x, y, radius, 0x440066, 0.5);
+    shadow.setDepth(20);
+
+    // 暗影粒子
+    const particles = this.scene.add.particles(x, y, 'particle_shadow', {
+      speed: { min: 50, max: 150 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 0.8, end: 0 },
+      alpha: { start: 0.6, end: 0 },
+      lifespan: 2000,
+      frequency: 100,
+      quantity: 3,
+    });
+    particles.setDepth(21);
+
+    this.scene.time.delayedCall(4000, () => {
+      particles.stop();
+      this.scene.tweens.add({
+        targets: [shadow, particles],
+        alpha: 0,
+        duration: 500,
+        onComplete: () => {
+          shadow.destroy();
+          particles.destroy();
+        },
+      });
+    });
+  }
+
+  /**
+   * 死亡凋零效果 - 死亡气息
+   */
+  private createDeathDecayEffect(x: number, y: number, radius: number): void {
+    // 死亡区域
+    const decay = this.scene.add.circle(x, y, radius, 0x440044, 0.4);
+    decay.setDepth(20);
+
+    // 死亡粒子（骷髅形状简化为圆形）
+    const particles = this.scene.add.particles(x, y, 'particle_shadow', {
+      speed: { min: 30, max: 80 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 0.7, end: 0 },
+      alpha: { start: 0.5, end: 0 },
+      tint: 0x880088,
+      lifespan: 3000,
+      frequency: 150,
+      quantity: 2,
+    });
+    particles.setDepth(21);
+
+    this.scene.time.delayedCall(5000, () => {
+      particles.stop();
+      this.scene.tweens.add({
+        targets: [decay, particles],
+        alpha: 0,
+        duration: 500,
+        onComplete: () => {
+          decay.destroy();
+          particles.destroy();
+        },
+      });
+    });
+  }
+
+  /**
+   * 山崩地裂效果 - 巨石崩塌
+   */
+  private createMountainCollapseEffect(x: number, y: number, radius: number): void {
+    // 岩石碎片
+    const rocks: Phaser.GameObjects.Arc[] = [];
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      const rock = this.scene.add.circle(
+        x + Math.cos(angle) * radius * 0.5,
+        y + Math.sin(angle) * radius * 0.5,
+        15 + Math.random() * 10,
+        0x886644,
+        0.9
+      );
+      rock.setDepth(21);
+      rocks.push(rock);
+
+      // 向外飞散
+      this.scene.tweens.add({
+        targets: rock,
+        x: x + Math.cos(angle) * radius,
+        y: y + Math.sin(angle) * radius,
+        alpha: 0,
+        duration: 400,
+        onComplete: () => rock.destroy(),
+      });
+    }
+
+    // 地裂效果
+    const crack = this.scene.add.circle(x, y, radius, 0x664422, 0.5);
+    crack.setDepth(20);
+
+    this.scene.tweens.add({
+      targets: crack,
+      scale: 1.5,
+      alpha: 0,
+      duration: 500,
+      onComplete: () => crack.destroy(),
+    });
+  }
+
+  /**
+   * 大地震击效果 - 全屏地震
+   */
+  private createEarthquakeEffect(x: number, y: number, radius: number): void {
+    // 地震波纹
+    const waves: Phaser.GameObjects.Arc[] = [];
+    for (let i = 0; i < 3; i++) {
+      const wave = this.scene.add.circle(x, y, radius * (0.3 + i * 0.3), 0x886644, 0.4 - i * 0.1);
+      wave.setDepth(20);
+      waves.push(wave);
+    }
+
+    // 冲击动画
+    this.scene.tweens.add({
+      targets: waves,
+      scale: 1.5,
+      alpha: 0,
+      duration: 500,
+      onComplete: () => waves.forEach(w => w.destroy()),
+    });
+
+    // 屏幕震动
+    this.scene.cameras.main.shake(300, 0.015);
+  }
+
+  /**
+   * 海啸效果 - 巨浪推进
+   */
+  private createTsunamiEffect(x: number, y: number, radius: number): void {
+    // 巨浪
+    const wave = this.scene.add.graphics();
+    wave.fillStyle(0x4488ff, 0.6);
+    wave.fillCircle(x, y, radius);
+    wave.setDepth(20);
+
+    // 水流粒子
+    const particles = this.scene.add.particles(x, y, 'particle_water', {
+      speed: { min: 150, max: 300 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 1, end: 0 },
+      alpha: { start: 0.8, end: 0 },
+      lifespan: 600,
+      quantity: 50,
+      emitting: false,
+    });
+    particles.explode();
+    particles.setDepth(21);
+
+    this.scene.tweens.add({
+      targets: wave,
+      scale: 2,
+      alpha: 0,
+      duration: 800,
+      onComplete: () => {
+        wave.destroy();
+        particles.destroy();
+      },
+    });
+  }
+
+  /**
+   * 过度生长效果 - 植物缠绕
+   */
+  private createOvergrowthEffect(x: number, y: number, radius: number): void {
+    // 藤蔓区域
+    const vines = this.scene.add.circle(x, y, radius, 0x44ff44, 0.3);
+    vines.setDepth(20);
+
+    // 植物粒子
+    const particles = this.scene.add.particles(x, y, 'particle_grass', {
+      speed: { min: 50, max: 150 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 0.8, end: 0 },
+      alpha: { start: 0.8, end: 0 },
+      lifespan: 800,
+      quantity: 30,
+      emitting: false,
+    });
+    particles.explode();
+    particles.setDepth(21);
+
+    // 藤蔓生长
+    const branches: Phaser.GameObjects.Graphics[] = [];
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const branch = this.scene.add.graphics();
+      branch.lineStyle(4, 0x44aa44, 0.8);
+      branch.lineBetween(x, y, x + Math.cos(angle) * radius, y + Math.sin(angle) * radius);
+      branch.setDepth(22);
+      branches.push(branch);
+    }
+
+    this.scene.tweens.add({
+      targets: [vines, ...branches],
+      alpha: 0,
+      duration: 800,
+      onComplete: () => {
+        vines.destroy();
+        particles.destroy();
+        branches.forEach(b => b.destroy());
+      },
+    });
+  }
+
+  /**
+   * 虚空裂隙效果 - 裂隙吸引
+   */
+  private createVoidRiftEffect(x: number, y: number, radius: number): void {
+    // 裂隙核心
+    const rift = this.scene.add.circle(x, y, 40, 0x8800ff, 0.8);
+    rift.setDepth(21);
+
+    // 虚空环
+    const rings: Phaser.GameObjects.Arc[] = [];
+    for (let i = 0; i < 3; i++) {
+      const ring = this.scene.add.circle(x, y, radius - i * 30, 0x6600aa, 0.3 - i * 0.08);
+      ring.setDepth(20);
+      rings.push(ring);
+    }
+
+    // 虚空粒子
+    const particles = this.scene.add.particles(x, y, 'particle_shadow', {
+      speed: { min: 50, max: 150 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 0.6, end: 0 },
+      alpha: { start: 0.7, end: 0 },
+      tint: 0x8800ff,
+      lifespan: 1500,
+      frequency: 80,
+      quantity: 3,
+    });
+    particles.setDepth(22);
+
+    // 旋转动画
+    this.scene.tweens.add({
+      targets: rings,
+      angle: 360,
+      duration: 800,
+      repeat: 3,
+    });
+
+    this.scene.time.delayedCall(3000, () => {
+      particles.stop();
+      this.scene.tweens.add({
+        targets: [rift, ...rings, particles],
+        alpha: 0,
+        scale: 0.5,
+        duration: 300,
+        onComplete: () => {
+          rift.destroy();
+          rings.forEach(r => r.destroy());
+          particles.destroy();
         },
       });
     });
