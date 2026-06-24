@@ -403,6 +403,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
    * Take damage, with optional element for counter bonus calculation
    */
   takeDamage(amount: number, attackerElement?: Element): boolean {
+    // Safety check: if enemy is destroyed or scene is gone, return false
+    if (!this.scene || !this.active) {
+      return false;
+    }
+
     let finalDamage = amount;
 
     // Apply counter damage bonus
@@ -429,13 +434,15 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     this.currentHp -= finalDamage;
 
-    // 受伤闪烁
-    this.scene.tweens.add({
-      targets: this,
-      alpha: 0.3,
-      duration: 50,
-      yoyo: true,
-    });
+    // 受伤闪烁 (check scene again in case it was destroyed during damage calculation)
+    if (this.scene) {
+      this.scene.tweens.add({
+        targets: this,
+        alpha: 0.3,
+        duration: 50,
+        yoyo: true,
+      });
+    }
 
     if (this.currentHp <= 0) {
       this.die();
@@ -478,11 +485,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
    * Visual effect for counter hit
    */
   private showCounterEffect(): void {
+    // Safety check
+    if (!this.scene || !this.active) return;
+
     // Flash white briefly
     const originalTint = this.tintTopLeft;
     this.setTint(0xffffff);
     this.scene.time.delayedCall(100, () => {
-      if (this.active) {
+      if (this.active && this.scene) {
         this.setTint(originalTint);
       }
     });
