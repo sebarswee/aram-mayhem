@@ -21,6 +21,8 @@ export class GraphicsFactory {
     this.createEffectSprites();
     this.createParticles();
     this.createSkillIcons();
+    this.createFoodSprites();
+    this.createExpOrbSprites();
   }
 
   /**
@@ -622,5 +624,159 @@ export class GraphicsFactory {
     const g = Math.min(255, Math.floor(((color >> 8) & 0xff) * (1 + amount)));
     const b = Math.min(255, Math.floor((color & 0xff) * (1 + amount)));
     return (r << 16) | (g << 8) | b;
+  }
+
+  /**
+   * 创建食物精灵
+   */
+  private createFoodSprites(): void {
+    // 食物发光背景
+    this.createFoodGlowSprite();
+
+    // 按稀有度创建食物
+    const rarityColors: Record<string, number> = {
+      common: 0x88ff88,
+      rare: 0x4a9eff,
+      epic: 0xa855f7,
+      legendary: 0xffd700,
+      mythic: 0xff6b9d,
+    };
+
+    for (const [rarity, color] of Object.entries(rarityColors)) {
+      this.createFoodSprite(`food_${rarity}`, color);
+    }
+  }
+
+  /**
+   * 创建单个食物精灵
+   */
+  private createFoodSprite(key: string, color: number): void {
+    const size = 32;
+    const graphics = this.scene.add.graphics();
+
+    // 外层光晕
+    graphics.fillStyle(color, 0.4);
+    graphics.fillCircle(size / 2, size / 2, 12);
+
+    // 主体圆形
+    graphics.fillStyle(color, 0.8);
+    graphics.fillCircle(size / 2, size / 2, 8);
+
+    // 核心高光
+    graphics.fillStyle(0xffffff, 0.9);
+    graphics.fillCircle(size / 2 - 2, size / 2 - 2, 3);
+
+    graphics.generateTexture(key, size, size);
+    graphics.destroy();
+  }
+
+  /**
+   * 创建食物发光精灵
+   */
+  private createFoodGlowSprite(): void {
+    const size = 48;
+    const graphics = this.scene.add.graphics();
+
+    // 多层发光效果
+    graphics.fillStyle(0xffffff, 0.2);
+    graphics.fillCircle(size / 2, size / 2, 20);
+
+    graphics.fillStyle(0xffffff, 0.3);
+    graphics.fillCircle(size / 2, size / 2, 14);
+
+    graphics.fillStyle(0xffffff, 0.4);
+    graphics.fillCircle(size / 2, size / 2, 8);
+
+    graphics.generateTexture('food_glow', size, size);
+    graphics.destroy();
+  }
+
+  /**
+   * 创建经验球精灵
+   */
+  private createExpOrbSprites(): void {
+    // 经验球发光背景
+    this.createExpOrbGlowSprite();
+
+    // 青色粒子（用于拖尾效果）
+    this.createCyanParticle();
+
+    // 三种尺寸的经验球
+    const sizes: Array<{ name: string; radius: number; color: number }> = [
+      { name: 'small', radius: 6, color: 0x66ffff },
+      { name: 'medium', radius: 10, color: 0x44ffff },
+      { name: 'large', radius: 16, color: 0x00ffff },
+    ];
+
+    for (const { name, radius, color } of sizes) {
+      this.createExpOrbSprite(`exp_orb_${name}`, radius, color);
+    }
+  }
+
+  /**
+   * 创建单个经验球精灵
+   */
+  private createExpOrbSprite(key: string, radius: number, color: number): void {
+    const size = radius * 2 + 8;
+    const graphics = this.scene.add.graphics();
+    const center = size / 2;
+
+    // 外层光晕
+    graphics.fillStyle(color, 0.3);
+    graphics.fillCircle(center, center, radius + 3);
+
+    // 主体
+    graphics.fillStyle(color, 0.8);
+    graphics.fillCircle(center, center, radius);
+
+    // 核心 - 更亮的中心
+    graphics.fillStyle(0xffffff, 0.9);
+    graphics.fillCircle(center, center, radius * 0.5);
+
+    // 高光点
+    graphics.fillStyle(0xffffff, 1);
+    graphics.fillCircle(center - radius * 0.3, center - radius * 0.3, radius * 0.25);
+
+    graphics.generateTexture(key, size, size);
+    graphics.destroy();
+  }
+
+  /**
+   * 创建经验球发光精灵
+   */
+  private createExpOrbGlowSprite(): void {
+    const size = 40;
+    const graphics = this.scene.add.graphics();
+    const center = size / 2;
+
+    // 多层发光效果
+    graphics.fillStyle(0x00ffff, 0.15);
+    graphics.fillCircle(center, center, 18);
+
+    graphics.fillStyle(0x00ffff, 0.25);
+    graphics.fillCircle(center, center, 12);
+
+    graphics.fillStyle(0x00ffff, 0.35);
+    graphics.fillCircle(center, center, 6);
+
+    graphics.generateTexture('exp_orb_glow', size, size);
+    graphics.destroy();
+  }
+
+  /**
+   * 创建青色粒子（经验球拖尾用）
+   */
+  private createCyanParticle(): void {
+    const size = 12;
+    const graphics = this.scene.add.graphics();
+
+    graphics.fillStyle(0x00ffff, 0.8);
+    graphics.fillCircle(size / 2, size / 2, 4);
+
+    graphics.fillStyle(0xffffff, 0.6);
+    graphics.fillCircle(size / 2, size / 2, 2);
+
+    graphics.generateTexture('particle_cyan', size, size);
+    graphics.destroy();
   }
 }
