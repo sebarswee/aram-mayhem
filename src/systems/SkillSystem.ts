@@ -195,26 +195,173 @@ export class SkillSystem {
         enemy.takeDamage(critBonus);
         break;
 
-      // Default cases - log for debugging
+      // Default cases - implement remaining synergy effects
       case 'chain_boost':
+        // Enhanced chain lightning with increased damage
+        const chainBoostDamage = Math.floor(baseDamage * (synergy.value || 1.5));
+        // Deal enhanced damage and emit event for chain effect
+        enemy.takeDamage(chainBoostDamage);
+        // Emit chain lightning event for visual
+        this.scene.events.emit('synergyChainLightning', {
+          x: enemy.x,
+          y: enemy.y,
+          damage: chainBoostDamage,
+          range: 150,
+          count: 3,
+        });
+        break;
+
       case 'spread_debuff':
+        // Spread existing status effects to nearby enemies
+        this.spreadDebuffToNearby(enemy);
+        break;
+
       case 'dispel_and_damage':
+        // Remove enemy buffs and deal damage
+        enemy.statusEffects = []; // Clear all status effects
+        enemy.takeDamage(Math.floor(baseDamage * 0.5));
+        break;
+
       case 'damage_increase':
+        // Increase damage for a duration (apply as a buff to player)
+        // Simplified: deal extra damage now
+        const increasedDamage = Math.floor(baseDamage * (1 + (synergy.value || 0.3)));
+        enemy.takeDamage(increasedDamage);
+        break;
+
       case 'burn_spread':
+        // Spread burn to nearby enemies
+        const nearbyEnemies = this.findEnemiesInRange(enemy.x, enemy.y, 100);
+        for (const nearby of nearbyEnemies) {
+          if (nearby !== enemy) {
+            nearby.addStatusEffect({
+              type: 'burn',
+              value: 5,
+              duration: 3000,
+              remainingTime: 3000,
+              source: 'synergy_burn_spread',
+            });
+          }
+        }
+        break;
+
       case 'lava_zone':
+        // Create lava zone at enemy position
+        this.createLavaZone(enemy.x, enemy.y, 100, baseDamage * 0.1, 3000);
+        break;
+
       case 'damage_to_shield':
+        // Convert damage to player shield
+        const shieldValue = Math.floor(baseDamage * (synergy.value || 0.5));
+        this.player.addShield(shieldValue);
+        break;
+
       case 'damage_boost_no_heal':
+        // Extra damage but prevent healing
+        const boostedDamage = Math.floor(baseDamage * (1 + (synergy.value || 0.5)));
+        enemy.takeDamage(boostedDamage);
+        // Mark enemy as no-heal for duration (simplified: just deal damage)
+        break;
+
       case 'cooldown_refresh':
+        // Refresh skill cooldown
+        // Simplified: reduce all cooldowns by 50%
+        this.player.skillCooldowns.forEach((cooldown, skillId) => {
+          this.player.skillCooldowns.set(skillId, Math.floor(cooldown * 0.5));
+        });
+        break;
+
       case 'knockup':
+        // Knock enemy up (stun with visual)
+        enemy.addStatusEffect({
+          type: 'stun',
+          value: 0,
+          duration: 1000,
+          remainingTime: 1000,
+          source: 'synergy_knockup',
+        });
+        // Visual knockup
+        this.scene.tweens.add({
+          targets: enemy,
+          y: enemy.y - 30,
+          duration: 200,
+          yoyo: true,
+          ease: 'Power2',
+        });
+        break;
+
       case 'refract_damage':
+        // Reflect damage to nearby enemies
+        const reflectDamage = Math.floor(baseDamage * 0.3);
+        const reflectTargets = this.findEnemiesInRange(enemy.x, enemy.y, 150);
+        for (const target of reflectTargets) {
+          if (target !== enemy) {
+            target.takeDamage(reflectDamage);
+          }
+        }
+        break;
+
       case 'death_explosion':
+        // Mark enemy to explode on death with bonus damage
+        enemy.addStatusEffect({
+          type: 'burn', // Use burn as marker, will trigger on death
+          value: baseDamage * 2,
+          duration: 5000,
+          remainingTime: 5000,
+          source: 'synergy_death_explosion',
+        });
+        // Simplified: deal immediate explosion damage
+        enemy.takeDamage(Math.floor(baseDamage * 1.5));
+        break;
+
       case 'tick_speed_double':
+        // Double DoT tick speed (simplified: deal immediate extra damage)
+        enemy.takeDamage(Math.floor(baseDamage * 0.5));
+        break;
+
       case 'split_3':
+        // Create 3 split projectiles from impact point
+        this.createSplitProjectilesAt(enemy.x, enemy.y, 3, baseDamage * 0.3);
+        break;
+
       case 'defense_reduce':
+        // Reduce enemy defense (simplified: deal extra damage)
+        const defenseBreakDamage = Math.floor(baseDamage * (1 + (synergy.value || 0.5)));
+        enemy.takeDamage(defenseBreakDamage);
+        break;
+
       case 'heal_zone':
+        // Create healing zone at enemy position
+        this.createHealZone(enemy.x, enemy.y, 100, synergy.value || 5, synergy.duration || 5000);
+        break;
+
       case 'barrier':
+        // Create barrier around player
+        this.player.addShield(50);
+        // Visual barrier effect
+        const barrier = this.scene.add.circle(this.player.x, this.player.y, 40, 0x66aaff, 0.3);
+        barrier.setStrokeStyle(2, 0x66aaff, 0.8);
+        barrier.setDepth(48);
+        this.scene.tweens.add({
+          targets: barrier,
+          alpha: 0,
+          scale: 1.5,
+          duration: synergy.duration || 3000,
+          onComplete: () => barrier.destroy(),
+        });
+        break;
+
       case 'true_damage_confuse':
-        console.log(`[SkillSystem] Synergy effect '${synergy.effect}' not yet implemented`);
+        // True damage + confusion (stun)
+        const confuseDamage = Math.floor(baseDamage * 0.3);
+        enemy.takeDamage(confuseDamage);
+        enemy.addStatusEffect({
+          type: 'stun',
+          value: 0,
+          duration: synergy.duration || 2000,
+          remainingTime: synergy.duration || 2000,
+          source: 'synergy_confuse',
+        });
         break;
 
       default:
@@ -976,6 +1123,140 @@ export class SkillSystem {
   }
 
   // Legacy methods removed - status effects now handled via enemy.addStatusEffect()
+
+  /**
+   * Find enemies within range of a point
+   */
+  private findEnemiesInRange(x: number, y: number, range: number): Enemy[] {
+    const enemies: Enemy[] = [];
+    const bodies = this.scene.physics.overlapCirc(x, y, range) as Phaser.Physics.Arcade.Body[];
+    for (const body of bodies) {
+      const enemy = body.gameObject as Enemy;
+      if (enemy && enemy.active && enemy.config) {
+        enemies.push(enemy);
+      }
+    }
+    return enemies;
+  }
+
+  /**
+   * Spread debuffs from enemy to nearby enemies
+   */
+  private spreadDebuffToNearby(sourceEnemy: Enemy): void {
+    const debuffTypes = ['burn', 'poison', 'slow', 'root'];
+    const debuffs = sourceEnemy.statusEffects.filter(e => debuffTypes.includes(e.type));
+
+    if (debuffs.length === 0) return;
+
+    const nearbyEnemies = this.findEnemiesInRange(sourceEnemy.x, sourceEnemy.y, 100);
+    for (const enemy of nearbyEnemies) {
+      if (enemy === sourceEnemy) continue;
+      for (const debuff of debuffs) {
+        enemy.addStatusEffect({
+          type: debuff.type,
+          value: debuff.value,
+          duration: debuff.duration,
+          remainingTime: debuff.duration,
+          source: 'synergy_spread',
+        });
+      }
+    }
+  }
+
+  /**
+   * Create lava zone at position
+   */
+  private createLavaZone(x: number, y: number, radius: number, damagePerTick: number, duration: number): void {
+    // Visual effect
+    const lava = this.scene.add.circle(x, y, radius, 0xff4400, 0.4);
+    lava.setDepth(25);
+
+    const tickInterval = 500;
+    let elapsed = 0;
+
+    const damageTimer = this.scene.time.addEvent({
+      delay: tickInterval,
+      callback: () => {
+        elapsed += tickInterval;
+        if (elapsed >= duration) {
+          damageTimer.destroy();
+          lava.destroy();
+          return;
+        }
+
+        const enemies = this.findEnemiesInRange(x, y, radius);
+        for (const enemy of enemies) {
+          enemy.takeDamage(Math.floor(damagePerTick));
+        }
+      },
+      repeat: Math.floor(duration / tickInterval) - 1,
+    });
+  }
+
+  /**
+   * Create split projectiles at position (for split_3 synergy)
+   */
+  private createSplitProjectilesAt(x: number, y: number, count: number, damage: number): void {
+    const angleStep = (Math.PI * 2) / count;
+
+    for (let i = 0; i < count; i++) {
+      const angle = angleStep * i;
+      // Create simple split projectile visual
+      const proj = this.scene.add.circle(x, y, 6, 0xffff00, 0.8);
+      proj.setDepth(40);
+
+      const speed = 200;
+      const distance = 100;
+
+      this.scene.tweens.add({
+        targets: proj,
+        x: x + Math.cos(angle) * distance,
+        y: y + Math.sin(angle) * distance,
+        alpha: 0,
+        duration: 300,
+        onUpdate: () => {
+          // Check collision with enemies during flight
+          const enemies = this.findEnemiesInRange(proj.x, proj.y, 20);
+          for (const enemy of enemies) {
+            enemy.takeDamage(Math.floor(damage));
+          }
+        },
+        onComplete: () => proj.destroy(),
+      });
+    }
+  }
+
+  /**
+   * Create heal zone at position
+   */
+  private createHealZone(x: number, y: number, radius: number, healPerTick: number, duration: number): void {
+    // Visual effect
+    const healZone = this.scene.add.circle(x, y, radius, 0x44ff44, 0.3);
+    healZone.setDepth(25);
+    healZone.setStrokeStyle(2, 0x44ff44, 0.6);
+
+    const tickInterval = 500;
+    let elapsed = 0;
+
+    const healTimer = this.scene.time.addEvent({
+      delay: tickInterval,
+      callback: () => {
+        elapsed += tickInterval;
+        if (elapsed >= duration) {
+          healTimer.destroy();
+          healZone.destroy();
+          return;
+        }
+
+        // Heal player if in range
+        const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, x, y);
+        if (distance <= radius) {
+          this.player.heal(healPerTick);
+        }
+      },
+      repeat: Math.floor(duration / tickInterval) - 1,
+    });
+  }
 
   getProjectiles(): Phaser.Physics.Arcade.Group {
     return this.projectiles;
