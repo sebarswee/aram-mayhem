@@ -1,11 +1,22 @@
+### Task 1: Update Type Definitions
+
+**Files:**
+- Modify: `src/types/index.ts`
+
+**Interfaces:**
+- Produces: `Element`, `SkillCategory`, `SkillType`, `Rarity`, `EnemyType`, `Skill`, `SkillEffect`, `SkillEnhancement`, `SkillEvolution`, `Enemy`, `EnemyAbility`, `Food`, `ExpOrb`, `PlayerStats`, `ElementMark`, `SynergyResult`
+
+- [ ] **Step 1: Replace entire type definitions file**
+
+```typescript
+// src/types/index.ts
+
 // ==================== 元素系统 ====================
 export type Element = 'fire' | 'water' | 'ice' | 'lightning' | 'holy' | 'shadow' | 'grass' | 'earth';
 
 export type SkillCategory = 'projectile' | 'area' | 'buff' | 'summon';
 
 export type SkillType = 'basic' | 'ultimate';
-
-export type SkillRange = 'melee' | 'mid' | 'long';
 
 export type Rarity = 'common' | 'rare' | 'epic' | 'legendary' | 'mythic';
 
@@ -33,15 +44,11 @@ export interface SkillEffect {
   duration?: number;
 }
 
-// 技能强化类型（扩展版，兼容旧系统）
-export type EnhancementType = 'split' | 'range' | 'pierce' | 'multicast' | 'effect' | 'damage' | 'cooldown' | 'projectile_count' | 'effect_power';
-
 export interface SkillEnhancement {
   id: string;
-  type: EnhancementType;
+  type: 'damage' | 'range' | 'cooldown' | 'projectile_count' | 'pierce' | 'effect_power';
   value: number;
   level: number;
-  source?: string;  // 兼容旧系统
 }
 
 export interface SkillEvolution {
@@ -64,10 +71,7 @@ export interface Skill {
   description: string;
   type: SkillType;
   element: Element;
-  elements: Element[];  // 兼容旧系统（复数形式）
   category: SkillCategory;
-  categories: SkillCategory[];  // 兼容旧系统（复数形式）
-  range: SkillRange;  // 兼容旧系统
   cooldown: number;
   damage: number;
   rangeValue: number;
@@ -83,74 +87,10 @@ export interface Skill {
     cooldown: number;
     projectileCount: number;
   };
-  // 连锁属性（兼容旧系统）
-  chainCount?: number;
-  chainRange?: number;
-  chainDamageDecay?: number;
-  // 稀有度（兼容旧系统）
-  rarity?: Rarity;
-}
-
-// ==================== 技能强化石（旧系统兼容）====================
-export interface SkillEnhancer {
-  id: string;
-  name: string;
-  description: string;
-  rarity: Rarity;
-  type: EnhancementType;
-  value: number;
-  maxLevel: number;
-  skillCategories?: SkillCategory[];
-  skillElements?: Element[];
-  excludeElements?: Element[];
-}
-
-// 属性提升选项
-export interface StatBoost {
-  id: string;
-  name: string;
-  description: string;
-  stat: string;
-  value: number;
-  isPercent: boolean;
-}
-
-// 升级选项类型
-export type UpgradeOptionType = 'new_skill' | 'skill_enhancer' | 'stat_boost';
-
-export interface UpgradeOption {
-  type: UpgradeOptionType;
-  data: Skill | SkillEnhancer | StatBoost;
-}
-
-// ==================== 符文系统（兼容旧系统）====================
-export type RuneType = 'stat_boost' | 'skill_enhance' | 'passive' | 'new_skill' | 'special';
-
-export interface RuneEffect {
-  type: RuneType;
-  target?: 'all' | 'element' | 'category';
-  targetValue?: string;
-  stat?: string;
-  value: number;
-  isPercent: boolean;
-}
-
-export interface Rune {
-  id: string;
-  name: string;
-  description: string;
-  rarity: Rarity;
-  type: RuneType;
-  effects: RuneEffect[];
-  exclusiveGroup?: string;
-  maxLevel: number;
-  currentLevel?: number;
 }
 
 // ==================== 怪物系统 ====================
 export type EnemyType = 'normal' | 'elite' | 'boss';
-
-export type EnemyBehavior = 'chase' | 'ranged' | 'summon' | 'teleport';
 
 export interface EnemyAbility {
   type: 'burn_on_contact' | 'speed_boost' | 'slow_on_attack' | 'explode_on_death' | 'damage_reduction' | 'poison_on_attack' | 'root_on_attack' | 'hp_boost';
@@ -169,7 +109,6 @@ export interface EnemyConfig {
   expValue: number;
   color: number;
   abilities: EnemyAbility[];
-  behavior?: EnemyBehavior;  // 兼容旧系统
 }
 
 // ==================== 掉落系统 ====================
@@ -198,41 +137,32 @@ export interface PlayerStats {
   critRate: number;
   critDamage: number;
   lifesteal: number;
-  // 兼容旧系统
-  skillDamageBonus?: number;
-  cooldownReduction?: number;
-}
-
-// ==================== 输入系统 ====================
-export interface InputState {
-  moveX: number;
-  moveY: number;
-  isMoving: boolean;
 }
 
 // ==================== 游戏状态 ====================
 export interface GameState {
   stats: PlayerStats;
   skills: Skill[];
-  runes: Rune[];  // 兼容旧系统
   level: number;
   exp: number;
   expToNext: number;
   wave: number;
   kills: number;
-  bossesKilled?: number;  // 兼容旧系统
   isPaused: boolean;
   isDead: boolean;
   isUpgrading: boolean;
-  isSelectingSkill: boolean;  // 兼容旧系统
   ultimateSlots: number;
 }
+```
 
-// ==================== 碰撞分组 ====================
-export const CollisionGroup = {
-  PLAYER: 'player',
-  ENEMY: 'enemy',
-  PLAYER_PROJECTILE: 'player_projectile',
-  ENEMY_PROJECTILE: 'enemy_projectile',
-  EXP_ORB: 'exp_orb',
-} as const;
+- [ ] **Step 2: Verify TypeScript compilation**
+
+Run: `npm run build`
+Expected: No type errors
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add src/types/index.ts
+git commit -m "refactor: 重新定义类型系统支持8元素羁绊"
+```

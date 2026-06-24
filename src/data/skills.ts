@@ -3,9 +3,17 @@ import { Skill, SkillEffect, SkillEvolution } from '@/types';
 import { Element } from '@/types';
 
 // 创建技能的辅助函数
-function createSkill(base: Omit<Skill, 'level' | 'maxLevel' | 'enhancements' | 'evolutions' | 'baseValues'>): Skill {
+function createSkill(base: Omit<Skill, 'level' | 'maxLevel' | 'enhancements' | 'evolutions' | 'baseValues' | 'elements' | 'categories' | 'range'>): Skill {
+  // 根据 rangeValue 推断 range
+  let range: 'melee' | 'mid' | 'long' = 'mid';
+  if (base.rangeValue <= 150) range = 'melee';
+  else if (base.rangeValue >= 400) range = 'long';
+
   return {
     ...base,
+    elements: [base.element],  // 兼容旧系统
+    categories: [base.category],  // 兼容旧系统
+    range,  // 兼容旧系统
     level: 1,
     maxLevel: 5,
     enhancements: [],
@@ -380,4 +388,28 @@ export function cloneSkill(skill: Skill): Skill {
     evolutions: [...skill.evolutions],
     baseValues: { ...skill.baseValues },
   };
+}
+
+// 获取随机大招（兼容旧系统）
+export function getRandomUltimate(excludeIds: string[] = []): Skill | null {
+  const ultimates = getUltimateSkills().filter(s => !excludeIds.includes(s.id));
+  if (ultimates.length === 0) return null;
+
+  // 按稀有度选择
+  const roll = Math.random();
+  if (roll < 0.3) {
+    const rare = ultimates.filter(s => s.rarity === 'rare');
+    if (rare.length > 0) {
+      return cloneSkill(rare[Math.floor(Math.random() * rare.length)]);
+    }
+  }
+  const common = ultimates.filter(s => s.rarity === 'common' || !s.rarity);
+  return cloneSkill(common[Math.floor(Math.random() * common.length)] || ultimates[0]);
+}
+
+// 获取随机技能（兼容旧系统）
+export function getRandomSkill(excludeIds: string[] = []): Skill | null {
+  const basics = getBasicSkills().filter(s => !excludeIds.includes(s.id));
+  if (basics.length === 0) return null;
+  return cloneSkill(basics[Math.floor(Math.random() * basics.length)]);
 }

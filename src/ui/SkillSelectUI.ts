@@ -234,7 +234,6 @@ export class SkillSelectUI {
     if (skill.categories.includes('area')) return '范围';
     if (skill.categories.includes('summon')) return '召唤';
     if (skill.categories.includes('buff')) return '增益';
-    if (skill.categories.includes('control')) return '控制';
     return '基础';
   }
 

@@ -316,6 +316,7 @@ export class BattleScene extends Phaser.Scene {
         speed: 280, // 使用更新后的速度
         critRate: 0.05,
         critDamage: 1.5,
+        lifesteal: 0,
       },
       skills: [],
       runes: [],

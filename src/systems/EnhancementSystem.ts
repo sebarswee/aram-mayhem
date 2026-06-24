@@ -52,6 +52,7 @@ export class EnhancementSystem {
         id: `${enhancer.id}_${Date.now()}`,
         type: enhancer.type,
         value: enhancer.value,
+        level: currentLevel + 1,
         source: enhancer.id,
       };
       targetSkill.enhancements.push(enhancement);
