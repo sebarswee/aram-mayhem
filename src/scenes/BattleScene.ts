@@ -204,8 +204,12 @@ export class BattleScene extends Phaser.Scene {
     // 敌人击杀 - DropSystem handles drop spawning via its own listener
     this.events.on('enemyKilled', (enemy: { getExpValue: () => number }) => {
       this.gameState.kills++;
-      const exp = enemy.getExpValue();
-      this.expSystem.addExp(exp);
+      // 经验不再直接获取，改为拾取经验球
+    });
+
+    // 拾取经验球获得经验
+    this.events.on('expOrbPickedUp', (value: number) => {
+      this.expSystem.addExp(value);
     });
 
     // 升级
