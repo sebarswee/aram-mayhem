@@ -986,4 +986,157 @@ export class GraphicsFactory {
     graphics.generateTexture('particle_cyan', size, size);
     graphics.destroy();
   }
+
+  // === 新敌人精灵方法 ===
+
+  private createElementalSprite(key: string, color: number): void {
+    const size = 36;
+    const graphics = this.scene.add.graphics();
+    graphics.fillStyle(color, 0.8);
+    graphics.fillCircle(size / 2, size / 2, 14);
+    graphics.fillStyle(this.lighten(color, 0.3), 1);
+    graphics.fillCircle(size / 2 - 4, size / 2 - 4, 6);
+    graphics.generateTexture(key, size, size);
+    graphics.destroy();
+  }
+
+  private createGhostSprite(key: string, color: number): void {
+    const size = 40;
+    const graphics = this.scene.add.graphics();
+    graphics.fillStyle(color, 0.6);
+    graphics.fillEllipse(size / 2, size / 2, 18, 24);
+    graphics.fillStyle(this.lighten(color, 0.2), 0.8);
+    graphics.fillCircle(size / 2 - 5, size / 2 - 6, 4);
+    graphics.fillCircle(size / 2 + 5, size / 2 - 6, 4);
+    graphics.generateTexture(key, size, size);
+    graphics.destroy();
+  }
+
+  private createSpiritSprite(key: string, color: number): void {
+    const size = 32;
+    const graphics = this.scene.add.graphics();
+    graphics.fillStyle(color, 0.7);
+    graphics.fillTriangle(size / 2, 4, 4, size - 4, size - 4, size - 4);
+    graphics.fillStyle(0xffffff, 0.8);
+    graphics.fillCircle(size / 2, size / 2 - 4, 4);
+    graphics.generateTexture(key, size, size);
+    graphics.destroy();
+  }
+
+  private createDemonSprite(key: string, color: number): void {
+    const size = 44;
+    const graphics = this.scene.add.graphics();
+    graphics.fillStyle(color, 1);
+    graphics.fillCircle(size / 2, size / 2 + 2, 16);
+    graphics.fillStyle(this.darken(color, 0.2), 1);
+    graphics.fillTriangle(8, 8, 14, 16, 4, 12);
+    graphics.fillTriangle(size - 8, 8, size - 14, 16, size - 4, 12);
+    graphics.generateTexture(key, size, size);
+    graphics.destroy();
+  }
+
+  private createVineMonsterSprite(key: string, color: number): void {
+    const size = 38;
+    const graphics = this.scene.add.graphics();
+    graphics.fillStyle(color, 1);
+    graphics.fillCircle(size / 2, size / 2, 12);
+    graphics.fillStyle(this.lighten(color, 0.1), 1);
+    graphics.fillRect(size / 2 - 1, 4, 2, 10);
+    graphics.fillRect(4, size / 2, 8, 2);
+    graphics.fillRect(size - 12, size / 2, 8, 2);
+    graphics.generateTexture(key, size, size);
+    graphics.destroy();
+  }
+
+  private createGolemSprite(key: string, color: number): void {
+    const size = 48;
+    const graphics = this.scene.add.graphics();
+    graphics.fillStyle(color, 1);
+    graphics.fillRect(8, 16, 32, 28);
+    graphics.fillStyle(this.darken(color, 0.15), 1);
+    graphics.fillRect(12, 8, 8, 8);
+    graphics.fillRect(28, 8, 8, 8);
+    graphics.fillStyle(this.lighten(color, 0.2), 1);
+    graphics.fillRect(18, 20, 12, 12);
+    graphics.generateTexture(key, size, size);
+    graphics.destroy();
+  }
+
+  private createEliteFlameLordSprite(key: string, color: number): void {
+    this.createEliteBase(key, color);
+  }
+
+  private createEliteFrostTitanSprite(key: string, color: number): void {
+    this.createEliteBase(key, color);
+  }
+
+  private createEliteStormDrakeSprite(key: string, color: number): void {
+    this.createEliteBase(key, color);
+  }
+
+  private createEliteShadowLordSprite(key: string, color: number): void {
+    this.createEliteBase(key, color);
+  }
+
+  private createEliteBase(key: string, color: number): void {
+    const size = 52;
+    const graphics = this.scene.add.graphics();
+    graphics.fillStyle(color, 1);
+    graphics.fillCircle(size / 2, size / 2, 20);
+    graphics.fillStyle(0xffff00, 1);
+    graphics.fillCircle(size / 2, 8, 6);
+    graphics.fillStyle(this.lighten(color, 0.3), 0.9);
+    graphics.fillCircle(size / 2 - 8, size / 2 - 8, 6);
+    graphics.fillCircle(size / 2 + 8, size / 2 - 8, 6);
+    graphics.generateTexture(key, size, size);
+    graphics.destroy();
+  }
+
+  private createBossFlameLordSprite(key: string, color: number): void {
+    this.createBossBase(key, color);
+  }
+
+  private createBossFrostGiantSprite(key: string, color: number): void {
+    this.createBossBase(key, color);
+  }
+
+  private createBossThunderDragonSprite(key: string, color: number): void {
+    this.createBossBase(key, color);
+  }
+
+  private createBossShadowKingSprite(key: string, color: number): void {
+    this.createBossBase(key, color);
+  }
+
+  private createBossNatureGuardianSprite(key: string, color: number): void {
+    this.createBossBase(key, color);
+  }
+
+  private createBossGolemLordSprite(key: string, color: number): void {
+    this.createBossBase(key, color);
+  }
+
+  private createBossFallenAngelSprite(key: string, color: number): void {
+    this.createBossBase(key, color);
+  }
+
+  private createBossHydraSprite(key: string, color: number): void {
+    this.createBossBase(key, color);
+  }
+
+  private createBossBase(key: string, color: number): void {
+    const size = 64;
+    const graphics = this.scene.add.graphics();
+    graphics.fillStyle(color, 1);
+    graphics.fillCircle(size / 2, size / 2 + 4, 26);
+    graphics.fillStyle(0xff0000, 1);
+    graphics.fillCircle(size / 2, 8, 8);
+    graphics.fillStyle(this.lighten(color, 0.2), 0.9);
+    graphics.fillCircle(size / 2 - 12, size / 2 - 8, 8);
+    graphics.fillCircle(size / 2 + 12, size / 2 - 8, 8);
+    graphics.fillStyle(0xffffff, 0.6);
+    graphics.strokeCircle(size / 2, size / 2, 30);
+    graphics.generateTexture(key, size, size);
+    graphics.destroy();
+  }
 }
