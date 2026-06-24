@@ -105,8 +105,9 @@ export class SkillSelectUI {
     width: number,
     height: number
   ): void {
-    // 卡片背景
+    // 卡片背景 - 设置 scrollFactor(0) 固定在屏幕上
     const card = this.scene.add.container(x, y);
+    card.setScrollFactor(0);
 
     // 使用统一的元素颜色
     const color = getElementColor(skill.elements[0]);
@@ -173,20 +174,22 @@ export class SkillSelectUI {
     desc.setOrigin(0.5, 0);
     card.add(desc);
 
-    // 点击交互
-    bg.setInteractive({ useHandCursor: true });
+    // 点击交互 - 设置整个卡片为可点击区域
+    const hitArea = this.scene.add.rectangle(0, 0, width, height, 0x000000, 0);
+    hitArea.setInteractive({ useHandCursor: true });
+    card.add(hitArea);
 
-    bg.on('pointerover', () => {
+    hitArea.on('pointerover', () => {
       bg.setStrokeStyle(4, 0xffffff, 1);
       bg.setFillStyle(0x333344, 1);
     });
 
-    bg.on('pointerout', () => {
+    hitArea.on('pointerout', () => {
       bg.setStrokeStyle(3, color, 1);
       bg.setFillStyle(0x222233, 1);
     });
 
-    bg.on('pointerdown', () => {
+    hitArea.on('pointerdown', () => {
       this.selectSkill(skill);
     });
 

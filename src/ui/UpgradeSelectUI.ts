@@ -156,6 +156,7 @@ export class UpgradeSelectUI {
     isSmallScreen: boolean
   ): void {
     const card = this.scene.add.container(x, y);
+    card.setScrollFactor(0); // 固定在屏幕上
 
     // 稀有度颜色
     let color = 0xffffff;
@@ -264,20 +265,22 @@ export class UpgradeSelectUI {
     desc.setOrigin(0.5, 0);
     card.add(desc);
 
-    // 交互
-    bg.setInteractive({ useHandCursor: true });
+    // 交互 - 使用透明点击区域
+    const hitArea = this.scene.add.rectangle(0, 0, width, height, 0x000000, 0);
+    hitArea.setInteractive({ useHandCursor: true });
+    card.add(hitArea);
 
-    bg.on('pointerover', () => {
+    hitArea.on('pointerover', () => {
       bg.setStrokeStyle(4, 0xffffff, 1);
       bg.setFillStyle(0x333344, 1);
     });
 
-    bg.on('pointerout', () => {
+    hitArea.on('pointerout', () => {
       bg.setStrokeStyle(3, color, 1);
       bg.setFillStyle(0x222233, 1);
     });
 
-    bg.on('pointerdown', () => {
+    hitArea.on('pointerdown', () => {
       this.selectOption(option);
     });
 
