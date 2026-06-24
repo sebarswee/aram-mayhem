@@ -1159,15 +1159,6 @@ export class SkillSystem {
    */
   private applyEffects(enemy: Enemy, effects: Skill['effects']): void {
     for (const effect of effects) {
-      // Convert skill effect to status effect
-      const statusEffect: StatusEffect = {
-        type: effect.type as StatusEffect['type'],
-        value: effect.value,
-        duration: effect.duration || 3000,
-        remainingTime: effect.duration || 3000,
-        source: 'skill',
-      };
-
       switch (effect.type) {
         case 'burn':
           enemy.addStatusEffect({
@@ -1219,8 +1210,37 @@ export class SkillSystem {
           });
           break;
 
+        case 'knockback':
+          // 击退效果 - 立即生效
+          const player = this.player;
+          const angle = Phaser.Math.Angle.Between(
+            player.x,
+            player.y,
+            enemy.x,
+            enemy.y
+          );
+          const knockbackDistance = effect.value || 100;
+          enemy.x += Math.cos(angle) * knockbackDistance;
+          enemy.y += Math.sin(angle) * knockbackDistance;
+          break;
+
+        case 'damage':
+          // damage 效果已在投射物命中或范围技能中处理，这里不需要额外处理
+          break;
+
+        case 'heal':
+          // 治疗效果 - 恢复玩家生命
+          this.player.heal(effect.value || 10);
+          break;
+
+        case 'shield':
+          // 护盾效果 - 给玩家添加护盾
+          this.player.addShield(effect.value || 50);
+          break;
+
         default:
-          // Other effects like heal, shield, knockback are handled separately
+          // 其他效果暂不处理
+          console.warn(`[SkillSystem] Unknown effect type: ${effect.type}`);
           break;
       }
     }

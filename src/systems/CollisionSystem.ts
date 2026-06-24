@@ -606,21 +606,63 @@ export class CollisionSystem {
 
   /**
    * Apply skill effects to enemy
-   * Uses Enemy.addStatusEffect() for all status types
+   * Uses Enemy.addStatusEffect() for status types, handles instant effects separately
    */
   private applyEffects(
     enemy: Enemy,
     effects: { type: string; value?: number; duration?: number }[],
     skillElement?: Element
   ): void {
+    const player = this.player;
+
     for (const effect of effects) {
-      enemy.addStatusEffect({
-        type: effect.type as any,
-        value: effect.value || 0,
-        duration: effect.duration || 1000,
-        remainingTime: effect.duration || 1000,
-        source: 'skill',
-      });
+      switch (effect.type) {
+        case 'burn':
+        case 'freeze':
+        case 'stun':
+        case 'poison':
+        case 'slow':
+          // 状态效果 - 添加到敌人状态列表
+          enemy.addStatusEffect({
+            type: effect.type as any,
+            value: effect.value || 0,
+            duration: effect.duration || 2000,
+            remainingTime: effect.duration || 2000,
+            source: 'skill',
+          });
+          break;
+
+        case 'knockback':
+          // 击退效果 - 立即生效
+          const angle = Phaser.Math.Angle.Between(
+            player.x,
+            player.y,
+            enemy.x,
+            enemy.y
+          );
+          const knockbackDistance = effect.value || 100;
+          enemy.x += Math.cos(angle) * knockbackDistance;
+          enemy.y += Math.sin(angle) * knockbackDistance;
+          break;
+
+        case 'damage':
+          // damage 效果已在碰撞处理中计算，不需要额外处理
+          break;
+
+        case 'heal':
+          // 治疗效果 - 恢复玩家生命
+          player.heal(effect.value || 10);
+          break;
+
+        case 'shield':
+          // 护盾效果
+          player.addShield(effect.value || 50);
+          break;
+
+        default:
+          console.warn(`[CollisionSystem] Unknown effect type: ${effect.type}`);
+          break;
+      }
     }
 
     // Apply element mark for synergy check
