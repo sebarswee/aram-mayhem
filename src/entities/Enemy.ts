@@ -183,7 +183,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   update(time: number, _delta: number): void {
-    if (!this.target || !this.active) return;
+    // Safety check: ensure enemy is active and has a valid body
+    if (!this.target || !this.active || !this.body || !this.scene) return;
 
     // Update status effects (ticking)
     this.updateStatusEffects(time);
@@ -207,9 +208,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       this.setVelocity(Math.cos(angle) * actualSpeed, Math.sin(angle) * actualSpeed);
 
       // 根据移动方向轻微翻转
-      if (this.body?.velocity.x && this.body.velocity.x < 0) {
+      if (this.body.velocity.x < 0) {
         this.setFlipX(true);
-      } else if (this.body?.velocity.x && this.body.velocity.x > 0) {
+      } else if (this.body.velocity.x > 0) {
         this.setFlipX(false);
       }
     } else {
