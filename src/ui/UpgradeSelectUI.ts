@@ -25,7 +25,6 @@ export class UpgradeSelectUI {
     this.onSelectCallback = onSelect;
     this.container = scene.add.container(0, 0);
     this.container.setDepth(1000);
-    this.container.setScrollFactor(0); // 固定在屏幕上，不受相机移动影响
     this.container.setVisible(false);
   }
 
@@ -37,9 +36,10 @@ export class UpgradeSelectUI {
     this.container.removeAll(true);
     this.container.setVisible(true);
 
-    // 将容器移动到摄像机当前位置
-    const camera = this.scene.cameras.main;
-    this.container.setPosition(camera.scrollX, camera.scrollY);
+    // scrollFactor(0) 固定在屏幕上，容器位置设为 (0,0)
+    // 容器内元素使用屏幕坐标定位
+    this.container.setPosition(0, 0);
+    this.container.setScrollFactor(0);
 
     const width = this.scene.scale.width;
     const height = this.scene.scale.height;
