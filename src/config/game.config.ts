@@ -8,6 +8,10 @@ export const BASE_HEIGHT = 720;
 export let GAME_WIDTH = BASE_WIDTH;
 export let GAME_HEIGHT = BASE_HEIGHT;
 
+// Infinite world size (much larger than screen for Vampire Survivors-like gameplay)
+export const WORLD_WIDTH = 10000;
+export const WORLD_HEIGHT = 10000;
+
 // 更新游戏尺寸
 export function updateGameSize(width: number, height: number): void {
   GAME_WIDTH = width;

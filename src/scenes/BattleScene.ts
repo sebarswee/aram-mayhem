@@ -13,7 +13,7 @@ import { HUD } from '@/ui/HUD';
 import { SkillSelectUI } from '@/ui/SkillSelectUI';
 import { UpgradeSelectUI } from '@/ui/UpgradeSelectUI';
 import { getRandomBasicSkills, cloneSkill } from '@/data/skills';
-import { GAME_WIDTH, GAME_HEIGHT, updateGameSize } from '@/config/game.config';
+import { GAME_WIDTH, GAME_HEIGHT, updateGameSize, WORLD_WIDTH, WORLD_HEIGHT } from '@/config/game.config';
 import { GraphicsFactory } from '@/graphics/GraphicsFactory';
 
 declare global {
@@ -59,6 +59,12 @@ export class BattleScene extends Phaser.Scene {
     // 更新游戏尺寸
     this.updateSize();
 
+    // 设置无限世界边界（吸血鬼幸存者风格）
+    this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
+    // 创建背景（深色，覆盖整个世界）
+    this.createInfiniteBackground();
+
     // 确保纹理存在（防止热重载或直接进入场景时纹理丢失）
     if (!this.textures.exists('player')) {
       console.log('Generating textures...');
@@ -76,7 +82,8 @@ export class BattleScene extends Phaser.Scene {
     // 初始化游戏状态 - 每次开始都创建新状态，避免旧状态污染
     this.gameState = this.createDefaultGameState();
 
-    // 计算游戏边界（保持一定边距）
+    // 游戏边界不再需要固定屏幕大小，使用整个世界
+    // 但保留 gameBounds 用于某些 UI 计算
     const padding = 20;
     this.gameBounds = new Phaser.Geom.Rectangle(
       padding,
@@ -85,8 +92,12 @@ export class BattleScene extends Phaser.Scene {
       GAME_HEIGHT - padding * 2
     );
 
-    // 创建玩家
-    this.player = new Player(this, GAME_WIDTH / 2, GAME_HEIGHT / 2);
+    // 创建玩家（在世界中心）
+    this.player = new Player(this, WORLD_WIDTH / 2, WORLD_HEIGHT / 2);
+
+    // 设置摄像机跟随玩家（吸血鬼幸存者风格）
+    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+    this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
     // 初始化系统 - 读取摇杆设置
     const joystickMode = window.gameSettings?.joystickMode || 'follow';
@@ -129,6 +140,33 @@ export class BattleScene extends Phaser.Scene {
     const width = this.scale.width;
     const height = this.scale.height;
     updateGameSize(width, height);
+  }
+
+  /**
+   * 创建无限背景（吸血鬼幸存者风格）
+   * 使用深色背景，玩家可以自由移动
+   */
+  private createInfiniteBackground(): void {
+    // 创建一个大的深色背景覆盖整个世界
+    const bg = this.add.graphics();
+    bg.fillStyle(0x1a1a2e, 1);
+    bg.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    bg.setDepth(-1); // 最底层
+
+    // 创建网格线效果（可选，增加视觉参考）
+    const grid = this.add.graphics();
+    grid.lineStyle(1, 0x2a2a3e, 0.3);
+    const gridSize = 100;
+    for (let x = 0; x <= WORLD_WIDTH; x += gridSize) {
+      grid.moveTo(x, 0);
+      grid.lineTo(x, WORLD_HEIGHT);
+    }
+    for (let y = 0; y <= WORLD_HEIGHT; y += gridSize) {
+      grid.moveTo(0, y);
+      grid.lineTo(WORLD_WIDTH, y);
+    }
+    grid.strokePath();
+    grid.setDepth(-1);
   }
 
   /**

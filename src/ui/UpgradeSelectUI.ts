@@ -25,6 +25,7 @@ export class UpgradeSelectUI {
     this.onSelectCallback = onSelect;
     this.container = scene.add.container(0, 0);
     this.container.setDepth(1000);
+    this.container.setScrollFactor(0); // 固定在屏幕上，不受相机移动影响
     this.container.setVisible(false);
   }
 
