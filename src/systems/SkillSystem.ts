@@ -767,6 +767,51 @@ export class SkillSystem {
     } else if (skill.id === 'ground_spike') {
       // 地刺：伤害+击退
       this.castGroundSpike(skill, damage);
+    } else if (skill.id === 'dragon_breath') {
+      // 炎龙吐息：扇形持续火焰
+      this.castDragonBreath(skill, damage);
+    } else if (skill.id === 'inferno') {
+      // 烈焰风暴：持续燃烧区域
+      this.castInferno(skill, damage);
+    } else if (skill.id === 'abyss_vortex') {
+      // 深渊漩涡：持续吸引
+      this.castAbyssVortex(skill, damage);
+    } else if (skill.id === 'frozen_domain') {
+      // 冰封领域：持续冻结
+      this.castFrozenDomain(skill, damage);
+    } else if (skill.id === 'absolute_zero') {
+      // 绝对零度：秒杀低血量
+      this.castAbsoluteZero(skill, damage);
+    } else if (skill.id === 'thunder_apocalypse') {
+      // 雷霆万钧：全屏连锁雷击
+      this.castThunderApocalypse(skill, damage);
+    } else if (skill.id === 'judgment_light') {
+      // 审判之光：伤害+治疗
+      this.castJudgmentLight(skill, damage);
+    } else if (skill.id === 'shadow_descent') {
+      // 暗影降临：降防+持续伤害
+      this.castShadowDescent(skill, damage);
+    } else if (skill.id === 'death_decay') {
+      // 死亡凋零：持续吸血
+      this.castDeathDecay(skill, damage);
+    } else if (skill.id === 'mountain_collapse') {
+      // 山崩地裂：范围伤害+击飞
+      this.castMountainCollapse(skill, damage);
+    } else if (skill.id === 'meteor') {
+      // 陨石坠落：大范围爆炸
+      this.castMeteor(skill, damage);
+    } else if (skill.id === 'tsunami') {
+      // 海啸：全屏推开
+      this.castTsunami(skill, damage);
+    } else if (skill.id === 'earthquake') {
+      // 大地震击：全屏眩晕
+      this.castEarthquake(skill, damage);
+    } else if (skill.id === 'overgrowth') {
+      // 过度生长：全屏缠绕
+      this.castOvergrowth(skill, damage);
+    } else if (skill.id === 'void_rift') {
+      // 虚空裂隙：持续吸引+伤害
+      this.castVoidRift(skill, damage);
     } else {
       // 其他范围技能：立即造成伤害
       const bodies = this.scene.physics.overlapCirc(
@@ -864,17 +909,17 @@ export class SkillSystem {
    * 释放增益技能
    */
   private castBuff(skill: Skill): void {
-    if (skill.id === 'shield') {
-      // 获取护盾值
-      const shieldEffect = skill.effects.find(e => e.type === 'shield');
-      const shieldValue = shieldEffect?.value || 50;
-
-      // 给玩家添加护盾
+    // 处理护盾效果
+    const shieldEffect = skill.effects.find(e => e.type === 'shield');
+    if (shieldEffect) {
+      const shieldBoost = (this.player.stats as any).shieldBoost || 0;
+      const shieldValue = Math.floor(shieldEffect.value * (1 + shieldBoost));
       this.player.addShield(shieldValue);
 
       // 护盾视觉效果
-      const shield = this.scene.add.circle(this.player.x, this.player.y, 35, 0x66aaff, 0.3);
-      shield.setStrokeStyle(2, 0x66aaff, 0.8);
+      const color = ELEMENT_COLORS[skill.elements[0]] || 0x66aaff;
+      const shield = this.scene.add.circle(this.player.x, this.player.y, 35, color, 0.3);
+      shield.setStrokeStyle(2, color, 0.8);
       shield.setDepth(48);
 
       // 跟随玩家
@@ -889,6 +934,74 @@ export class SkillSystem {
           shield.setPosition(this.player.x, this.player.y);
         },
         repeat: -1,
+      });
+    }
+
+    // 处理治疗效果
+    const healEffect = skill.effects.find(e => e.type === 'heal');
+    if (healEffect) {
+      this.player.heal(healEffect.value);
+      // 治疗视觉效果
+      const healEffect_visual = this.scene.add.circle(this.player.x, this.player.y, 30, 0x44ff44, 0.5);
+      healEffect_visual.setDepth(100);
+      this.scene.tweens.add({
+        targets: healEffect_visual,
+        alpha: 0,
+        scale: 1.5,
+        duration: 500,
+        onComplete: () => healEffect_visual.destroy(),
+      });
+    }
+
+    // 处理反弹效果
+    const reflectEffect = skill.effects.find(e => e.type === 'damage_reflect');
+    if (reflectEffect) {
+      this.player.addReflectEffect({
+        value: reflectEffect.value,
+        duration: reflectEffect.duration || 8000,
+      });
+    }
+
+    // 特殊技能效果
+    if (skill.id === 'purify') {
+      // 净化：清除负面状态
+      this.player.clearDebuffs();
+    }
+
+    if (skill.id === 'halo') {
+      // 光环：持续治疗
+      this.createHaloEffect(skill);
+    }
+
+    if (skill.id === 'blessing') {
+      // 祝福：提升攻击力和暴击
+      this.player.addStatusEffect({
+        type: 'attack_boost',
+        value: 0.3,
+        duration: 10000,
+      });
+    }
+
+    if (skill.id === 'sanctuary') {
+      // 圣域：无敌+持续治疗
+      this.player.isInvincible = true;
+      this.scene.time.delayedCall(3000, () => {
+        this.player.isInvincible = false;
+      });
+      this.createHaloEffect(skill);
+    }
+
+    if (skill.id === 'earth_guardian') {
+      // 大地守护：巨大护盾
+      const guardian = this.scene.add.circle(this.player.x, this.player.y, 50, 0xaa8844, 0.4);
+      guardian.setStrokeStyle(3, 0xaa8844, 0.9);
+      guardian.setDepth(48);
+      this.scene.tweens.add({
+        targets: guardian,
+        alpha: 0,
+        scale: 1.5,
+        duration: 2000,
+        onComplete: () => guardian.destroy(),
       });
     }
   }
@@ -1543,6 +1656,529 @@ export class SkillSystem {
 
   getProjectiles(): Phaser.Physics.Arcade.Group {
     return this.projectiles;
+  }
+
+  // ==================== 新增技能实现 ====================
+
+  /**
+   * 创建光环效果（持续治疗）
+   */
+  private createHaloEffect(skill: Skill): void {
+    const duration = 5000;
+    const tickInterval = 500;
+    const healPerTick = skill.effects.find(e => e.type === 'heal')?.value || 5;
+
+    // 光环视觉效果
+    const halo = this.scene.add.circle(this.player.x, this.player.y, 40, 0xffcc00, 0.3);
+    halo.setStrokeStyle(2, 0xffcc00, 0.6);
+    halo.setDepth(48);
+
+    let elapsed = 0;
+    const healTimer = this.scene.time.addEvent({
+      delay: tickInterval,
+      callback: () => {
+        elapsed += tickInterval;
+        if (elapsed >= duration) {
+          healTimer.destroy();
+          halo.destroy();
+          return;
+        }
+        this.player.heal(healPerTick);
+        halo.setPosition(this.player.x, this.player.y);
+      },
+      repeat: Math.floor(duration / tickInterval) - 1,
+    });
+  }
+
+  /**
+   * 炎龙吐息 - 扇形持续火焰
+   */
+  private castDragonBreath(skill: Skill, damage: number): void {
+    const duration = 2000;
+    const tickInterval = 200;
+    const range = skill.rangeValue;
+    const angleSpread = Math.PI / 3; // 60度扇形
+
+    // 扇形视觉效果
+    const breathGraphics = this.scene.add.graphics();
+    breathGraphics.setDepth(40);
+
+    let elapsed = 0;
+    const breathTimer = this.scene.time.addEvent({
+      delay: tickInterval,
+      callback: () => {
+        elapsed += tickInterval;
+        if (elapsed >= duration) {
+          breathTimer.destroy();
+          breathGraphics.destroy();
+          return;
+        }
+
+        // 检测扇形范围内敌人
+        const enemies = this.findEnemiesInRange(this.player.x, this.player.y, range);
+        for (const enemy of enemies) {
+          const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, enemy.x, enemy.y);
+          const playerAngle = (this.player as any).body?.angle || 0;
+          if (Math.abs(Phaser.Math.Angle.Wrap(angle - playerAngle)) < angleSpread / 2) {
+            this.applyDamageToEnemy(enemy, Math.floor(damage * 0.3), skill);
+          }
+        }
+      },
+      repeat: Math.floor(duration / tickInterval) - 1,
+    });
+  }
+
+  /**
+   * 烈焰风暴 - 持续燃烧区域
+   */
+  private castInferno(skill: Skill, damage: number): void {
+    const radius = skill.rangeValue;
+    const duration = 5000;
+    const tickInterval = 300;
+
+    // 火焰视觉效果
+    const inferno = this.scene.add.circle(this.player.x, this.player.y, radius, 0xff4400, 0.4);
+    inferno.setDepth(25);
+
+    let elapsed = 0;
+    const infernoTimer = this.scene.time.addEvent({
+      delay: tickInterval,
+      callback: () => {
+        elapsed += tickInterval;
+        if (elapsed >= duration) {
+          infernoTimer.destroy();
+          inferno.destroy();
+          return;
+        }
+
+        const enemies = this.findEnemiesInRange(this.player.x, this.player.y, radius);
+        for (const enemy of enemies) {
+          this.applyDamageToEnemy(enemy, Math.floor(damage * 0.15), skill);
+        }
+      },
+      repeat: Math.floor(duration / tickInterval) - 1,
+    });
+  }
+
+  /**
+   * 深渊漩涡 - 持续吸引
+   */
+  private castAbyssVortex(skill: Skill, damage: number): void {
+    const centerX = this.player.x;
+    const centerY = this.player.y;
+    const radius = skill.rangeValue;
+    const duration = 3000;
+    const tickInterval = 200;
+
+    // 漩涡视觉效果
+    const vortex = this.scene.add.circle(centerX, centerY, radius, 0x2266cc, 0.3);
+    vortex.setDepth(25);
+
+    let elapsed = 0;
+    const vortexTimer = this.scene.time.addEvent({
+      delay: tickInterval,
+      callback: () => {
+        elapsed += tickInterval;
+        if (elapsed >= duration) {
+          vortexTimer.destroy();
+          vortex.destroy();
+          return;
+        }
+
+        const enemies = this.findEnemiesInRange(centerX, centerY, radius);
+        for (const enemy of enemies) {
+          // 吸引效果
+          const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, centerX, centerY);
+          enemy.x += Math.cos(angle) * 30;
+          enemy.y += Math.sin(angle) * 30;
+          // 伤害
+          this.applyDamageToEnemy(enemy, Math.floor(damage * 0.2), skill);
+        }
+      },
+      repeat: Math.floor(duration / tickInterval) - 1,
+    });
+  }
+
+  /**
+   * 冰封领域 - 持续冻结
+   */
+  private castFrozenDomain(skill: Skill, damage: number): void {
+    const radius = skill.rangeValue;
+    const duration = 4000;
+    const tickInterval = 500;
+
+    // 冰霜视觉效果
+    const domain = this.scene.add.circle(this.player.x, this.player.y, radius, 0x88ddff, 0.3);
+    domain.setDepth(25);
+
+    let elapsed = 0;
+    const domainTimer = this.scene.time.addEvent({
+      delay: tickInterval,
+      callback: () => {
+        elapsed += tickInterval;
+        if (elapsed >= duration) {
+          domainTimer.destroy();
+          domain.destroy();
+          return;
+        }
+
+        const enemies = this.findEnemiesInRange(this.player.x, this.player.y, radius);
+        for (const enemy of enemies) {
+          this.applyDamageToEnemy(enemy, Math.floor(damage * 0.2), skill);
+        }
+      },
+      repeat: Math.floor(duration / tickInterval) - 1,
+    });
+  }
+
+  /**
+   * 绝对零度 - 秒杀低血量
+   */
+  private castAbsoluteZero(skill: Skill, damage: number): void {
+    const radius = skill.rangeValue;
+    const executeThreshold = 0.15; // 15%血量以下秒杀
+
+    // 极寒视觉效果
+    const freeze = this.scene.add.circle(this.player.x, this.player.y, radius, 0x88ffff, 0.5);
+    freeze.setDepth(100);
+    this.scene.tweens.add({
+      targets: freeze,
+      alpha: 0,
+      scale: 1.5,
+      duration: 800,
+      onComplete: () => freeze.destroy(),
+    });
+
+    const enemies = this.findEnemiesInRange(this.player.x, this.player.y, radius);
+    for (const enemy of enemies) {
+      const hpPercent = enemy.currentHp / enemy.maxHp;
+      if (hpPercent < executeThreshold) {
+        // 秒杀
+        enemy.takeDamage(enemy.currentHp + 1);
+      } else {
+        // 正常伤害
+        this.applyDamageToEnemy(enemy, damage, skill);
+      }
+    }
+  }
+
+  /**
+   * 雷霆万钧 - 全屏连锁雷击
+   */
+  private castThunderApocalypse(skill: Skill, damage: number): void {
+    const strikeCount = 12;
+    const strikeInterval = 200;
+    let currentStrike = 0;
+
+    const strikeTimer = this.scene.time.addEvent({
+      delay: strikeInterval,
+      callback: () => {
+        currentStrike++;
+        if (currentStrike > strikeCount) {
+          strikeTimer.destroy();
+          return;
+        }
+
+        // 随机位置雷击
+        const angle = Math.random() * Math.PI * 2;
+        const dist = Math.random() * skill.rangeValue * 0.8;
+        const strikeX = this.player.x + Math.cos(angle) * dist;
+        const strikeY = this.player.y + Math.sin(angle) * dist;
+
+        // 雷击视觉效果
+        const lightning = this.scene.add.circle(strikeX, strikeY, 40, 0xffff00, 0.8);
+        lightning.setDepth(100);
+        this.scene.tweens.add({
+          targets: lightning,
+          alpha: 0,
+          duration: 200,
+          onComplete: () => lightning.destroy(),
+        });
+
+        // 伤害附近敌人
+        const enemies = this.findEnemiesInRange(strikeX, strikeY, 60);
+        for (const enemy of enemies) {
+          this.applyDamageToEnemy(enemy, damage, skill);
+        }
+      },
+      repeat: strikeCount - 1,
+    });
+  }
+
+  /**
+   * 审判之光 - 伤害+治疗
+   */
+  private castJudgmentLight(skill: Skill, damage: number): void {
+    const radius = skill.rangeValue;
+    const healAmount = skill.effects.find(e => e.type === 'heal')?.value || 30;
+
+    // 圣光视觉效果
+    const light = this.scene.add.circle(this.player.x, this.player.y, radius, 0xffcc00, 0.4);
+    light.setDepth(100);
+    this.scene.tweens.add({
+      targets: light,
+      alpha: 0,
+      scale: 1.3,
+      duration: 600,
+      onComplete: () => light.destroy(),
+    });
+
+    // 伤害敌人
+    const enemies = this.findEnemiesInRange(this.player.x, this.player.y, radius);
+    for (const enemy of enemies) {
+      this.applyDamageToEnemy(enemy, damage, skill);
+    }
+
+    // 治疗玩家
+    this.player.heal(healAmount);
+  }
+
+  /**
+   * 暗影降临 - 降防+持续伤害
+   */
+  private castShadowDescent(skill: Skill, damage: number): void {
+    const radius = skill.rangeValue;
+    const duration = 4000;
+    const tickInterval = 500;
+
+    // 暗影视觉效果
+    const shadow = this.scene.add.circle(this.player.x, this.player.y, radius, 0x440066, 0.4);
+    shadow.setDepth(25);
+
+    let elapsed = 0;
+    const shadowTimer = this.scene.time.addEvent({
+      delay: tickInterval,
+      callback: () => {
+        elapsed += tickInterval;
+        if (elapsed >= duration) {
+          shadowTimer.destroy();
+          shadow.destroy();
+          return;
+        }
+
+        const enemies = this.findEnemiesInRange(this.player.x, this.player.y, radius);
+        for (const enemy of enemies) {
+          this.applyDamageToEnemy(enemy, Math.floor(damage * 0.15), skill);
+        }
+      },
+      repeat: Math.floor(duration / tickInterval) - 1,
+    });
+
+    // 立即伤害
+    const enemies = this.findEnemiesInRange(this.player.x, this.player.y, radius);
+    for (const enemy of enemies) {
+      this.applyDamageToEnemy(enemy, damage, skill);
+    }
+  }
+
+  /**
+   * 死亡凋零 - 持续吸血
+   */
+  private castDeathDecay(skill: Skill, damage: number): void {
+    const radius = skill.rangeValue;
+    const duration = 5000;
+    const tickInterval = 400;
+    const lifestealPercent = 0.3;
+
+    // 死亡视觉效果
+    const decay = this.scene.add.circle(this.player.x, this.player.y, radius, 0x440044, 0.3);
+    decay.setDepth(25);
+
+    let elapsed = 0;
+    const decayTimer = this.scene.time.addEvent({
+      delay: tickInterval,
+      callback: () => {
+        elapsed += tickInterval;
+        if (elapsed >= duration) {
+          decayTimer.destroy();
+          decay.destroy();
+          return;
+        }
+
+        const enemies = this.findEnemiesInRange(this.player.x, this.player.y, radius);
+        let totalDamage = 0;
+        for (const enemy of enemies) {
+          const tickDamage = Math.floor(damage * 0.12);
+          this.applyDamageToEnemy(enemy, tickDamage, skill);
+          totalDamage += tickDamage;
+        }
+        // 吸血
+        if (totalDamage > 0) {
+          this.player.heal(Math.floor(totalDamage * lifestealPercent));
+        }
+      },
+      repeat: Math.floor(duration / tickInterval) - 1,
+    });
+  }
+
+  /**
+   * 山崩地裂 - 范围伤害+击飞+眩晕
+   */
+  private castMountainCollapse(skill: Skill, damage: number): void {
+    const radius = skill.rangeValue;
+    const knockbackDist = 150;
+
+    // 地裂视觉效果
+    const crack = this.scene.add.circle(this.player.x, this.player.y, radius, 0x886644, 0.5);
+    crack.setDepth(100);
+    this.scene.tweens.add({
+      targets: crack,
+      alpha: 0,
+      scale: 1.5,
+      duration: 600,
+      onComplete: () => crack.destroy(),
+    });
+
+    const enemies = this.findEnemiesInRange(this.player.x, this.player.y, radius);
+    for (const enemy of enemies) {
+      this.applyDamageToEnemy(enemy, damage, skill);
+      // 击飞
+      const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, enemy.x, enemy.y);
+      enemy.x += Math.cos(angle) * knockbackDist;
+      enemy.y += Math.sin(angle) * knockbackDist;
+    }
+  }
+
+  /**
+   * 陨石坠落 - 大范围爆炸
+   */
+  private castMeteor(skill: Skill, damage: number): void {
+    const radius = skill.rangeValue;
+
+    // 陨石视觉效果
+    const meteor = this.scene.add.circle(this.player.x, this.player.y - 100, 30, 0xff4400, 1);
+    meteor.setDepth(100);
+
+    // 下落动画
+    this.scene.tweens.add({
+      targets: meteor,
+      y: this.player.y,
+      duration: 500,
+      ease: 'Power2',
+      onComplete: () => {
+        meteor.destroy();
+        // 爆炸效果
+        this.createExplosionVisual(this.player.x, this.player.y, radius);
+
+        // 伤害
+        const enemies = this.findEnemiesInRange(this.player.x, this.player.y, radius);
+        for (const enemy of enemies) {
+          this.applyDamageToEnemy(enemy, damage, skill);
+        }
+      },
+    });
+  }
+
+  /**
+   * 海啸 - 全屏推开
+   */
+  private castTsunami(skill: Skill, damage: number): void {
+    const radius = skill.rangeValue;
+    const knockbackDist = 200;
+
+    // 海啸视觉效果
+    const wave = this.scene.add.circle(this.player.x, this.player.y, 20, 0x4488ff, 0.6);
+    wave.setDepth(100);
+    this.scene.tweens.add({
+      targets: wave,
+      scale: radius / 20,
+      alpha: 0,
+      duration: 800,
+      onComplete: () => wave.destroy(),
+    });
+
+    const enemies = this.findEnemiesInRange(this.player.x, this.player.y, radius);
+    for (const enemy of enemies) {
+      this.applyDamageToEnemy(enemy, damage, skill);
+      // 推开
+      const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, enemy.x, enemy.y);
+      enemy.x += Math.cos(angle) * knockbackDist;
+      enemy.y += Math.sin(angle) * knockbackDist;
+    }
+  }
+
+  /**
+   * 大地震击 - 全屏眩晕
+   */
+  private castEarthquake(skill: Skill, damage: number): void {
+    const radius = skill.rangeValue;
+
+    // 地震视觉效果
+    this.scene.cameras.main.shake(500, 0.02);
+    const quake = this.scene.add.circle(this.player.x, this.player.y, radius, 0x886644, 0.3);
+    quake.setDepth(100);
+    this.scene.tweens.add({
+      targets: quake,
+      alpha: 0,
+      duration: 500,
+      onComplete: () => quake.destroy(),
+    });
+
+    const enemies = this.findEnemiesInRange(this.player.x, this.player.y, radius);
+    for (const enemy of enemies) {
+      this.applyDamageToEnemy(enemy, damage, skill);
+    }
+  }
+
+  /**
+   * 过度生长 - 全屏缠绕
+   */
+  private castOvergrowth(skill: Skill, damage: number): void {
+    const radius = skill.rangeValue;
+
+    // 藤蔓视觉效果
+    const vines = this.scene.add.circle(this.player.x, this.player.y, radius, 0x44ff44, 0.3);
+    vines.setDepth(100);
+    this.scene.tweens.add({
+      targets: vines,
+      alpha: 0,
+      duration: 1000,
+      onComplete: () => vines.destroy(),
+    });
+
+    const enemies = this.findEnemiesInRange(this.player.x, this.player.y, radius);
+    for (const enemy of enemies) {
+      this.applyDamageToEnemy(enemy, damage, skill);
+    }
+  }
+
+  /**
+   * 虚空裂隙 - 持续吸引+伤害
+   */
+  private castVoidRift(skill: Skill, damage: number): void {
+    const centerX = this.player.x;
+    const centerY = this.player.y;
+    const radius = skill.rangeValue;
+    const duration = 3000;
+    const tickInterval = 300;
+
+    // 裂隙视觉效果
+    const rift = this.scene.add.circle(centerX, centerY, radius, 0x8800ff, 0.4);
+    rift.setDepth(25);
+
+    let elapsed = 0;
+    const riftTimer = this.scene.time.addEvent({
+      delay: tickInterval,
+      callback: () => {
+        elapsed += tickInterval;
+        if (elapsed >= duration) {
+          riftTimer.destroy();
+          rift.destroy();
+          return;
+        }
+
+        const enemies = this.findEnemiesInRange(centerX, centerY, radius);
+        for (const enemy of enemies) {
+          // 吸引
+          const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, centerX, centerY);
+          enemy.x += Math.cos(angle) * 25;
+          enemy.y += Math.sin(angle) * 25;
+          // 伤害
+          this.applyDamageToEnemy(enemy, Math.floor(damage * 0.25), skill);
+        }
+      },
+      repeat: Math.floor(duration / tickInterval) - 1,
+    });
   }
 
   destroy(): void {
