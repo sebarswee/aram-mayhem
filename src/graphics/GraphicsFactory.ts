@@ -313,17 +313,26 @@ export class GraphicsFactory {
     // 火球
     this.createFireballSprite('projectile_fire', 0xff4400);
 
+    // 水流
+    this.createWaterSprite('projectile_water', 0x4488ff);
+
     // 冰片
     this.createIceShardSprite('projectile_ice', 0x44ccff);
 
     // 闪电
     this.createLightningSprite('projectile_lightning', 0xffff00);
 
+    // 神圣
+    this.createHolySprite('projectile_holy', 0xffcc00);
+
     // 暗影
     this.createShadowSprite('projectile_shadow', 0x8800ff);
 
-    // 神圣
-    this.createHolySprite('projectile_holy', 0xffcc00);
+    // 草叶
+    this.createGrassSprite('projectile_grass', 0x44ff44);
+
+    // 岩石
+    this.createEarthSprite('projectile_earth', 0xaa8844);
   }
 
   /**
@@ -456,6 +465,88 @@ export class GraphicsFactory {
   }
 
   /**
+   * 水流精灵
+   */
+  private createWaterSprite(key: string, color: number): void {
+    const size = 32;
+    const graphics = this.scene.add.graphics();
+
+    // 水滴外形
+    graphics.fillStyle(color, 0.7);
+    graphics.fillCircle(size / 2, size / 2 + 2, 10);
+
+    // 水波纹
+    graphics.fillStyle(this.lighten(color, 0.2), 0.9);
+    graphics.fillCircle(size / 2 - 3, size / 2, 5);
+
+    // 高光
+    graphics.fillStyle(0xffffff, 0.8);
+    graphics.fillCircle(size / 2 - 4, size / 2 - 2, 3);
+
+    // 水滴尾巴
+    graphics.fillStyle(color, 0.6);
+    graphics.fillTriangle(size / 2, size / 2 - 10, size / 2 - 5, size / 2, size / 2 + 5, size / 2);
+
+    graphics.generateTexture(key, size, size);
+    graphics.destroy();
+  }
+
+  /**
+   * 草叶精灵
+   */
+  private createGrassSprite(key: string, color: number): void {
+    const size = 32;
+    const graphics = this.scene.add.graphics();
+
+    // 主叶片
+    graphics.fillStyle(color, 1);
+    graphics.fillTriangle(size / 2, 4, size / 2 - 8, size / 2 + 8, size / 2 + 8, size / 2 + 8);
+
+    // 左叶片
+    graphics.fillStyle(this.darken(color, 0.1), 0.9);
+    graphics.fillTriangle(size / 2 - 6, size / 2 - 4, size / 2 - 14, size / 2 + 10, size / 2 - 2, size / 2 + 6);
+
+    // 右叶片
+    graphics.fillStyle(this.lighten(color, 0.1), 0.9);
+    graphics.fillTriangle(size / 2 + 6, size / 2 - 4, size / 2 + 14, size / 2 + 10, size / 2 + 2, size / 2 + 6);
+
+    // 叶脉高光
+    graphics.fillStyle(0xffffff, 0.5);
+    graphics.fillRect(size / 2 - 1, size / 2 - 4, 2, 10);
+
+    graphics.generateTexture(key, size, size);
+    graphics.destroy();
+  }
+
+  /**
+   * 岩石精灵
+   */
+  private createEarthSprite(key: string, color: number): void {
+    const size = 36;
+    const graphics = this.scene.add.graphics();
+
+    // 岩石主体 - 不规则形状
+    graphics.fillStyle(color, 1);
+    this.drawPixelCircle(graphics, size / 2, size / 2, 12, color);
+
+    // 岩石纹理
+    graphics.fillStyle(this.darken(color, 0.15), 1);
+    graphics.fillRect(size / 2 - 8, size / 2 - 4, 4, 6);
+    graphics.fillRect(size / 2 + 4, size / 2 + 2, 3, 4);
+
+    // 高光
+    graphics.fillStyle(this.lighten(color, 0.2), 0.8);
+    graphics.fillRect(size / 2 - 6, size / 2 - 8, 4, 3);
+
+    // 裂纹
+    graphics.fillStyle(this.darken(color, 0.3), 1);
+    graphics.fillRect(size / 2 - 2, size / 2 - 2, 1, 8);
+
+    graphics.generateTexture(key, size, size);
+    graphics.destroy();
+  }
+
+  /**
    * 创建效果精灵
    */
   private createEffectSprites(): void {
@@ -501,31 +592,102 @@ export class GraphicsFactory {
     graphics.destroy();
 
     // 火焰粒子
-    const fireGfx = this.scene.add.graphics();
-    fireGfx.fillStyle(0xff8800, 1);
-    fireGfx.fillCircle(6, 6, 3);
-    fireGfx.fillStyle(0xffff00, 0.8);
-    fireGfx.fillCircle(6, 6, 2);
-    fireGfx.generateTexture('particle_fire', 12, 12);
-    fireGfx.destroy();
+    this.createElementParticle('particle_fire', 0xff8800, 'circle');
+
+    // 水粒子
+    this.createElementParticle('particle_water', 0x4488ff, 'droplet');
 
     // 冰霜粒子
-    const iceGfx = this.scene.add.graphics();
-    iceGfx.fillStyle(0x88ddff, 1);
-    iceGfx.fillRect(2, 2, 4, 4);
-    iceGfx.fillStyle(0xffffff, 0.8);
-    iceGfx.fillRect(3, 3, 2, 2);
-    iceGfx.generateTexture('particle_ice', 8, 8);
-    iceGfx.destroy();
+    this.createElementParticle('particle_ice', 0x88ddff, 'square');
 
     // 闪电粒子
-    const lightningGfx = this.scene.add.graphics();
-    lightningGfx.fillStyle(0xffff44, 1);
-    lightningGfx.fillRect(0, 4, 8, 2);
-    lightningGfx.fillStyle(0xffffff, 1);
-    lightningGfx.fillRect(2, 4, 4, 2);
-    lightningGfx.generateTexture('particle_lightning', 8, 8);
-    lightningGfx.destroy();
+    this.createElementParticle('particle_lightning', 0xffff44, 'line');
+
+    // 神圣粒子
+    this.createElementParticle('particle_holy', 0xffdd00, 'star');
+
+    // 暗影粒子
+    this.createElementParticle('particle_shadow', 0x8800ff, 'ring');
+
+    // 草叶粒子
+    this.createElementParticle('particle_grass', 0x44ff44, 'leaf');
+
+    // 岩石粒子
+    this.createElementParticle('particle_earth', 0xaa8844, 'rock');
+  }
+
+  /**
+   * 创建元素粒子
+   */
+  private createElementParticle(key: string, color: number, shape: 'circle' | 'droplet' | 'square' | 'line' | 'star' | 'ring' | 'leaf' | 'rock'): void {
+    const size = 12;
+    const graphics = this.scene.add.graphics();
+
+    switch (shape) {
+      case 'circle':
+        graphics.fillStyle(color, 1);
+        graphics.fillCircle(size / 2, size / 2, 4);
+        graphics.fillStyle(0xffffff, 0.8);
+        graphics.fillCircle(size / 2, size / 2, 2);
+        break;
+
+      case 'droplet':
+        graphics.fillStyle(color, 0.9);
+        graphics.fillCircle(size / 2, size / 2 + 1, 3);
+        graphics.fillTriangle(size / 2, size / 2 - 4, size / 2 - 2, size / 2, size / 2 + 2, size / 2);
+        graphics.fillStyle(0xffffff, 0.7);
+        graphics.fillCircle(size / 2 - 1, size / 2, 1);
+        break;
+
+      case 'square':
+        graphics.fillStyle(color, 1);
+        graphics.fillRect(2, 2, 8, 8);
+        graphics.fillStyle(0xffffff, 0.8);
+        graphics.fillRect(3, 3, 4, 4);
+        break;
+
+      case 'line':
+        graphics.fillStyle(color, 1);
+        graphics.fillRect(0, size / 2 - 1, size, 2);
+        graphics.fillStyle(0xffffff, 1);
+        graphics.fillRect(4, size / 2 - 1, 4, 2);
+        break;
+
+      case 'star':
+        graphics.fillStyle(color, 0.4);
+        graphics.fillCircle(size / 2, size / 2, 5);
+        graphics.fillStyle(color, 1);
+        graphics.fillCircle(size / 2, size / 2, 3);
+        graphics.fillStyle(0xffffff, 0.9);
+        graphics.fillRect(size / 2 - 1, size / 2 - 5, 2, 10);
+        graphics.fillRect(size / 2 - 5, size / 2 - 1, 10, 2);
+        break;
+
+      case 'ring':
+        graphics.fillStyle(color, 0.7);
+        graphics.fillCircle(size / 2, size / 2, 5);
+        graphics.fillStyle(0x000000, 0.8);
+        graphics.fillCircle(size / 2, size / 2, 2);
+        break;
+
+      case 'leaf':
+        graphics.fillStyle(color, 1);
+        graphics.fillTriangle(size / 2, 2, 2, size - 2, size - 2, size - 2);
+        graphics.fillStyle(0xffffff, 0.5);
+        graphics.fillRect(size / 2 - 1, 4, 2, 4);
+        break;
+
+      case 'rock':
+        graphics.fillStyle(color, 1);
+        graphics.fillRect(2, 4, 8, 6);
+        graphics.fillRect(4, 2, 4, 8);
+        graphics.fillStyle(this.lighten(color, 0.2), 0.8);
+        graphics.fillRect(3, 3, 3, 3);
+        break;
+    }
+
+    graphics.generateTexture(key, size, size);
+    graphics.destroy();
   }
 
   /**

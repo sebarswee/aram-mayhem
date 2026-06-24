@@ -1,8 +1,10 @@
 import Phaser from 'phaser';
 import { Player } from '@/entities/Player';
-import { GameState, Skill } from '@/types';
+import { GameState, Skill, Element } from '@/types';
 import { ExpSystem } from '@/systems/ExpSystem';
 import { GAME_WIDTH } from '@/config/game.config';
+import { ELEMENT_COLORS, getElementColor, getSynergy } from '@/data/elements';
+import { SynergyResult } from '@/types';
 
 interface SkillUI {
   container: Phaser.GameObjects.Container;
@@ -29,6 +31,9 @@ export class HUD {
 
   // 技能UI
   private skillUIs: SkillUI[] = [];
+
+  // 羁绊通知
+  private synergyNotifications: Array<{ text: Phaser.GameObjects.Text; timer: number }> = [];
 
   constructor(
     scene: Phaser.Scene,
@@ -210,15 +215,51 @@ export class HUD {
    * 获取技能对应颜色
    */
   private getSkillColor(skill: Skill): number {
-    const colors: Record<string, number> = {
-      fire: 0xff4400,
-      ice: 0x44ccff,
-      lightning: 0xffff00,
-      shadow: 0x8800ff,
-      holy: 0xffcc00,
-      physical: 0xffffff,
-    };
-    return colors[skill.elements[0]] || 0xffffff;
+    return getElementColor(skill.elements[0]);
+  }
+
+  /**
+   * 显示羁绊通知
+   */
+  showSynergyNotification(synergy: SynergyResult): void {
+    const width = this.scene.scale.width;
+    const height = this.scene.scale.height;
+
+    // 创建羁绊名称文字
+    const fontSize = Math.min(24, width / 25);
+    const text = this.scene.add.text(
+      width / 2,
+      height / 3,
+      `羁绊触发：${synergy.name}`,
+      {
+        fontSize: `${fontSize}px`,
+        color: '#ffcc00',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 4,
+      }
+    );
+    text.setOrigin(0.5, 0.5);
+    text.setScrollFactor(0);
+    text.setDepth(200);
+
+    // 淡入淡出动画
+    this.scene.tweens.add({
+      targets: text,
+      alpha: { from: 0, to: 1 },
+      duration: 200,
+      onComplete: () => {
+        // 1秒后淡出
+        this.scene.time.delayedCall(1000, () => {
+          this.scene.tweens.add({
+            targets: text,
+            alpha: 0,
+            duration: 300,
+            onComplete: () => text.destroy(),
+          });
+        });
+      },
+    });
   }
 
   update(): void {
