@@ -184,7 +184,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
   update(time: number, _delta: number): void {
     // Safety check: ensure enemy is active and has a valid body
-    if (!this.target || !this.active || !this.body || !this.scene) return;
+    if (!this.target || !this.active) return;
+
+    const body = this.body as Phaser.Physics.Arcade.Body | null;
+    if (!body || !this.scene) return;
 
     // Update status effects (ticking)
     this.updateStatusEffects(time);
@@ -205,17 +208,17 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.target.y
       );
 
-      this.setVelocity(Math.cos(angle) * actualSpeed, Math.sin(angle) * actualSpeed);
+      body.setVelocity(Math.cos(angle) * actualSpeed, Math.sin(angle) * actualSpeed);
 
       // 根据移动方向轻微翻转
-      if (this.body.velocity.x < 0) {
+      if (body.velocity.x < 0) {
         this.setFlipX(true);
-      } else if (this.body.velocity.x > 0) {
+      } else if (body.velocity.x > 0) {
         this.setFlipX(false);
       }
     } else {
       // Stop movement when immobilized
-      this.setVelocity(0, 0);
+      body.setVelocity(0, 0);
     }
 
     // 更新阴影位置
