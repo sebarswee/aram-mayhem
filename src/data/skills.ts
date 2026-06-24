@@ -1,423 +1,383 @@
-import { Skill, SkillBaseValues } from '@/types';
+// src/data/skills.ts
+import { Skill, SkillEffect, SkillEvolution } from '@/types';
+import { Element } from '@/types';
 
-// 创建技能的辅助函数，自动填充 baseValues 和 enhancements
-function createSkill(base: Omit<Skill, 'enhancements' | 'baseValues'>): Skill {
+// 创建技能的辅助函数
+function createSkill(base: Omit<Skill, 'level' | 'maxLevel' | 'enhancements' | 'evolutions' | 'baseValues'>): Skill {
   return {
     ...base,
+    level: 1,
+    maxLevel: 5,
     enhancements: [],
+    evolutions: [],
     baseValues: {
       damage: base.damage,
       range: base.rangeValue,
-      projectileCount: 1,
-      pierce: 0,
       cooldown: base.cooldown,
+      projectileCount: 1,
     },
   };
 }
 
-// 基础技能数据
+// 基础技能（16个）
 export const SKILLS: Record<string, Skill> = {
-  // ==================== 投射物技能 ====================
+  // ===== 火属性 =====
   fireball: createSkill({
     id: 'fireball',
     name: '火球术',
-    description: '发射一颗火球，造成范围伤害',
+    description: '发射火球，命中造成范围伤害',
     type: 'basic',
-    elements: ['fire'],
-    categories: ['projectile'],
-    range: 'long',
+    element: 'fire',
+    category: 'projectile',
     cooldown: 1500,
     damage: 15,
     rangeValue: 400,
     speed: 300,
-    effects: [{ type: 'damage', value: 15 }],
+    effects: [{ type: 'damage', value: 15 }, { type: 'burn', value: 5, duration: 3000 }],
   }),
 
+  flame_wave: createSkill({
+    id: 'flame_wave',
+    name: '烈焰波',
+    description: '向前释放火焰波，持续灼烧',
+    type: 'basic',
+    element: 'fire',
+    category: 'area',
+    cooldown: 2500,
+    damage: 20,
+    rangeValue: 150,
+    effects: [{ type: 'damage', value: 20 }, { type: 'burn', value: 8, duration: 4000 }],
+  }),
+
+  // ===== 水属性 =====
+  water_bullet: createSkill({
+    id: 'water_bullet',
+    name: '水弹',
+    description: '发射水弹，减速敌人',
+    type: 'basic',
+    element: 'water',
+    category: 'projectile',
+    cooldown: 1200,
+    damage: 12,
+    rangeValue: 350,
+    speed: 320,
+    effects: [{ type: 'damage', value: 12 }, { type: 'slow', value: 0.3, duration: 2000 }],
+  }),
+
+  tidal_wave: createSkill({
+    id: 'tidal_wave',
+    name: '潮汐',
+    description: '释放水流，推开敌人并减速',
+    type: 'basic',
+    element: 'water',
+    category: 'area',
+    cooldown: 3000,
+    damage: 18,
+    rangeValue: 120,
+    effects: [{ type: 'damage', value: 18 }, { type: 'knockback', value: 100 }, { type: 'slow', value: 0.4, duration: 2000 }],
+  }),
+
+  // ===== 冰属性 =====
   ice_shard: createSkill({
     id: 'ice_shard',
     name: '冰刺',
-    description: '发射冰刺，减速敌人',
+    description: '发射冰刺，冻结敌人',
     type: 'basic',
-    elements: ['ice'],
-    categories: ['projectile'],
-    range: 'mid',
-    cooldown: 1000,
+    element: 'ice',
+    category: 'projectile',
+    cooldown: 1800,
     damage: 10,
     rangeValue: 300,
     speed: 350,
-    effects: [
-      { type: 'damage', value: 10 },
-      { type: 'freeze', value: 0.3, duration: 1500 },
-    ],
-  }),
-
-  lightning_bolt: createSkill({
-    id: 'lightning_bolt',
-    name: '闪电箭',
-    description: '发射闪电，可连锁攻击3个敌人',
-    type: 'basic',
-    elements: ['lightning'],
-    categories: ['projectile'],
-    range: 'long',
-    cooldown: 2000,
-    damage: 20,
-    rangeValue: 500,
-    speed: 500,
-    chainCount: 3,
-    chainRange: 150,
-    chainDamageDecay: 0.8,
-    effects: [{ type: 'damage', value: 20 }],
-  }),
-
-  // ==================== 新投射物技能 ====================
-  multi_shot: createSkill({
-    id: 'multi_shot',
-    name: '多重箭',
-    description: '同时射出3支箭矢',
-    type: 'basic',
-    elements: ['physical'],
-    categories: ['projectile'],
-    range: 'long',
-    cooldown: 2000,
-    damage: 8,
-    rangeValue: 350,
-    speed: 400,
-    effects: [{ type: 'damage', value: 8 }],
-  }),
-
-  boomerang: createSkill({
-    id: 'boomerang',
-    name: '回旋镖',
-    description: '投掷回旋镖，往返都造成伤害',
-    type: 'basic',
-    elements: ['physical'],
-    categories: ['projectile'],
-    range: 'mid',
-    cooldown: 2500,
-    damage: 18,
-    rangeValue: 250,
-    speed: 250,
-    effects: [{ type: 'damage', value: 18 }],
-  }),
-
-  homing_missile: createSkill({
-    id: 'homing_missile',
-    name: '追踪弹',
-    description: '发射自动追踪敌人的导弹',
-    type: 'basic',
-    elements: ['fire'],
-    categories: ['projectile'],
-    range: 'long',
-    cooldown: 3000,
-    damage: 25,
-    rangeValue: 400,
-    speed: 200,
-    effects: [{ type: 'damage', value: 25 }],
-  }),
-
-  poison_dart: createSkill({
-    id: 'poison_dart',
-    name: '毒镖',
-    description: '发射带毒的飞镖，造成持续伤害',
-    type: 'basic',
-    elements: ['shadow'],
-    categories: ['projectile'],
-    range: 'mid',
-    cooldown: 1800,
-    damage: 12,
-    rangeValue: 300,
-    speed: 380,
-    effects: [
-      { type: 'damage', value: 12 },
-      { type: 'poison', value: 6, duration: 4000 },
-    ],
-  }),
-
-  // ==================== 范围技能 ====================
-  flame_circle: createSkill({
-    id: 'flame_circle',
-    name: '烈焰环',
-    description: '在自身周围释放火焰环',
-    type: 'basic',
-    elements: ['fire'],
-    categories: ['area'],
-    range: 'melee',
-    cooldown: 3000,
-    damage: 25,
-    rangeValue: 100,
-    effects: [
-      { type: 'damage', value: 25 },
-      { type: 'burn', value: 5, duration: 3000 },
-    ],
+    effects: [{ type: 'damage', value: 10 }, { type: 'freeze', value: 1, duration: 1500 }],
   }),
 
   frost_nova: createSkill({
     id: 'frost_nova',
     name: '冰霜新星',
-    description: '释放冰霜冲击波，冻结周围敌人',
+    description: '释放冰霜冲击波，冻结周围',
     type: 'basic',
-    elements: ['ice'],
-    categories: ['area'],
-    range: 'melee',
+    element: 'ice',
+    category: 'area',
     cooldown: 4000,
-    damage: 30,
+    damage: 25,
     rangeValue: 150,
-    effects: [
-      { type: 'damage', value: 30 },
-      { type: 'freeze', value: 1, duration: 2000 },
-    ],
+    effects: [{ type: 'damage', value: 25 }, { type: 'freeze', value: 1, duration: 2000 }],
   }),
 
-  whirlwind: createSkill({
-    id: 'whirlwind',
-    name: '旋风斩',
-    description: '原地旋转，对周围敌人造成伤害',
+  // ===== 电属性 =====
+  lightning_bolt: createSkill({
+    id: 'lightning_bolt',
+    name: '闪电箭',
+    description: '发射闪电，连锁攻击3个敌人',
     type: 'basic',
-    elements: ['physical'],
-    categories: ['area'],
-    range: 'melee',
-    cooldown: 4000,
-    damage: 30,
-    rangeValue: 120,
-    effects: [{ type: 'damage', value: 30 }],
+    element: 'lightning',
+    category: 'projectile',
+    cooldown: 2000,
+    damage: 18,
+    rangeValue: 500,
+    speed: 500,
+    effects: [{ type: 'damage', value: 18 }],
   }),
 
-  poison_cloud: createSkill({
-    id: 'poison_cloud',
-    name: '毒雾',
-    description: '释放毒雾，持续伤害范围内敌人',
+  thunder_storm: createSkill({
+    id: 'thunder_storm',
+    name: '雷暴',
+    description: '召唤雷暴，随机雷击敌人',
     type: 'basic',
-    elements: ['shadow'],
-    categories: ['area'],
-    range: 'mid',
-    cooldown: 5000,
-    damage: 20,
-    rangeValue: 150,
-    effects: [
-      { type: 'damage', value: 20 },
-      { type: 'poison', value: 5, duration: 3000 },
-    ],
-  }),
-
-  // ==================== 新范围技能 ====================
-  ground_spike: createSkill({
-    id: 'ground_spike',
-    name: '地刺',
-    description: '从地面刺出尖刺，击飞敌人',
-    type: 'basic',
-    elements: ['physical'],
-    categories: ['area'],
-    range: 'mid',
+    element: 'lightning',
+    category: 'area',
     cooldown: 3500,
-    damage: 28,
-    rangeValue: 130,
-    effects: [
-      { type: 'damage', value: 28 },
-      { type: 'knockback', value: 100 },
-    ],
+    damage: 22,
+    rangeValue: 200,
+    effects: [{ type: 'damage', value: 22 }, { type: 'stun', value: 0, duration: 500 }],
   }),
 
+  // ===== 光属性 =====
   holy_light: createSkill({
     id: 'holy_light',
-    name: '神圣之光',
-    description: '释放圣光，治疗自己并伤害周围敌人',
+    name: '圣光',
+    description: '释放圣光，伤害敌人并治疗自己',
     type: 'basic',
-    elements: ['holy'],
-    categories: ['area'],
-    range: 'melee',
-    cooldown: 4000,
-    damage: 20,
-    rangeValue: 120,
-    effects: [
-      { type: 'damage', value: 20 },
-      { type: 'heal', value: 15 },
-    ],
-  }),
-
-  black_hole: createSkill({
-    id: 'black_hole',
-    name: '黑洞',
-    description: '创造黑洞，吸引周围敌人并造成伤害',
-    type: 'basic',
-    elements: ['shadow'],
-    categories: ['area'],
-    range: 'mid',
-    cooldown: 6000,
-    damage: 35,
-    rangeValue: 180,
-    effects: [{ type: 'damage', value: 35 }],
-  }),
-
-  time_stop: createSkill({
-    id: 'time_stop',
-    name: '时间停止',
-    description: '暂停范围内敌人的行动',
-    type: 'basic',
-    elements: ['shadow'],
-    categories: ['area', 'control'],
-    range: 'mid',
-    cooldown: 8000,
+    element: 'holy',
+    category: 'area',
+    cooldown: 3000,
     damage: 15,
-    rangeValue: 140,
-    effects: [
-      { type: 'damage', value: 15 },
-      { type: 'stun', value: 0, duration: 2000 },
-    ],
+    rangeValue: 130,
+    effects: [{ type: 'damage', value: 15 }, { type: 'heal', value: 10 }],
   }),
 
-  // ==================== 召唤/防御技能 ====================
-  summon: createSkill({
-    id: 'summon',
-    name: '召唤精灵',
-    description: '召唤一个小精灵自动攻击敌人',
+  divine_shield: createSkill({
+    id: 'divine_shield',
+    name: '神圣护盾',
+    description: '获得护盾，反弹伤害',
     type: 'basic',
-    elements: ['holy'],
-    categories: ['summon'],
-    range: 'long',
-    cooldown: 10000,
-    damage: 10,
-    rangeValue: 300,
-    effects: [{ type: 'damage', value: 10 }],
-  }),
-
-  shield: createSkill({
-    id: 'shield',
-    name: '防御护盾',
-    description: '获得临时护盾，抵挡伤害',
-    type: 'basic',
-    elements: ['holy'],
-    categories: ['buff'],
-    range: 'melee',
-    cooldown: 12000,
+    element: 'holy',
+    category: 'buff',
+    cooldown: 8000,
     damage: 0,
     rangeValue: 0,
     effects: [{ type: 'shield', value: 50 }],
   }),
 
-  // ==================== 大招 ====================
+  // ===== 暗属性 =====
+  shadow_bolt: createSkill({
+    id: 'shadow_bolt',
+    name: '暗影箭',
+    description: '发射暗影箭，中毒敌人',
+    type: 'basic',
+    element: 'shadow',
+    category: 'projectile',
+    cooldown: 1500,
+    damage: 14,
+    rangeValue: 320,
+    speed: 340,
+    effects: [{ type: 'damage', value: 14 }, { type: 'poison', value: 6, duration: 4000 }],
+  }),
+
+  curse_aura: createSkill({
+    id: 'curse_aura',
+    name: '诅咒光环',
+    description: '释放诅咒，降低敌人攻防',
+    type: 'basic',
+    element: 'shadow',
+    category: 'area',
+    cooldown: 4000,
+    damage: 10,
+    rangeValue: 140,
+    effects: [{ type: 'damage', value: 10 }],
+  }),
+
+  // ===== 草属性 =====
+  vine_whip: createSkill({
+    id: 'vine_whip',
+    name: '藤蔓鞭',
+    description: '发射藤蔓，缠绕敌人',
+    type: 'basic',
+    element: 'grass',
+    category: 'projectile',
+    cooldown: 1800,
+    damage: 12,
+    rangeValue: 280,
+    speed: 300,
+    effects: [{ type: 'damage', value: 12 }, { type: 'stun', value: 0, duration: 800 }],
+  }),
+
+  poison_cloud: createSkill({
+    id: 'poison_cloud',
+    name: '毒雾',
+    description: '释放毒雾，持续伤害',
+    type: 'basic',
+    element: 'grass',
+    category: 'area',
+    cooldown: 3500,
+    damage: 15,
+    rangeValue: 150,
+    effects: [{ type: 'damage', value: 15 }, { type: 'poison', value: 8, duration: 5000 }],
+  }),
+
+  // ===== 土属性 =====
+  rock_spike: createSkill({
+    id: 'rock_spike',
+    name: '岩刺',
+    description: '地面刺出岩石，击飞敌人',
+    type: 'basic',
+    element: 'earth',
+    category: 'area',
+    cooldown: 2500,
+    damage: 22,
+    rangeValue: 130,
+    effects: [{ type: 'damage', value: 22 }, { type: 'knockback', value: 80 }],
+  }),
+
+  sandstorm: createSkill({
+    id: 'sandstorm',
+    name: '沙暴',
+    description: '召唤沙暴，眩晕敌人',
+    type: 'basic',
+    element: 'earth',
+    category: 'area',
+    cooldown: 4000,
+    damage: 18,
+    rangeValue: 160,
+    effects: [{ type: 'damage', value: 18 }, { type: 'stun', value: 0, duration: 1000 }],
+  }),
+
+  // ===== 大招（8个）=====
   meteor: createSkill({
     id: 'meteor',
-    name: '陨石',
-    description: '召唤陨石砸向敌人最密集区域',
+    name: '陨石坠落',
+    description: '召唤陨石，大范围爆炸+灼烧',
     type: 'ultimate',
-    elements: ['fire'],
-    categories: ['area'],
-    range: 'long',
-    cooldown: 15000,
+    element: 'fire',
+    category: 'area',
+    cooldown: 20000,
     damage: 80,
     rangeValue: 200,
-    effects: [
-      { type: 'damage', value: 80 },
-      { type: 'burn', value: 10, duration: 5000 },
-    ],
-    rarity: 'common',
+    effects: [{ type: 'damage', value: 80 }, { type: 'burn', value: 15, duration: 5000 }],
+  }),
+
+  tsunami: createSkill({
+    id: 'tsunami',
+    name: '海啸',
+    description: '召唤海啸，全屏推开并伤害敌人',
+    type: 'ultimate',
+    element: 'water',
+    category: 'area',
+    cooldown: 22000,
+    damage: 60,
+    rangeValue: 500,
+    effects: [{ type: 'damage', value: 60 }, { type: 'knockback', value: 200 }],
   }),
 
   blizzard: createSkill({
     id: 'blizzard',
     name: '暴风雪',
-    description: '召唤暴风雪，持续伤害并减速范围内敌人',
+    description: '召唤暴风雪，持续冻结+伤害',
     type: 'ultimate',
-    elements: ['ice'],
-    categories: ['area'],
-    range: 'long',
-    cooldown: 18000,
+    element: 'ice',
+    category: 'area',
+    cooldown: 25000,
     damage: 50,
     rangeValue: 250,
-    effects: [
-      { type: 'damage', value: 50 },
-      { type: 'freeze', value: 0.5, duration: 4000 },
-    ],
-    rarity: 'common',
+    effects: [{ type: 'damage', value: 50 }, { type: 'freeze', value: 0.5, duration: 4000 }],
   }),
 
-  thunder_storm: createSkill({
-    id: 'thunder_storm',
-    name: '雷霆风暴',
-    description: '召唤雷电风暴，随机雷击范围内敌人',
+  thunder_strike: createSkill({
+    id: 'thunder_strike',
+    name: '雷神之怒',
+    description: '全屏雷击，随机打击15次',
     type: 'ultimate',
-    elements: ['lightning'],
-    categories: ['area'],
-    range: 'long',
-    cooldown: 20000,
+    element: 'lightning',
+    category: 'area',
+    cooldown: 18000,
     damage: 40,
-    rangeValue: 300,
-    effects: [
-      { type: 'damage', value: 40 },
-      { type: 'stun', value: 0, duration: 500 },
-    ],
-    rarity: 'rare',
+    rangeValue: 400,
+    effects: [{ type: 'damage', value: 40 }, { type: 'stun', value: 0, duration: 300 }],
+  }),
+
+  holy_judgment: createSkill({
+    id: 'holy_judgment',
+    name: '神圣审判',
+    description: '全屏伤害+自身满血',
+    type: 'ultimate',
+    element: 'holy',
+    category: 'area',
+    cooldown: 30000,
+    damage: 70,
+    rangeValue: 500,
+    effects: [{ type: 'damage', value: 70 }, { type: 'heal', value: 999 }],
+  }),
+
+  void_rift: createSkill({
+    id: 'void_rift',
+    name: '虚空裂隙',
+    description: '打开裂隙，持续吸引和伤害敌人',
+    type: 'ultimate',
+    element: 'shadow',
+    category: 'area',
+    cooldown: 22000,
+    damage: 55,
+    rangeValue: 180,
+    effects: [{ type: 'damage', value: 55 }, { type: 'poison', value: 10, duration: 5000 }],
+  }),
+
+  overgrowth: createSkill({
+    id: 'overgrowth',
+    name: '过度生长',
+    description: '召唤森林，缠绕并持续伤害全屏敌人',
+    type: 'ultimate',
+    element: 'grass',
+    category: 'area',
+    cooldown: 28000,
+    damage: 45,
+    rangeValue: 400,
+    effects: [{ type: 'damage', value: 45 }, { type: 'stun', value: 0, duration: 1500 }],
+  }),
+
+  earthquake: createSkill({
+    id: 'earthquake',
+    name: '大地震击',
+    description: '全屏地震，眩晕所有敌人',
+    type: 'ultimate',
+    element: 'earth',
+    category: 'area',
+    cooldown: 24000,
+    damage: 60,
+    rangeValue: 500,
+    effects: [{ type: 'damage', value: 60 }, { type: 'stun', value: 0, duration: 2000 }],
   }),
 };
 
-// ==================== 辅助函数 ====================
-
-/**
- * 获取所有基础技能
- */
+// 获取所有基础技能
 export function getBasicSkills(): Skill[] {
-  return Object.values(SKILLS).filter((s) => s.type === 'basic');
+  return Object.values(SKILLS).filter(s => s.type === 'basic');
 }
 
-/**
- * 获取所有大招
- */
+// 获取所有大招
 export function getUltimateSkills(): Skill[] {
-  return Object.values(SKILLS).filter((s) => s.type === 'ultimate');
+  return Object.values(SKILLS).filter(s => s.type === 'ultimate');
 }
 
-/**
- * 获取随机基础技能（用于开局选择）
- */
+// 获取随机基础技能（开局选择）
 export function getRandomBasicSkills(count: number): Skill[] {
   const basics = getBasicSkills();
   const shuffled = basics.sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, count);
+  return shuffled.slice(0, count).map(cloneSkill);
 }
 
-/**
- * 获取随机大招（用于解锁）
- */
-export function getRandomUltimate(excludeIds: string[] = []): Skill | null {
-  const ultimates = getUltimateSkills().filter((s) => !excludeIds.includes(s.id));
-  if (ultimates.length === 0) return null;
-
-  // 按稀有度选择
-  const roll = Math.random();
-  if (roll < 0.3) {
-    const rare = ultimates.filter((s) => s.rarity === 'rare');
-    if (rare.length > 0) {
-      return rare[Math.floor(Math.random() * rare.length)];
-    }
-  }
-  const common = ultimates.filter((s) => s.rarity === 'common' || !s.rarity);
-  return common[Math.floor(Math.random() * common.length)] || ultimates[0];
-}
-
-/**
- * 获取随机技能（用于升级选择）
- */
-export function getRandomSkill(excludeIds: string[] = []): Skill | null {
-  const basics = getBasicSkills().filter((s) => !excludeIds.includes(s.id));
-  if (basics.length === 0) return null;
-  return basics[Math.floor(Math.random() * basics.length)];
-}
-
-/**
- * 获取单个技能
- */
+// 获取单个技能
 export function getSkill(id: string): Skill | undefined {
   return SKILLS[id];
 }
 
-/**
- * 克隆技能（避免引用问题）
- */
+// 克隆技能
 export function cloneSkill(skill: Skill): Skill {
   return {
     ...skill,
     effects: [...skill.effects],
     enhancements: [...skill.enhancements],
+    evolutions: [...skill.evolutions],
     baseValues: { ...skill.baseValues },
   };
 }
