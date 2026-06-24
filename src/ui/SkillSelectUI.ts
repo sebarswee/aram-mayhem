@@ -103,6 +103,7 @@ export class SkillSelectUI {
   ): void {
     // 卡片背景
     const card = this.scene.add.container(x, y);
+    card.setScrollFactor(0); // 固定在屏幕上
 
     // 使用统一的元素颜色
     const color = getElementColor(skill.elements[0]);

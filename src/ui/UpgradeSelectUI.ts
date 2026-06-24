@@ -152,6 +152,7 @@ export class UpgradeSelectUI {
     isSmallScreen: boolean
   ): void {
     const card = this.scene.add.container(x, y);
+    card.setScrollFactor(0); // 固定在屏幕上
 
     // 稀有度颜色
     let color = 0xffffff;
