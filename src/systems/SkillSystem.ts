@@ -1238,6 +1238,25 @@ export class SkillSystem {
           this.player.addShield(effect.value || 50);
           break;
 
+        case 'defense_break':
+          // 降低敌人防御 - 使其受到更多伤害
+          enemy.addStatusEffect({
+            type: 'defense_break',
+            value: effect.value || 0.3, // 30%额外伤害
+            duration: effect.duration || 5000,
+            remainingTime: effect.duration || 5000,
+            source: 'skill',
+          });
+          break;
+
+        case 'damage_reflect':
+          // 反弹伤害 - 给玩家添加反弹状态
+          this.player.addReflectEffect({
+            value: effect.value || 0.3, // 反弹30%伤害
+            duration: effect.duration || 8000,
+          });
+          break;
+
         default:
           // 其他效果暂不处理
           console.warn(`[SkillSystem] Unknown effect type: ${effect.type}`);

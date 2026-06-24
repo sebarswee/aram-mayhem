@@ -14,6 +14,15 @@ export interface PlayerStatusEffect {
 }
 
 /**
+ * Reflect effect - bounces damage back to attacker
+ */
+export interface ReflectEffect {
+  value: number;      // Percentage of damage to reflect (e.g., 0.3 = 30%)
+  duration: number;
+  remainingTime: number;
+}
+
+/**
  * Debuff types for identification
  */
 const DEBUFF_TYPES = ['burn', 'poison', 'slow', 'root'];
@@ -36,6 +45,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   // Status effects system
   public statusEffects: PlayerStatusEffect[] = [];
   private statusEffectTickTimers: Map<string, number> = new Map();
+
+  // Reflect effects system
+  private reflectEffects: ReflectEffect[] = [];
 
   // Element resistance system
   public elementResistance: Partial<Record<Element, number>> = {};
@@ -250,6 +262,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.statusEffects = this.statusEffects.filter(e => e.type !== type);
       this.statusEffectTickTimers.delete(type);
     }
+
+    // Update reflect effects
+    this.reflectEffects = this.reflectEffects.filter(effect => {
+      effect.remainingTime -= delta;
+      return effect.remainingTime > 0;
+    });
   }
 
   /**
@@ -509,6 +527,33 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
    */
   getShield(): number {
     return this.shieldValue;
+  }
+
+  /**
+   * 添加反弹效果
+   */
+  addReflectEffect(effect: Omit<ReflectEffect, 'remainingTime'>): void {
+    this.reflectEffects.push({
+      ...effect,
+      remainingTime: effect.duration,
+    });
+  }
+
+  /**
+   * 获取当前反弹伤害百分比
+   * Returns the total reflect percentage (e.g., 0.3 = 30%)
+   */
+  getReflectValue(): number {
+    if (this.reflectEffects.length === 0) return 0;
+    // Sum all active reflect effects
+    return this.reflectEffects.reduce((total, effect) => total + effect.value, 0);
+  }
+
+  /**
+   * 检查是否有反弹效果
+   */
+  hasReflect(): boolean {
+    return this.reflectEffects.length > 0;
   }
 
   heal(amount: number): void {

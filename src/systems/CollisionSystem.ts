@@ -659,6 +659,25 @@ export class CollisionSystem {
           player.addShield(effect.value || 50);
           break;
 
+        case 'defense_break':
+          // 降低敌人防御 - 使其受到更多伤害
+          enemy.addStatusEffect({
+            type: 'defense_break',
+            value: effect.value || 0.3,
+            duration: effect.duration || 5000,
+            remainingTime: effect.duration || 5000,
+            source: 'skill',
+          });
+          break;
+
+        case 'damage_reflect':
+          // 反弹伤害 - 给玩家添加反弹状态
+          player.addReflectEffect({
+            value: effect.value || 0.3,
+            duration: effect.duration || 8000,
+          });
+          break;
+
         default:
           console.warn(`[CollisionSystem] Unknown effect type: ${effect.type}`);
           break;
@@ -686,8 +705,42 @@ export class CollisionSystem {
 
     if (distance > collisionDistance) return;
 
+    // Get enemy damage before applying
+    const enemyDamage = enem.config.damage;
+
     // Enemy collision damage
-    ply.takeDamage(enem.config.damage);
+    ply.takeDamage(enemyDamage);
+
+    // Apply reflect damage if player has reflect effect
+    if (ply.hasReflect()) {
+      const reflectPercent = ply.getReflectValue();
+      const reflectDamage = Math.floor(enemyDamage * reflectPercent);
+      if (reflectDamage > 0) {
+        enem.takeDamage(reflectDamage);
+
+        // Visual feedback for reflect
+        const reflectFlash = this.scene.add.circle(ply.x, ply.y, 40, 0xffff88, 0.6);
+        reflectFlash.setDepth(100);
+        this.scene.tweens.add({
+          targets: reflectFlash,
+          alpha: 0,
+          scale: 1.5,
+          duration: 200,
+          onComplete: () => reflectFlash.destroy(),
+        });
+
+        // Create reflect beam visual
+        const beam = this.scene.add.graphics();
+        beam.lineStyle(3, 0xffff88, 0.8);
+        beam.lineBetween(ply.x, ply.y, enem.x, enem.y);
+        this.scene.tweens.add({
+          targets: beam,
+          alpha: 0,
+          duration: 150,
+          onComplete: () => beam.destroy(),
+        });
+      }
+    }
 
     // Trigger enemy attack abilities
     this.triggerEnemyAttackAbilities(enem, ply);

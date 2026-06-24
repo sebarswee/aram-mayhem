@@ -28,7 +28,7 @@ export interface SynergyResult {
 
 // ==================== 技能系统 ====================
 export interface SkillEffect {
-  type: 'damage' | 'burn' | 'freeze' | 'stun' | 'poison' | 'heal' | 'shield' | 'knockback' | 'slow';
+  type: 'damage' | 'burn' | 'freeze' | 'stun' | 'poison' | 'heal' | 'shield' | 'knockback' | 'slow' | 'defense_break' | 'damage_reflect';
   value: number;
   duration?: number;
 }

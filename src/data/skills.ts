@@ -168,7 +168,7 @@ export const SKILLS: Record<string, Skill> = {
     cooldown: 8000,
     damage: 0,
     rangeValue: 0,
-    effects: [{ type: 'shield', value: 50 }],
+    effects: [{ type: 'shield', value: 50 }, { type: 'damage_reflect', value: 0.3, duration: 8000 }],
   }),
 
   // ===== 暗属性 =====
@@ -196,7 +196,7 @@ export const SKILLS: Record<string, Skill> = {
     cooldown: 4000,
     damage: 10,
     rangeValue: 140,
-    effects: [{ type: 'damage', value: 10 }],
+    effects: [{ type: 'damage', value: 10 }, { type: 'defense_break', value: 0.3, duration: 5000 }],
   }),
 
   // ===== 草属性 =====
