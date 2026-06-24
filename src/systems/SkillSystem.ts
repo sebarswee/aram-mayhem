@@ -5,6 +5,7 @@ import { Projectile, ProjectileConfig } from '@/entities/Projectile';
 import { Skill, Element, SynergyResult } from '@/types';
 import { SkillEffects } from '@/graphics/SkillEffects';
 import { ElementSystem } from '@/systems/ElementSystem';
+import { specialBehaviorRegistry } from '@/systems/SpecialBehaviorRegistry';
 import { getCounterBonus, ELEMENT_COLORS as DATA_ELEMENT_COLORS } from '@/data/elements';
 
 // 元素颜色映射 (all 8 elements)
@@ -635,6 +636,11 @@ export class SkillSystem {
     const projectileCount = this.getProjectileCount(skill);
     const spreadAngle = 0.15; // 散射角度
 
+    // 检查特殊行为中的连发数量（支持 multicast 和 rapid_fire）
+    const rapidFireValue = specialBehaviorRegistry.getBehaviorValue(skill, 'rapid_fire');
+    const multicastValue = specialBehaviorRegistry.getBehaviorValue(skill, 'multicast');
+    const rapidFireCount = Math.max(rapidFireValue || 1, multicastValue || 1);
+
     for (let i = 0; i < projectileCount; i++) {
       // 计算散射角度
       let angle = baseAngle;
@@ -663,6 +669,15 @@ export class SkillSystem {
         hitEnemies: new Set<string>(),
       };
 
+      // 应用特殊行为到投射物配置
+      specialBehaviorRegistry.applyToConfig(skill, config);
+
+      // 处理瞬发行为
+      if (config.isInstant) {
+        config.instantHitTarget = { x: target.x, y: target.y };
+        config.speed = 9999; // 极速到达
+      }
+
       const projectile = new Projectile(
         this.scene,
         this.player.x,
@@ -673,6 +688,22 @@ export class SkillSystem {
       // 先添加到组，再设置速度（避免被重置）
       this.projectiles.add(projectile);
       projectile.fire(angle);
+
+      // 连发处理 - 延迟发射额外投射物
+      if (rapidFireCount > 1) {
+        for (let j = 1; j < rapidFireCount; j++) {
+          this.scene.time.delayedCall(j * 80, () => {
+            const rapidProjectile = new Projectile(
+              this.scene,
+              this.player.x,
+              this.player.y,
+              config
+            );
+            this.projectiles.add(rapidProjectile);
+            rapidProjectile.fire(angle);
+          });
+        }
+      }
     }
   }
 

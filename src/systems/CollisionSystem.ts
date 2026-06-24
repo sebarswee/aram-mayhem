@@ -8,6 +8,7 @@ import { EnemySystem } from '@/systems/EnemySystem';
 import { SkillSystem } from '@/systems/SkillSystem';
 import { ElementSystem } from '@/systems/ElementSystem';
 import { DropSystem } from '@/systems/DropSystem';
+import { specialBehaviorRegistry } from '@/systems/SpecialBehaviorRegistry';
 import { SkillEffects } from '@/graphics/SkillEffects';
 import { Element, Skill } from '@/types';
 
@@ -147,8 +148,18 @@ export class CollisionSystem {
       proj.config.hitEnemies.add(enem.instanceId);
     }
 
+    // Check for shatter effect (extra damage to frozen enemies)
+    let damage = proj.getDamage();
+    if (proj.config.shatterMultiplier && proj.config.shatterMultiplier > 1) {
+      const hasFreeze = enem.statusEffects.some(e => e.type === 'freeze');
+      if (hasFreeze) {
+        damage = Math.floor(damage * proj.config.shatterMultiplier);
+        // Create shatter visual effect
+        this.createShatterEffect(enem.x, enem.y);
+      }
+    }
+
     // Deal damage
-    const damage = proj.getDamage();
     const killed = enem.takeDamage(damage);
 
     // Trigger lifesteal
@@ -180,6 +191,16 @@ export class CollisionSystem {
       );
     }
 
+    // Leave slow field if configured
+    if (proj.config.leaveSlowField) {
+      this.createSlowField(
+        proj.x,
+        proj.y,
+        proj.config.slowFieldValue || 0.5,
+        proj.config.slowFieldDuration || 3000
+      );
+    }
+
     // Check piercing
     const pierceCount = proj.config.pierceCount || 0;
     if (pierceCount > 0) {
@@ -191,6 +212,17 @@ export class CollisionSystem {
       if (splitCount > 0) {
         this.createSplitProjectiles(proj, splitCount);
       }
+
+      // Check for explode on hit
+      if (proj.config.explodeOnHit) {
+        this.createExplosionOnHit(
+          proj.x,
+          proj.y,
+          proj.config.explodeRadius || 60,
+          Math.floor(damage * (proj.config.explodeDamage || 0.5))
+        );
+      }
+
       // No more piercing, destroy projectile
       proj.destroy();
     }
@@ -202,17 +234,159 @@ export class CollisionSystem {
   }
 
   /**
-   * Get split count from skill enhancements
+   * Get split count from skill enhancements and special behaviors
    */
   private getSplitCount(skill: Skill): number {
     let splitCount = 0;
+
+    // Check enhancements (old system)
     for (const enhancement of skill.enhancements) {
       if (enhancement.type === 'split') {
         // split_1 = 2 projectiles, split_2 = 3 projectiles
         splitCount = Math.max(splitCount, enhancement.value);
       }
     }
+
+    // Check special behaviors (new upgrade system)
+    const behaviorSplit = specialBehaviorRegistry.getBehaviorValue(skill, 'split');
+    if (behaviorSplit) {
+      splitCount = Math.max(splitCount, behaviorSplit);
+    }
+
     return splitCount;
+  }
+
+  /**
+   * Create explosion on projectile hit
+   */
+  private createExplosionOnHit(x: number, y: number, radius: number, damage: number): void {
+    // Visual explosion
+    const explosion = this.scene.add.circle(x, y, radius * 0.5, 0xff6600, 0.8);
+    explosion.setDepth(100);
+
+    const shockwave = this.scene.add.circle(x, y, radius * 0.3, 0xffff00, 0.6);
+    shockwave.setDepth(99);
+
+    // Particle burst
+    const particles = this.scene.add.particles(x, y, 'particle_fire', {
+      speed: { min: 100, max: 250 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 0.8, end: 0 },
+      alpha: { start: 1, end: 0 },
+      lifespan: 400,
+      quantity: 15,
+      emitting: false,
+    });
+    particles.explode();
+    particles.setDepth(101);
+
+    // Animation
+    this.scene.tweens.add({
+      targets: [explosion, shockwave],
+      scaleX: 2.5,
+      scaleY: 2.5,
+      alpha: 0,
+      duration: 350,
+      onComplete: () => {
+        explosion.destroy();
+        shockwave.destroy();
+        particles.destroy();
+      },
+    });
+
+    // Damage enemies in range
+    const enemies = this.enemySystem.getEnemies().getChildren() as Enemy[];
+    for (const enemy of enemies) {
+      if (!enemy.active) continue;
+      const distance = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
+      if (distance <= radius) {
+        // Damage falloff
+        const falloff = 1 - (distance / radius) * 0.3;
+        enemy.takeDamage(Math.floor(damage * falloff));
+      }
+    }
+  }
+
+  /**
+   * Create shatter visual effect
+   */
+  private createShatterEffect(x: number, y: number): void {
+    // Ice shards burst
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const shard = this.scene.add.circle(
+        x + Math.cos(angle) * 5,
+        y + Math.sin(angle) * 5,
+        8,
+        0x88ddff,
+        0.8
+      );
+      shard.setDepth(100);
+
+      this.scene.tweens.add({
+        targets: shard,
+        x: x + Math.cos(angle) * 50,
+        y: y + Math.sin(angle) * 50,
+        alpha: 0,
+        scale: 0.3,
+        duration: 300,
+        onComplete: () => shard.destroy(),
+      });
+    }
+
+    // White flash
+    const flash = this.scene.add.circle(x, y, 30, 0xffffff, 0.9);
+    flash.setDepth(99);
+    this.scene.tweens.add({
+      targets: flash,
+      scale: 1.5,
+      alpha: 0,
+      duration: 200,
+      onComplete: () => flash.destroy(),
+    });
+  }
+
+  /**
+   * Create slow field at position
+   */
+  private createSlowField(x: number, y: number, slowValue: number, duration: number): void {
+    // Visual slow field
+    const field = this.scene.add.circle(x, y, 80, 0x88aaff, 0.3);
+    field.setDepth(25);
+    field.setStrokeStyle(2, 0x88aaff, 0.5);
+
+    // Apply slow to enemies in range periodically
+    const tickInterval = 500;
+    let elapsed = 0;
+
+    const slowTimer = this.scene.time.addEvent({
+      delay: tickInterval,
+      callback: () => {
+        elapsed += tickInterval;
+        if (elapsed >= duration) {
+          slowTimer.destroy();
+          field.destroy();
+          return;
+        }
+
+        // Apply slow to enemies in range
+        const enemies = this.enemySystem.getEnemies().getChildren() as Enemy[];
+        for (const enemy of enemies) {
+          if (!enemy.active) continue;
+          const distance = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
+          if (distance <= 80) {
+            enemy.addStatusEffect({
+              type: 'slow',
+              value: slowValue,
+              duration: tickInterval + 100,
+              remainingTime: tickInterval + 100,
+              source: 'slow_field',
+            });
+          }
+        }
+      },
+      repeat: Math.floor(duration / tickInterval) - 1,
+    });
   }
 
   /**

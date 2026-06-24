@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { Skill, SkillEffect } from '@/types';
 import { PROJECTILE_LIFETIME } from '@/config/balance.config';
+import { specialBehaviorRegistry } from '@/systems/SpecialBehaviorRegistry';
+import { Enemy } from '@/entities/Enemy';
 
 // 元素到投射物纹理的映射（8元素系统）
 const ELEMENT_TEXTURE_MAP: Record<string, string> = {
@@ -31,6 +33,19 @@ export interface ProjectileConfig {
   // 穿透信息
   pierceCount?: number;         // 剩余穿透次数
   hitEnemies?: Set<string>;     // 已命中的敌人ID
+  // 特殊行为
+  isHoming?: boolean;           // 是否追踪
+  homingTarget?: Enemy | null;  // 追踪目标
+  isInstant?: boolean;          // 是否瞬发
+  instantHitTarget?: { x: number; y: number } | null; // 瞬发目标位置
+  splitCount?: number;          // 分裂数量
+  explodeOnHit?: boolean;       // 命中时爆炸
+  explodeRadius?: number;       // 爆炸半径
+  explodeDamage?: number;       // 爆炸伤害比例
+  shatterMultiplier?: number;   // 破碎伤害倍率
+  leaveSlowField?: boolean;     // 留下减速区域
+  slowFieldValue?: number;      // 减速值
+  slowFieldDuration?: number;   // 减速持续时间
 }
 
 export class Projectile extends Phaser.Physics.Arcade.Sprite {
@@ -214,6 +229,11 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     // 更新尾迹粒子位置
     if (this.trailParticles) {
       this.trailParticles.setPosition(this.x, this.y);
+    }
+
+    // 执行特殊行为（如追踪）
+    if (this.config.isHoming) {
+      specialBehaviorRegistry.updateProjectile(this, this.scene);
     }
 
     // 检查存活时间
