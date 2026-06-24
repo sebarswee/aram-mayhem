@@ -5,7 +5,8 @@ import {
   ENEMY_CONFIGS,
   getEnemyPoolForWave,
   getElitePoolForWave,
-  BOSS_ENEMIES
+  BOSS_ENEMIES,
+  getEnemiesByType
 } from '@/data/enemies';
 import { ENEMY_SPAWN_CONFIG, ENEMY_SCALING } from '@/config/balance.config';
 
@@ -40,8 +41,56 @@ export class EnemySystem {
       runChildUpdate: true,
     });
 
+    // Listen for summon events
+    this.scene.events.on('enemySummon', this.handleSummonEvent, this);
+
     // Start continuous spawning
     this.startContinuousSpawning();
+  }
+
+  /**
+   * Handle summon event from boss/elite abilities
+   */
+  private handleSummonEvent(data: { x: number; y: number; count: number; type: string; element?: string }): void {
+    // Get random normal enemy config
+    const enemyConfig = this.getSummonedEnemyConfig(data.type, data.element);
+
+    for (let i = 0; i < data.count; i++) {
+      // Spawn in a circle around the summoner
+      const angle = (i / data.count) * Math.PI * 2;
+      const distance = 50 + Math.random() * 30;
+      const spawnX = data.x + Math.cos(angle) * distance;
+      const spawnY = data.y + Math.sin(angle) * distance;
+
+      const enemy = new EnemyEntity(this.scene, spawnX, spawnY, enemyConfig);
+      enemy.setTarget(this.player);
+      this.enemies.add(enemy);
+
+      // Enemy death event
+      enemy.on('death', () => {
+        this.scene.events.emit('enemyKilled', enemy);
+      });
+    }
+  }
+
+  /**
+   * Get enemy config for summoned enemies
+   */
+  private getSummonedEnemyConfig(type: string, element?: string): EnemyConfig {
+    // Get a random normal enemy
+    const normalEnemies = getEnemiesByType('normal');
+
+    // If element specified, try to find matching element
+    if (element) {
+      const matchingElement = normalEnemies.find(e => e.element === element);
+      if (matchingElement) {
+        return { ...matchingElement };
+      }
+    }
+
+    // Otherwise return random
+    const randomIndex = Math.floor(Math.random() * normalEnemies.length);
+    return { ...normalEnemies[randomIndex] };
   }
 
   /**

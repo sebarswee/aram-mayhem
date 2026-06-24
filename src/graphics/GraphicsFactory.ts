@@ -103,6 +103,9 @@ export class GraphicsFactory {
     // 暗影领主 - 恶魔形状
     this.createEliteShadowLordSprite('elite_shadow_lord', 0x6600cc);
 
+    // 水元素精英 - 水元素形状
+    this.createEliteWaterElementalSprite('elite_water_elemental', 0x2288ff);
+
     // === Boss敌人 (8种) ===
     // 炎魔 - 大型火焰恶魔
     this.createBossFlameLordSprite('boss_flame_lord', 0xff0000);
@@ -1176,6 +1179,44 @@ export class GraphicsFactory {
     graphics.fillStyle(color, 1);
     graphics.fillTriangle(size / 2 - 10, size / 2 - 24, size / 2 - 6, size / 2 - 36, size / 2 - 2, size / 2 - 24);
     graphics.fillTriangle(size / 2 + 2, size / 2 - 24, size / 2 + 6, size / 2 - 36, size / 2 + 10, size / 2 - 24);
+
+    graphics.generateTexture(key, size, size);
+    graphics.destroy();
+  }
+
+  private createEliteWaterElementalSprite(key: string, color: number): void {
+    const size = 54;
+    const graphics = this.scene.add.graphics();
+
+    // 水波纹外圈
+    graphics.fillStyle(this.lighten(color, 0.2), 0.3);
+    graphics.fillCircle(size / 2, size / 2, 26);
+
+    // 身体 - 水滴形状
+    graphics.fillStyle(color, 0.8);
+    graphics.fillEllipse(size / 2, size / 2, 24, 28);
+
+    // 内部水流动效果
+    graphics.fillStyle(this.lighten(color, 0.4), 0.5);
+    graphics.fillEllipse(size / 2 - 4, size / 2 - 4, 12, 14);
+
+    // 头部
+    graphics.fillStyle(color, 1);
+    graphics.fillCircle(size / 2, size / 2 - 18, 10);
+
+    // 眼睛 - 水蓝色
+    graphics.fillStyle(0xffffff, 1);
+    graphics.fillCircle(size / 2 - 4, size / 2 - 20, 3);
+    graphics.fillCircle(size / 2 + 4, size / 2 - 20, 3);
+    graphics.fillStyle(0x4488ff, 1);
+    graphics.fillCircle(size / 2 - 4, size / 2 - 20, 2);
+    graphics.fillCircle(size / 2 + 4, size / 2 - 20, 2);
+
+    // 水花飞溅效果
+    graphics.fillStyle(this.lighten(color, 0.3), 0.6);
+    graphics.fillCircle(size / 2 - 16, size / 2 + 8, 4);
+    graphics.fillCircle(size / 2 + 18, size / 2 + 6, 3);
+    graphics.fillCircle(size / 2, size / 2 + 18, 5);
 
     graphics.generateTexture(key, size, size);
     graphics.destroy();

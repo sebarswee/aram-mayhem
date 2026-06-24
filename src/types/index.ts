@@ -220,9 +220,22 @@ export type EnemyType = 'normal' | 'elite' | 'boss';
 export type EnemyBehavior = 'chase' | 'ranged' | 'summon' | 'teleport';
 
 export interface EnemyAbility {
-  type: 'burn_on_contact' | 'speed_boost' | 'slow_on_attack' | 'explode_on_death' | 'damage_reduction' | 'poison_on_attack' | 'root_on_attack' | 'hp_boost';
-  trigger: 'passive' | 'attack' | 'death';
+  type: 'burn_on_contact' | 'speed_boost' | 'slow_on_attack' | 'explode_on_death' |
+        'damage_reduction' | 'poison_on_attack' | 'root_on_attack' | 'hp_boost' |
+        'charge' | 'shoot' | 'summon' | 'shield' | 'heal' | 'rage';  // 新增主动能力
+  trigger: 'passive' | 'attack' | 'death' | 'active';  // 新增 active 触发类型
+  cooldown?: number;  // 冷却时间（毫秒）
   params?: Record<string, any>;
+}
+
+// Boss 阶段定义
+export interface BossPhase {
+  phase: number;               // 阶段编号
+  hpThreshold: number;         // 血量阈值（百分比 0-100）
+  abilities: string[];         // 该阶段可用能力 ID 列表
+  damageMultiplier: number;    // 伤害倍率
+  speedMultiplier: number;     // 速度倍率
+  specialBehavior?: string;    // 特殊行为（如 'rage'）
 }
 
 export interface EnemyConfig {
@@ -237,6 +250,7 @@ export interface EnemyConfig {
   color: number;
   abilities: EnemyAbility[];
   behavior?: EnemyBehavior;  // 兼容旧系统
+  phases?: BossPhase[];      // Boss 阶段配置
 }
 
 // ==================== 掉落系统 ====================

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { EnemyConfig, EnemyType, Element, ElementMark } from '@/types';
+import { EnemyConfig, EnemyType, Element, ElementMark, BossPhase, EnemyAbility } from '@/types';
 import { COUNTER_RELATIONS, ELEMENT_COLORS, getCounterBonus } from '@/data/elements';
 
 // Status effect interface
@@ -27,6 +27,7 @@ const ENEMY_TEXTURE_MAP: Record<string, string> = {
   'rock_golem': 'rock_golem',
   // Elite enemies
   'elite_flame_lord': 'elite_flame_lord',
+  'elite_water_elemental': 'elite_water_elemental',
   'elite_frost_titan': 'elite_frost_titan',
   'elite_storm_drake': 'elite_storm_drake',
   'elite_shadow_lord': 'elite_shadow_lord',
@@ -68,6 +69,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   // Death explosion params (set by synergy effects)
   public deathExplosionParams?: { damage: number; radius: number };
 
+  // Boss 相关属性
+  public bossPhase: number = 1;
+  public bossPhases?: BossPhase[];
+  public abilityCooldowns: Map<string, number> = new Map();
+  public shieldValue: number = 0;
+  public isEnraged: boolean = false;
+  public maxHp: number;  // 用于计算血量百分比
+
   // Element marks for synergy tracking
   private elementMarks: Map<Element, ElementMark> = new Map();
 
@@ -83,8 +92,22 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     this.config = config;
     this.currentHp = config.hp;
+    this.maxHp = config.hp;  // 用于计算血量百分比
     this.instanceId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     this.element = config.element;
+
+    // 初始化 Boss 阶段（如果有）
+    if (config.phases) {
+      this.bossPhases = config.phases;
+      this.bossPhase = 1;
+    }
+
+    // 初始化能力冷却
+    for (const ability of config.abilities) {
+      if (ability.cooldown) {
+        this.abilityCooldowns.set(ability.type, 0);
+      }
+    }
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -166,7 +189,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.shadowGraphics.fillEllipse(this.x, this.y + 10, 30 * this.scaleX, 10);
   }
 
-  private applyElementTint(): void {
+  public applyElementTint(): void {
     const elementColor = ELEMENT_COLORS[this.element];
     if (elementColor) {
       this.setTint(elementColor);
@@ -353,7 +376,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   /**
    * Check if enemy is immobilized (freeze/stun/root)
    */
-  private isImmobilized(): boolean {
+  public isImmobilized(): boolean {
     return this.statusEffects.some(e =>
       e.type === 'freeze' || e.type === 'stun' || e.type === 'root'
     );
@@ -443,6 +466,19 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       finalDamage = finalDamage * (1 + defenseBreak);
     }
 
+    // Apply shield first
+    if (this.shieldValue > 0) {
+      if (this.shieldValue >= finalDamage) {
+        this.shieldValue -= finalDamage;
+        // 护盾吸收全部伤害，显示护盾效果
+        this.showShieldEffect();
+        return false;
+      } else {
+        finalDamage -= this.shieldValue;
+        this.shieldValue = 0;
+      }
+    }
+
     this.currentHp -= finalDamage;
 
     // 受伤闪烁 (check scene again in case it was destroyed during damage calculation)
@@ -481,6 +517,162 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private getDefenseBreakBonus(): number {
     const defenseBreak = this.statusEffects.find(e => e.type === 'defense_break');
     return defenseBreak?.value || 0;
+  }
+
+  // ==================== Boss Abilities ====================
+
+  /**
+   * Add shield to enemy
+   */
+  addShield(value: number): void {
+    this.shieldValue += value;
+    this.showShieldEffect();
+  }
+
+  /**
+   * Check if enemy has shield
+   */
+  hasShield(): boolean {
+    return this.shieldValue > 0;
+  }
+
+  /**
+   * Heal enemy
+   */
+  heal(value: number): void {
+    this.currentHp = Math.min(this.maxHp, this.currentHp + value);
+    this.showHealEffect();
+  }
+
+  /**
+   * Activate rage mode
+   */
+  activateRage(params: { damageMultiplier?: number; speedMultiplier?: number }): void {
+    this.isEnraged = true;
+    const damageMult = params.damageMultiplier || 1.5;
+    const speedMult = params.speedMultiplier || 1.3;
+    this.config = {
+      ...this.config,
+      damage: Math.floor(this.config.damage * damageMult),
+      speed: Math.floor(this.config.speed * speedMult),
+    };
+    this.showRageEffect();
+  }
+
+  /**
+   * Update ability cooldowns
+   */
+  updateAbilityCooldowns(delta: number): void {
+    for (const [type, cooldown] of this.abilityCooldowns) {
+      if (cooldown > 0) {
+        this.abilityCooldowns.set(type, Math.max(0, cooldown - delta));
+      }
+    }
+  }
+
+  /**
+   * Check if ability is ready
+   */
+  isAbilityReady(type: string): boolean {
+    const cooldown = this.abilityCooldowns.get(type);
+    return cooldown === undefined || cooldown <= 0;
+  }
+
+  /**
+   * Set ability cooldown
+   */
+  setAbilityCooldown(type: string, cooldown: number): void {
+    this.abilityCooldowns.set(type, cooldown);
+  }
+
+  /**
+   * Get current HP percentage
+   */
+  getHpPercentage(): number {
+    return (this.currentHp / this.maxHp) * 100;
+  }
+
+  /**
+   * Get active abilities for current phase
+   */
+  getActiveAbilities(): EnemyAbility[] {
+    if (!this.bossPhases) {
+      return this.config.abilities.filter(a => a.trigger === 'active');
+    }
+    const currentPhase = this.bossPhases.find(p => p.phase === this.bossPhase);
+    if (!currentPhase) return [];
+    return this.config.abilities.filter(a =>
+      a.trigger === 'active' && currentPhase.abilities.includes(a.type)
+    );
+  }
+
+  // ==================== Visual Effects ====================
+
+  /**
+   * Show shield visual effect
+   */
+  private showShieldEffect(): void {
+    if (!this.scene) return;
+    const shield = this.scene.add.circle(this.x, this.y, 30, 0x4488ff, 0.4);
+    shield.setDepth(31);
+    shield.setStrokeStyle(2, 0x4488ff, 0.8);
+    this.scene.tweens.add({
+      targets: shield,
+      alpha: 0,
+      scale: 1.5,
+      duration: 300,
+      onComplete: () => shield.destroy(),
+    });
+  }
+
+  /**
+   * Show heal visual effect
+   */
+  private showHealEffect(): void {
+    if (!this.scene) return;
+    const heal = this.scene.add.circle(this.x, this.y, 25, 0x44ff44, 0.6);
+    heal.setDepth(31);
+    this.scene.tweens.add({
+      targets: heal,
+      alpha: 0,
+      scale: 1.5,
+      duration: 400,
+      onComplete: () => heal.destroy(),
+    });
+    // 绿色光柱
+    const beam = this.scene.add.graphics();
+    beam.fillStyle(0x44ff44, 0.3);
+    beam.fillRect(this.x - 15, this.y - 40, 30, 40);
+    this.scene.tweens.add({
+      targets: beam,
+      alpha: 0,
+      duration: 400,
+      onComplete: () => beam.destroy(),
+    });
+  }
+
+  /**
+   * Show rage visual effect
+   */
+  private showRageEffect(): void {
+    if (!this.scene) return;
+    // 红色脉冲
+    const rage = this.scene.add.circle(this.x, this.y, 40, 0xff4444, 0.6);
+    rage.setDepth(31);
+    this.scene.tweens.add({
+      targets: rage,
+      alpha: 0,
+      scale: 2,
+      duration: 500,
+      onComplete: () => rage.destroy(),
+    });
+    // 持续红光
+    this.setTint(0xff6666);
+    this.scene.time.delayedCall(3000, () => {
+      if (this.active) {
+        this.applyElementTint();
+      }
+    });
   }
 
   /**

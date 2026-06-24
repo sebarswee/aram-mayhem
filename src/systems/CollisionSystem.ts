@@ -2,10 +2,12 @@ import Phaser from 'phaser';
 import { Player } from '@/entities/Player';
 import { Enemy } from '@/entities/Enemy';
 import { Projectile, ProjectileConfig } from '@/entities/Projectile';
+import { EnemyProjectile } from '@/entities/EnemyProjectile';
 import { Food } from '@/entities/Food';
 import { ExpOrb } from '@/entities/ExpOrb';
 import { EnemySystem } from '@/systems/EnemySystem';
 import { SkillSystem } from '@/systems/SkillSystem';
+import { EnemyAbilitySystem } from '@/systems/EnemyAbilitySystem';
 import { ElementSystem } from '@/systems/ElementSystem';
 import { DropSystem } from '@/systems/DropSystem';
 import { specialBehaviorRegistry } from '@/systems/SpecialBehaviorRegistry';
@@ -20,6 +22,7 @@ export class CollisionSystem {
   private skillEffects: SkillEffects;
   private elementSystem: ElementSystem | null = null;
   private dropSystem: DropSystem | null = null;
+  private enemyAbilitySystem: EnemyAbilitySystem | null = null;
 
   constructor(
     scene: Phaser.Scene,
@@ -52,6 +55,15 @@ export class CollisionSystem {
     this.setupDropCollisions();
   }
 
+  /**
+   * Set the EnemyAbilitySystem reference (optional, can be set later)
+   */
+  setEnemyAbilitySystem(enemyAbilitySystem: EnemyAbilitySystem): void {
+    this.enemyAbilitySystem = enemyAbilitySystem;
+    // Setup enemy projectile collisions
+    this.setupEnemyProjectileCollisions();
+  }
+
   private setupCollisions(): void {
     // 1. Projectile vs Enemy
     this.scene.physics.add.overlap(
@@ -73,6 +85,17 @@ export class CollisionSystem {
 
     // 3. Listen for enemy explosion events
     this.scene.events.on('enemyExplosion', this.handleEnemyExplosion, this);
+
+    // 4. Listen for enemy summon events
+    this.scene.events.on('enemySummon', this.handleEnemySummon, this);
+  }
+
+  /**
+   * Handle enemy summon event (from summon ability)
+   */
+  private handleEnemySummon(data: { x: number; y: number; count: number; type: string; element?: string }): void {
+    // Emit to EnemySystem to handle spawning
+    // This will be handled by EnemySystem listening to the same event
   }
 
   /**
@@ -116,6 +139,52 @@ export class CollisionSystem {
       undefined,
       this
     );
+  }
+
+  /**
+   * Setup collision handlers for enemy projectiles
+   */
+  private setupEnemyProjectileCollisions(): void {
+    if (!this.enemyAbilitySystem) return;
+
+    // Player vs Enemy Projectile
+    this.scene.physics.add.overlap(
+      this.player,
+      this.enemyAbilitySystem.getProjectiles(),
+      this.handleEnemyProjectileHitPlayer as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
+      undefined,
+      this
+    );
+  }
+
+  /**
+   * Handle enemy projectile hitting player
+   */
+  private handleEnemyProjectileHitPlayer(
+    player: Phaser.GameObjects.GameObject,
+    projectile: Phaser.GameObjects.GameObject
+  ): void {
+    const ply = player as Player;
+    const proj = projectile as EnemyProjectile;
+
+    if (!ply.active || !proj.active) return;
+
+    // Deal damage to player
+    const damage = proj.getDamage();
+    ply.takeDamage(damage);
+
+    // Apply effect if any
+    const effect = proj.getEffect();
+    if (effect) {
+      ply.addStatusEffect({
+        type: effect.type as any,
+        value: effect.value,
+        duration: effect.duration,
+      });
+    }
+
+    // Destroy projectile
+    proj.destroy();
   }
 
   private handleProjectileHitEnemy(

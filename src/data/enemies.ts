@@ -117,6 +117,22 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
     abilities: [
       { type: 'burn_on_contact', trigger: 'passive', params: { damage: 8, duration: 3000 } },
       { type: 'hp_boost', trigger: 'passive', params: { multiplier: 1.5 } },
+      { type: 'charge', trigger: 'active', cooldown: 5000, params: { speed: 350, duration: 600 } },
+    ],
+  },
+  {
+    id: 'elite_water_elemental',
+    name: '水元素精英',
+    type: 'elite',
+    element: 'water',
+    hp: 85,
+    damage: 9,
+    speed: 110,
+    expValue: 25,
+    color: 0x2288ff,
+    abilities: [
+      { type: 'speed_boost', trigger: 'passive', params: { multiplier: 1.4 } },
+      { type: 'shoot', trigger: 'active', cooldown: 3000, params: { damage: 15, speed: 220, range: 350 } },
     ],
   },
   {
@@ -132,6 +148,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
     abilities: [
       { type: 'slow_on_attack', trigger: 'attack', params: { slow: 0.5, duration: 2000 } },
       { type: 'hp_boost', trigger: 'passive', params: { multiplier: 1.5 } },
+      { type: 'shield', trigger: 'active', cooldown: 8000, params: { value: 40, duration: 4000 } },
     ],
   },
   {
@@ -147,6 +164,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
     abilities: [
       { type: 'explode_on_death', trigger: 'death', params: { damage: 30, radius: 80 } },
       { type: 'speed_boost', trigger: 'passive', params: { multiplier: 1.2 } },
+      { type: 'shoot', trigger: 'active', cooldown: 2500, params: { damage: 18, speed: 280, range: 400, count: 2 } },
     ],
   },
   {
@@ -162,6 +180,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
     abilities: [
       { type: 'poison_on_attack', trigger: 'attack', params: { damage: 10, duration: 5000 } },
       { type: 'hp_boost', trigger: 'passive', params: { multiplier: 1.3 } },
+      { type: 'summon', trigger: 'active', cooldown: 10000, params: { count: 2, type: 'normal' } },
     ],
   },
 ];
@@ -178,7 +197,16 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     speed: 64,
     expValue: 100,
     color: 0xff0000,
-    abilities: [{ type: 'burn_on_contact', trigger: 'passive', params: { damage: 15, duration: 5000 } }],
+    abilities: [
+      { type: 'burn_on_contact', trigger: 'passive', params: { damage: 15, duration: 5000 } },
+      { type: 'charge', trigger: 'active', cooldown: 5000, params: { speed: 400, duration: 800 } },
+      { type: 'shoot', trigger: 'active', cooldown: 3000, params: { damage: 20, speed: 250, count: 3, effect: 'burn', effectValue: 8, effectDuration: 3000 } },
+    ],
+    phases: [
+      { phase: 1, hpThreshold: 100, abilities: ['burn_on_contact', 'charge'], damageMultiplier: 1.0, speedMultiplier: 1.0 },
+      { phase: 2, hpThreshold: 50, abilities: ['burn_on_contact', 'charge', 'shoot'], damageMultiplier: 1.2, speedMultiplier: 1.1 },
+      { phase: 3, hpThreshold: 20, abilities: ['burn_on_contact', 'charge', 'shoot', 'rage'], damageMultiplier: 1.5, speedMultiplier: 1.3, specialBehavior: 'rage' },
+    ],
   },
   {
     id: 'boss_frost_giant',
@@ -190,7 +218,16 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     speed: 56,
     expValue: 100,
     color: 0x44aaff,
-    abilities: [{ type: 'slow_on_attack', trigger: 'attack', params: { slow: 0.6, duration: 3000 } }],
+    abilities: [
+      { type: 'slow_on_attack', trigger: 'attack', params: { slow: 0.6, duration: 3000 } },
+      { type: 'shield', trigger: 'active', cooldown: 8000, params: { value: 100, duration: 5000 } },
+      { type: 'shoot', trigger: 'active', cooldown: 4000, params: { damage: 18, speed: 200, effect: 'slow', effectValue: 0.4, effectDuration: 2000 } },
+    ],
+    phases: [
+      { phase: 1, hpThreshold: 100, abilities: ['slow_on_attack', 'shield'], damageMultiplier: 1.0, speedMultiplier: 1.0 },
+      { phase: 2, hpThreshold: 50, abilities: ['slow_on_attack', 'shield', 'shoot'], damageMultiplier: 1.15, speedMultiplier: 1.1 },
+      { phase: 3, hpThreshold: 20, abilities: ['slow_on_attack', 'shield', 'shoot', 'rage'], damageMultiplier: 1.4, speedMultiplier: 1.2, specialBehavior: 'rage' },
+    ],
   },
   {
     id: 'boss_thunder_dragon',
@@ -202,7 +239,16 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     speed: 72,
     expValue: 100,
     color: 0xaaaa00,
-    abilities: [{ type: 'explode_on_death', trigger: 'death', params: { damage: 100, radius: 150 } }],
+    abilities: [
+      { type: 'explode_on_death', trigger: 'death', params: { damage: 100, radius: 150 } },
+      { type: 'charge', trigger: 'active', cooldown: 4000, params: { speed: 500, duration: 600 } },
+      { type: 'shoot', trigger: 'active', cooldown: 2000, params: { damage: 25, speed: 300, count: 5 } },
+    ],
+    phases: [
+      { phase: 1, hpThreshold: 100, abilities: ['charge', 'shoot'], damageMultiplier: 1.0, speedMultiplier: 1.0 },
+      { phase: 2, hpThreshold: 50, abilities: ['charge', 'shoot'], damageMultiplier: 1.25, speedMultiplier: 1.2 },
+      { phase: 3, hpThreshold: 20, abilities: ['charge', 'shoot', 'rage'], damageMultiplier: 1.6, speedMultiplier: 1.4, specialBehavior: 'rage' },
+    ],
   },
   {
     id: 'boss_shadow_king',
@@ -214,7 +260,17 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     speed: 68,
     expValue: 100,
     color: 0x4400aa,
-    abilities: [{ type: 'poison_on_attack', trigger: 'attack', params: { damage: 15, duration: 6000 } }],
+    abilities: [
+      { type: 'poison_on_attack', trigger: 'attack', params: { damage: 15, duration: 6000 } },
+      { type: 'summon', trigger: 'active', cooldown: 8000, params: { count: 3, type: 'normal' } },
+      { type: 'heal', trigger: 'active', cooldown: 10000, params: { value: 150 } },
+      { type: 'shoot', trigger: 'active', cooldown: 3000, params: { damage: 20, speed: 220, effect: 'poison', effectValue: 10, effectDuration: 4000 } },
+    ],
+    phases: [
+      { phase: 1, hpThreshold: 100, abilities: ['poison_on_attack', 'summon'], damageMultiplier: 1.0, speedMultiplier: 1.0 },
+      { phase: 2, hpThreshold: 50, abilities: ['poison_on_attack', 'summon', 'shoot'], damageMultiplier: 1.2, speedMultiplier: 1.15 },
+      { phase: 3, hpThreshold: 20, abilities: ['poison_on_attack', 'summon', 'shoot', 'heal', 'rage'], damageMultiplier: 1.5, speedMultiplier: 1.3, specialBehavior: 'rage' },
+    ],
   },
   {
     id: 'boss_nature_guardian',
@@ -226,7 +282,17 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     speed: 60,
     expValue: 100,
     color: 0x22cc22,
-    abilities: [{ type: 'root_on_attack', trigger: 'attack', params: { duration: 2000 } }],
+    abilities: [
+      { type: 'root_on_attack', trigger: 'attack', params: { duration: 2000 } },
+      { type: 'summon', trigger: 'active', cooldown: 6000, params: { count: 4, type: 'normal' } },
+      { type: 'heal', trigger: 'active', cooldown: 8000, params: { value: 200 } },
+      { type: 'shield', trigger: 'active', cooldown: 12000, params: { value: 80, duration: 4000 } },
+    ],
+    phases: [
+      { phase: 1, hpThreshold: 100, abilities: ['root_on_attack', 'summon'], damageMultiplier: 1.0, speedMultiplier: 1.0 },
+      { phase: 2, hpThreshold: 50, abilities: ['root_on_attack', 'summon', 'heal'], damageMultiplier: 1.1, speedMultiplier: 1.1 },
+      { phase: 3, hpThreshold: 20, abilities: ['root_on_attack', 'summon', 'heal', 'shield', 'rage'], damageMultiplier: 1.3, speedMultiplier: 1.25, specialBehavior: 'rage' },
+    ],
   },
   {
     id: 'boss_golem_lord',
@@ -241,6 +307,13 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     abilities: [
       { type: 'hp_boost', trigger: 'passive', params: { multiplier: 2.0 } },
       { type: 'damage_reduction', trigger: 'passive', params: { reduction: 0.3 } },
+      { type: 'shield', trigger: 'active', cooldown: 6000, params: { value: 150, duration: 6000 } },
+      { type: 'charge', trigger: 'active', cooldown: 8000, params: { speed: 300, duration: 1000 } },
+    ],
+    phases: [
+      { phase: 1, hpThreshold: 100, abilities: ['hp_boost', 'damage_reduction', 'shield'], damageMultiplier: 1.0, speedMultiplier: 1.0 },
+      { phase: 2, hpThreshold: 50, abilities: ['hp_boost', 'damage_reduction', 'shield', 'charge'], damageMultiplier: 1.15, speedMultiplier: 1.2 },
+      { phase: 3, hpThreshold: 20, abilities: ['hp_boost', 'damage_reduction', 'shield', 'charge', 'rage'], damageMultiplier: 1.4, speedMultiplier: 1.4, specialBehavior: 'rage' },
     ],
   },
   {
@@ -253,7 +326,16 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     speed: 80,
     expValue: 100,
     color: 0xccaa00,
-    abilities: [],
+    abilities: [
+      { type: 'charge', trigger: 'active', cooldown: 3500, params: { speed: 450, duration: 500 } },
+      { type: 'shoot', trigger: 'active', cooldown: 1500, params: { damage: 30, speed: 280, count: 3 } },
+      { type: 'heal', trigger: 'active', cooldown: 5000, params: { value: 100 } },
+    ],
+    phases: [
+      { phase: 1, hpThreshold: 100, abilities: ['charge', 'shoot'], damageMultiplier: 1.0, speedMultiplier: 1.0 },
+      { phase: 2, hpThreshold: 50, abilities: ['charge', 'shoot', 'heal'], damageMultiplier: 1.3, speedMultiplier: 1.2 },
+      { phase: 3, hpThreshold: 20, abilities: ['charge', 'shoot', 'heal', 'rage'], damageMultiplier: 1.7, speedMultiplier: 1.5, specialBehavior: 'rage' },
+    ],
   },
   {
     id: 'boss_hydra',
@@ -265,7 +347,17 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     speed: 64,
     expValue: 100,
     color: 0x2266cc,
-    abilities: [{ type: 'speed_boost', trigger: 'passive', params: { multiplier: 1.2 } }],
+    abilities: [
+      { type: 'speed_boost', trigger: 'passive', params: { multiplier: 1.2 } },
+      { type: 'summon', trigger: 'active', cooldown: 5000, params: { count: 5, type: 'normal' } },
+      { type: 'shoot', trigger: 'active', cooldown: 2000, params: { damage: 15, speed: 180, count: 3 } },
+      { type: 'heal', trigger: 'active', cooldown: 6000, params: { value: 120 } },
+    ],
+    phases: [
+      { phase: 1, hpThreshold: 100, abilities: ['speed_boost', 'shoot'], damageMultiplier: 1.0, speedMultiplier: 1.0 },
+      { phase: 2, hpThreshold: 50, abilities: ['speed_boost', 'shoot', 'summon', 'heal'], damageMultiplier: 1.15, speedMultiplier: 1.15 },
+      { phase: 3, hpThreshold: 20, abilities: ['speed_boost', 'shoot', 'summon', 'heal', 'rage'], damageMultiplier: 1.35, speedMultiplier: 1.3, specialBehavior: 'rage' },
+    ],
   },
 ];
 

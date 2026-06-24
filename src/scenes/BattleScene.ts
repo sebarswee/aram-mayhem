@@ -10,6 +10,8 @@ import { EnhancementSystem } from '@/systems/EnhancementSystem';
 import { SkillUpgradeSystem } from '@/systems/SkillUpgradeSystem';
 import { ElementSystem } from '@/systems/ElementSystem';
 import { DropSystem } from '@/systems/DropSystem';
+import { EnemyAbilitySystem } from '@/systems/EnemyAbilitySystem';
+import { BossController } from '@/entities/BossController';
 import { HUD } from '@/ui/HUD';
 import { SkillSelectUI } from '@/ui/SkillSelectUI';
 import { UpgradeSelectUI } from '@/ui/UpgradeSelectUI';
@@ -40,6 +42,8 @@ export class BattleScene extends Phaser.Scene {
   private skillUpgradeSystem!: SkillUpgradeSystem;
   private elementSystem!: ElementSystem;
   private dropSystem!: DropSystem;
+  private enemyAbilitySystem!: EnemyAbilitySystem;
+  private bossController!: BossController;
 
   // UI
   private hud!: HUD;
@@ -109,9 +113,12 @@ export class BattleScene extends Phaser.Scene {
     this.skillSystem = new SkillSystem(this, this.player);
     this.skillSystem.setElementSystem(this.elementSystem);
     this.dropSystem = new DropSystem(this, this.player);
+    this.enemyAbilitySystem = new EnemyAbilitySystem(this, this.player, this.enemySystem);
+    this.bossController = new BossController(this);
     this.collisionSystem = new CollisionSystem(this, this.player, this.enemySystem, this.skillSystem);
     this.collisionSystem.setElementSystem(this.elementSystem);
     this.collisionSystem.setDropSystem(this.dropSystem);
+    this.collisionSystem.setEnemyAbilitySystem(this.enemyAbilitySystem);
     this.expSystem = new ExpSystem(this, this.gameState);
     this.enhancementSystem = new EnhancementSystem(this, this.player);
     this.skillUpgradeSystem = new SkillUpgradeSystem();
@@ -406,6 +413,17 @@ export class BattleScene extends Phaser.Scene {
     // 更新技能系统
     this.skillSystem.update(delta, this.enemySystem.getEnemies());
 
+    // 更新敌人主动能力系统
+    const enemies = this.enemySystem.getEnemies().getChildren() as any[];
+    this.enemyAbilitySystem.update(delta, enemies);
+
+    // 更新 Boss 阶段
+    for (const enemy of enemies) {
+      if (enemy.config.type === 'boss') {
+        this.bossController.checkPhaseTransition(enemy);
+      }
+    }
+
     // 更新HUD
     this.hud.update();
 
@@ -451,6 +469,7 @@ export class BattleScene extends Phaser.Scene {
     this.collisionSystem?.destroy();
     this.enhancementSystem?.destroy();
     this.elementSystem?.destroy();
+    this.enemyAbilitySystem?.destroy();
     this.dropSystem?.destroy();
     this.hud?.destroy();
     this.skillSelectUI?.destroy();
