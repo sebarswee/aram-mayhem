@@ -11,6 +11,9 @@ export interface StatusEffect {
   source: string; // source skill ID
 }
 
+// 优先级顺序：freeze > stun > poison > defense_break > slow > burn
+const EFFECT_PRIORITY: StatusEffect['type'][] = ['freeze', 'stun', 'poison', 'defense_break', 'slow', 'burn', 'tick_speed_up'];
+
 // 敌人类型到精灵纹理的映射
 const ENEMY_TEXTURE_MAP: Record<string, string> = {
   // Normal enemies (8 elements)
@@ -244,7 +247,54 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       }
     } else {
       this.statusEffects.push({ ...effect, remainingTime: effect.duration });
-      this.applyStatusEffectVisual(effect.type);
+    }
+
+    // 更新视觉效果（根据优先级）
+    this.updateStatusVisual();
+  }
+
+  /**
+   * 根据优先级更新视觉效果
+   */
+  private updateStatusVisual(): void {
+    // 按优先级排序，找到最高优先级的效果
+    for (const effectType of EFFECT_PRIORITY) {
+      const effect = this.statusEffects.find(e => e.type === effectType);
+      if (effect) {
+        this.applyStatusEffectColor(effectType);
+        return;
+      }
+    }
+    // 没有状态效果，恢复元素颜色
+    this.applyElementTint();
+  }
+
+  /**
+   * Apply visual color for status type
+   */
+  private applyStatusEffectColor(type: StatusEffect['type']): void {
+    switch (type) {
+      case 'freeze':
+        this.setTint(0x88ddff); // 淡蓝色
+        break;
+      case 'stun':
+        this.setTint(0xffff88); // 黄色
+        break;
+      case 'poison':
+        this.setTint(0x88ff88); // 绿色
+        break;
+      case 'defense_break':
+        this.setTint(0xff8888); // 红色
+        break;
+      case 'slow':
+        this.setTint(0xaaddff); // 浅蓝灰色（减速视觉）
+        break;
+      case 'burn':
+        this.setTint(0xffaa44); // 橙色（燃烧视觉）
+        break;
+      default:
+        this.applyElementTint();
+        break;
     }
   }
 
@@ -257,6 +307,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     // Check for tick_speed_up effect and update multiplier
     const tickSpeedUp = this.statusEffects.find(e => e.type === 'tick_speed_up');
     this.tickSpeedMultiplier = tickSpeedUp ? 2.0 : 1.0;
+
+    let visualNeedsUpdate = false;
 
     this.statusEffects = this.statusEffects.filter(effect => {
       effect.remainingTime -= delta;
@@ -280,55 +332,17 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
       // Remove expired effects
       if (effect.remainingTime <= 0) {
-        this.removeStatusEffectVisual(effect.type);
         delete this.lastDotTickTime[`${this.instanceId}_${effect.type}`];
+        visualNeedsUpdate = true;
         return false;
       }
 
       return true;
     });
-  }
 
-  /**
-   * Apply visual effect for status type
-   */
-  private applyStatusEffectVisual(type: StatusEffect['type']): void {
-    switch (type) {
-      case 'freeze':
-        this.setTint(0x88ddff); // Blue tint
-        break;
-      case 'stun':
-        // Could add stars visual here
-        this.setTint(0xffff88);
-        break;
-      case 'poison':
-        this.setTint(0x88ff88);
-        break;
-      case 'defense_break':
-        this.setTint(0xff8888); // Red tint for defense break
-        break;
-      case 'tick_speed_up':
-        // Visual handled by existing DoT effects
-        break;
-      default:
-        break;
-    }
-  }
-
-  /**
-   * Remove visual effect for status type
-   */
-  private removeStatusEffectVisual(type: StatusEffect['type']): void {
-    switch (type) {
-      case 'freeze':
-      case 'stun':
-      case 'poison':
-      case 'defense_break':
-        // Restore element tint
-        this.applyElementTint();
-        break;
-      default:
-        break;
+    // 如果有效果过期，更新视觉效果
+    if (visualNeedsUpdate) {
+      this.updateStatusVisual();
     }
   }
 
