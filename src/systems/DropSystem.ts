@@ -37,6 +37,18 @@ export class DropSystem {
   onEnemyDeath(enemy: Enemy): void {
     if (!enemy.active) return;
 
+    // 检查场景是否暂停或物理组是否有效
+    const gameState = (this.scene as any).gameState;
+    if (gameState?.isUpgrading || gameState?.isSelectingSkill || gameState?.isPaused) {
+      return; // 升级/选技能期间不生成掉落
+    }
+
+    // 确保 expOrbs 组存在
+    if (!this.expOrbs || !this.expOrbs.active) {
+      console.warn('[DropSystem] expOrbs group not available');
+      return;
+    }
+
     const x = enemy.x;
     const y = enemy.y;
 
@@ -91,7 +103,13 @@ export class DropSystem {
   /**
    * Create a single exp orb at position
    */
-  private createExpOrb(x: number, y: number, value: number): ExpOrb {
+  private createExpOrb(x: number, y: number, value: number): ExpOrb | null {
+    // 安全检查
+    if (!this.expOrbs || !this.expOrbs.active) {
+      console.warn('[DropSystem] expOrbs group not available');
+      return null;
+    }
+
     const config = createExpOrbConfig(value);
     const orb = new ExpOrb(this.scene, x, y, config, this.player);
     this.expOrbs.add(orb);

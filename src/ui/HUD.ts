@@ -223,7 +223,7 @@ export class HUD {
     nameText.setDepth(101);
     container.add(nameText);
 
-    // 交互区域（悬停放大效果）
+    // 交互区域（悬停放大效果 + 大招点击）
     const hitArea = this.scene.add.rectangle(0, 0, iconSize, iconSize, 0x000000, 0);
     hitArea.setInteractive({ useHandCursor: true });
     hitArea.setScrollFactor(0);
@@ -236,6 +236,25 @@ export class HUD {
     hitArea.on('pointerout', () => {
       container.setScale(1);
     });
+
+    // 大招点击释放
+    if (isUltimate) {
+      hitArea.on('pointerdown', () => {
+        const battleScene = this.scene as any;
+        if (battleScene.skillSystem && battleScene.gameState) {
+          if (!battleScene.gameState.isSelectingSkill && !battleScene.gameState.isPaused && !battleScene.gameState.isUpgrading) {
+            battleScene.skillSystem.useUltimateByIndex(index, battleScene.enemySystem.getEnemies());
+            // 按下动画反馈
+            this.scene.tweens.add({
+              targets: container,
+              scale: 0.9,
+              duration: 80,
+              yoyo: true,
+            });
+          }
+        }
+      });
+    }
     container.add(hitArea);
 
     this.skillUIs.push({

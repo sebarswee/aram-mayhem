@@ -21,6 +21,7 @@ export class VirtualJoystick {
   private mode: JoystickMode;
   private isVisible: boolean = true;
   private touchZone: Phaser.GameObjects.Zone | null = null;
+  private isDisabled: boolean = false;
 
   constructor(scene: Phaser.Scene, config: JoystickConfig = { mode: 'fixed' }) {
     this.scene = scene;
@@ -58,6 +59,7 @@ export class VirtualJoystick {
       );
 
       this.base.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+        if (this.isDisabled) return;
         this.pointer = pointer;
         this.updatePosition(pointer.x, pointer.y);
       });
@@ -69,6 +71,7 @@ export class VirtualJoystick {
         .setInteractive();
 
       this.touchZone.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+        if (this.isDisabled) return;
         this.pointer = pointer;
         // 摇杆出现在手指位置
         this.baseX = pointer.x;
@@ -80,6 +83,7 @@ export class VirtualJoystick {
     }
 
     this.scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (this.isDisabled) return;
       if (this.pointer === pointer) {
         this.updatePosition(pointer.x, pointer.y);
       }
@@ -160,7 +164,17 @@ export class VirtualJoystick {
     this.setupEvents();
   }
 
+  setDisabled(disabled: boolean): void {
+    this.isDisabled = disabled;
+    if (disabled) {
+      this.reset();
+    }
+  }
+
   destroy(): void {
+    // 清理全局事件监听
+    this.scene.input.off('pointermove');
+    this.scene.input.off('pointerup');
     this.base.destroy();
     this.thumb.destroy();
     if (this.touchZone) {

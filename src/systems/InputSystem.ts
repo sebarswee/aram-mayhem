@@ -43,6 +43,15 @@ export class InputSystem {
   }
 
   getInput(): InputState {
+    // 检查游戏是否暂停
+    const gameState = (this._scene as any).gameState;
+    if (gameState?.isPaused || gameState?.isUpgrading || gameState?.isSelectingSkill) {
+      this.joystick.setDisabled(true);
+      return { moveX: 0, moveY: 0, isMoving: false };
+    }
+
+    this.joystick.setDisabled(false);
+
     // 优先使用键盘输入
     let moveX = 0;
     let moveY = 0;
