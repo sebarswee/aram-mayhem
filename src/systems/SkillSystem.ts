@@ -90,7 +90,7 @@ export class SkillSystem {
 
     // Apply damage with element for counter bonus
     // Enemy.takeDamage() handles counter bonus calculation and visual feedback
-    enemy.takeDamage(damage, skillElement);
+    enemy.takeDamage(damage, skillElement, isCrit);
 
     // Apply element mark and check for synergy
     if (this.elementSystem && skillElement) {

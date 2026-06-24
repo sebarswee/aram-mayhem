@@ -462,23 +462,39 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       return false;
     }
 
+    let finalDamage = amount;
+
     // 先扣护盾
     if (this.shieldValue > 0) {
-      if (this.shieldValue >= amount) {
-        this.shieldValue -= amount;
+      if (this.shieldValue >= finalDamage) {
+        this.shieldValue -= finalDamage;
         this.updateVisualTint();
+        // Emit damage event (shield absorbed)
+        this.scene?.events.emit('playerDamage', {
+          x: this.x,
+          y: this.y,
+          damage: Math.floor(finalDamage),
+          absorbed: true,
+        });
         return false;
       } else {
-        amount -= this.shieldValue;
+        finalDamage -= this.shieldValue;
         this.shieldValue = 0;
         this.updateVisualTint();
       }
     }
 
     // 计算实际伤害(考虑防御)
-    const actualDamage = Math.max(1, amount - this.stats.defense * 0.5);
+    const actualDamage = Math.max(1, finalDamage - this.stats.defense * 0.5);
     this.stats.currentHp = Math.max(0, this.stats.currentHp - actualDamage);
     this.lastDamageTime = now;
+
+    // Emit damage event for visual feedback
+    this.scene?.events.emit('playerDamage', {
+      x: this.x,
+      y: this.y,
+      damage: Math.floor(actualDamage),
+    });
 
     // 受伤闪烁效果
     this.scene.tweens.add({
@@ -513,6 +529,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   addShield(amount: number): void {
     this.shieldValue += amount;
     this.updateVisualTint();
+    // Emit shield event for visual feedback
+    this.scene?.events.emit('playerShield', {
+      x: this.x,
+      y: this.y,
+      value: amount,
+    });
   }
 
   /**
@@ -566,6 +588,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const actualHeal = this.stats.currentHp - oldHp;
     if (actualHeal > 0) {
       this.emit('heal', actualHeal);
+      this.scene?.events.emit('playerHeal', {
+        x: this.x,
+        y: this.y,
+        value: actualHeal,
+      });
     }
   }
 

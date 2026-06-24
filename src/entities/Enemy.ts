@@ -436,19 +436,21 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   /**
    * Take damage, with optional element for counter bonus calculation
    */
-  takeDamage(amount: number, attackerElement?: Element): boolean {
+  takeDamage(amount: number, attackerElement?: Element, isCrit: boolean = false): boolean {
     // Safety check: if enemy is destroyed or scene is gone, return false
     if (!this.scene || !this.active) {
       return false;
     }
 
     let finalDamage = amount;
+    let isCounter = false;
 
     // Apply counter damage bonus
     if (attackerElement) {
       const counterBonus = getCounterBonus(attackerElement, this.element);
       if (counterBonus > 0) {
         finalDamage = amount * (1 + counterBonus);
+        isCounter = true;
         // Visual feedback for counter hit
         this.showCounterEffect();
       }
@@ -472,6 +474,15 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.shieldValue -= finalDamage;
         // 护盾吸收全部伤害，显示护盾效果
         this.showShieldEffect();
+        // Emit damage event (shield absorbed)
+        this.scene.events.emit('enemyDamage', {
+          x: this.x,
+          y: this.y,
+          damage: Math.floor(finalDamage),
+          isCrit: false,
+          isCounter: false,
+          absorbed: true,
+        });
         return false;
       } else {
         finalDamage -= this.shieldValue;
@@ -480,6 +491,15 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     this.currentHp -= finalDamage;
+
+    // Emit damage event for visual feedback
+    this.scene.events.emit('enemyDamage', {
+      x: this.x,
+      y: this.y,
+      damage: Math.floor(finalDamage),
+      isCrit,
+      isCounter,
+    });
 
     // 受伤闪烁 (check scene again in case it was destroyed during damage calculation)
     if (this.scene) {

@@ -15,6 +15,7 @@ import { BossController } from '@/entities/BossController';
 import { HUD } from '@/ui/HUD';
 import { SkillSelectUI } from '@/ui/SkillSelectUI';
 import { UpgradeSelectUI } from '@/ui/UpgradeSelectUI';
+import { DamageNumberManager } from '@/ui/DamageNumberManager';
 import { getRandomBasicSkills, cloneSkill } from '@/data/skills';
 import { GAME_WIDTH, GAME_HEIGHT, updateGameSize, WORLD_WIDTH, WORLD_HEIGHT } from '@/config/game.config';
 import { GraphicsFactory } from '@/graphics/GraphicsFactory';
@@ -49,6 +50,7 @@ export class BattleScene extends Phaser.Scene {
   private hud!: HUD;
   private skillSelectUI!: SkillSelectUI;
   private upgradeSelectUI!: UpgradeSelectUI;
+  private damageNumberManager!: DamageNumberManager;
 
   // 波次控制
   private waveTimer!: Phaser.Time.TimerEvent;
@@ -208,6 +210,9 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private setupEvents(): void {
+    // 初始化伤害数值管理器
+    this.damageNumberManager = new DamageNumberManager(this);
+
     // 敌人击杀 - DropSystem handles drop spawning via its own listener
     this.events.on('enemyKilled', (enemy: { getExpValue: () => number }) => {
       this.gameState.kills++;
@@ -245,6 +250,23 @@ export class BattleScene extends Phaser.Scene {
       if (data.enemyPosition) {
         this.showSynergyAtPosition(data.synergy, data.enemyPosition.x, data.enemyPosition.y);
       }
+    });
+
+    // 伤害数值事件
+    this.events.on('enemyDamage', (data: { x: number; y: number; damage: number; isCrit: boolean; isCounter: boolean }) => {
+      this.damageNumberManager.showEnemyDamage(data.x, data.y, data.damage, data.isCrit, data.isCounter);
+    });
+
+    this.events.on('playerDamage', (data: { x: number; y: number; damage: number }) => {
+      this.damageNumberManager.showPlayerDamage(data.x, data.y, data.damage);
+    });
+
+    this.events.on('playerHeal', (data: { x: number; y: number; value: number }) => {
+      this.damageNumberManager.showHeal(data.x, data.y, data.value);
+    });
+
+    this.events.on('playerShield', (data: { x: number; y: number; value: number }) => {
+      this.damageNumberManager.showShield(data.x, data.y, data.value);
     });
   }
 
@@ -507,11 +529,16 @@ export class BattleScene extends Phaser.Scene {
     this.hud?.destroy();
     this.skillSelectUI?.destroy();
     this.upgradeSelectUI?.destroy();
+    this.damageNumberManager?.destroy();
     this.waveTimer?.destroy();
 
     // 移除事件
     this.events.off('enemyKilled');
     this.events.off('levelUp');
+    this.events.off('enemyDamage');
+    this.events.off('playerDamage');
+    this.events.off('playerHeal');
+    this.events.off('playerShield');
 
     // 停止所有 tweens
     this.tweens.killAll();
