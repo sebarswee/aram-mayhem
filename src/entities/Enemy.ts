@@ -66,6 +66,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   // Status effects
   public statusEffects: StatusEffect[] = [];
 
+  // Death explosion params (set by synergy effects)
+  public deathExplosionParams?: { damage: number; radius: number };
+
   // Element marks for synergy tracking
   private elementMarks: Map<Element, ElementMark> = new Map();
 
@@ -475,6 +478,15 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
    * Trigger death abilities (explode_on_death)
    */
   private triggerDeathAbilities(): void {
+    // First check for synergy death explosion
+    if (this.deathExplosionParams) {
+      this.triggerExplosion(
+        this.deathExplosionParams.damage,
+        this.deathExplosionParams.radius
+      );
+    }
+
+    // Then check for ability death explosions
     for (const ability of this.config.abilities) {
       if (ability.trigger !== 'death') continue;
 

@@ -177,10 +177,18 @@ export class SkillSystem {
         break;
 
       case 'explosion':
-        // Area damage around enemy (simplified - just extra damage for now)
-        const explosionDamage = Math.floor(baseDamage * (synergy.value || 1.0));
-        enemy.takeDamage(explosionDamage);
-        // Could expand to hit nearby enemies
+        // True area explosion - damage all enemies in radius
+        const explosionRadius = 120;
+        const explosionBaseDamage = Math.floor(baseDamage * (synergy.value || 1.0));
+        const explosionEnemies = this.findEnemiesInRange(enemy.x, enemy.y, explosionRadius);
+        for (const target of explosionEnemies) {
+          const distance = Phaser.Math.Distance.Between(enemy.x, enemy.y, target.x, target.y);
+          // Damage falloff based on distance
+          const falloff = 1 - (distance / explosionRadius) * 0.5;
+          target.takeDamage(Math.floor(explosionBaseDamage * falloff));
+        }
+        // Visual explosion effect
+        this.createExplosionVisual(enemy.x, enemy.y, explosionRadius);
         break;
 
       case 'lifesteal':
@@ -197,18 +205,11 @@ export class SkillSystem {
 
       // Default cases - implement remaining synergy effects
       case 'chain_boost':
-        // Enhanced chain lightning with increased damage
+        // Enhanced chain lightning - actually chain to nearby enemies
         const chainBoostDamage = Math.floor(baseDamage * (synergy.value || 1.5));
-        // Deal enhanced damage and emit event for chain effect
         enemy.takeDamage(chainBoostDamage);
-        // Emit chain lightning event for visual
-        this.scene.events.emit('synergyChainLightning', {
-          x: enemy.x,
-          y: enemy.y,
-          damage: chainBoostDamage,
-          range: 150,
-          count: 3,
-        });
+        // Chain to nearby enemies
+        this.triggerChainLightning(enemy.x, enemy.y, chainBoostDamage * 0.8, 3, 150);
         break;
 
       case 'spread_debuff':
@@ -223,10 +224,16 @@ export class SkillSystem {
         break;
 
       case 'damage_increase':
-        // Increase damage for a duration (apply as a buff to player)
-        // Simplified: deal extra damage now
-        const increasedDamage = Math.floor(baseDamage * (1 + (synergy.value || 0.3)));
-        enemy.takeDamage(increasedDamage);
+        // Give player a temporary damage buff
+        const damageBuffValue = synergy.value || 0.3;
+        const damageBuffDuration = synergy.duration || 5000;
+        this.player.addStatusEffect({
+          type: 'attack_boost',
+          value: damageBuffValue,
+          duration: damageBuffDuration,
+        });
+        // Also deal immediate damage
+        enemy.takeDamage(baseDamage);
         break;
 
       case 'burn_spread':
@@ -291,32 +298,64 @@ export class SkillSystem {
         break;
 
       case 'refract_damage':
-        // Reflect damage to nearby enemies
-        const reflectDamage = Math.floor(baseDamage * 0.3);
-        const reflectTargets = this.findEnemiesInRange(enemy.x, enemy.y, 150);
-        for (const target of reflectTargets) {
-          if (target !== enemy) {
-            target.takeDamage(reflectDamage);
+        // Refract damage to multiple nearby enemies
+        const refractDamage = Math.floor(baseDamage * 0.5);
+        const refractRadius = 150;
+        const refractTargets = this.findEnemiesInRange(enemy.x, enemy.y, refractRadius);
+        const refractMaxTargets = 5;
+        let refractedCount = 0;
+        for (const target of refractTargets) {
+          if (target !== enemy && refractedCount < refractMaxTargets) {
+            target.takeDamage(refractDamage);
+            // Create refract beam visual
+            this.createRefractBeam(enemy.x, enemy.y, target.x, target.y);
+            refractedCount++;
           }
         }
         break;
 
       case 'death_explosion':
         // Mark enemy to explode on death with bonus damage
-        enemy.addStatusEffect({
-          type: 'burn', // Use burn as marker, will trigger on death
-          value: baseDamage * 2,
-          duration: 5000,
-          remainingTime: 5000,
-          source: 'synergy_death_explosion',
-        });
-        // Simplified: deal immediate explosion damage
-        enemy.takeDamage(Math.floor(baseDamage * 1.5));
+        // Store explosion params on enemy for later trigger
+        if (!enemy.deathExplosionParams) {
+          enemy.deathExplosionParams = {
+            damage: Math.floor(baseDamage * 2),
+            radius: 100,
+          };
+          // Visual indicator
+          const indicator = this.scene.add.circle(enemy.x, enemy.y, 15, 0xff0000, 0.4);
+          indicator.setDepth(31);
+          // Follow enemy
+          const followEvent = this.scene.time.addEvent({
+            delay: 50,
+            callback: () => {
+              if (!enemy.active) {
+                followEvent.destroy();
+                indicator.destroy();
+                return;
+              }
+              indicator.setPosition(enemy.x, enemy.y);
+            },
+            repeat: -1,
+          });
+        }
         break;
 
       case 'tick_speed_double':
-        // Double DoT tick speed (simplified: deal immediate extra damage)
-        enemy.takeDamage(Math.floor(baseDamage * 0.5));
+        // Double the tick speed of all DoT effects on enemy
+        // This means DoTs will tick twice as fast, dealing damage more frequently
+        for (const effect of enemy.statusEffects) {
+          if (effect.type === 'burn' || effect.type === 'poison') {
+            // Reduce duration by half (same total damage, faster ticks)
+            effect.duration = Math.floor(effect.duration / 2);
+            effect.remainingTime = Math.floor(effect.remainingTime / 2);
+          }
+        }
+        // Visual feedback
+        enemy.setTint(0x88ff88);
+        this.scene.time.delayedCall(200, () => {
+          if (enemy.active) enemy.clearTint();
+        });
         break;
 
       case 'split_3':
@@ -325,9 +364,19 @@ export class SkillSystem {
         break;
 
       case 'defense_reduce':
-        // Reduce enemy defense (simplified: deal extra damage)
-        const defenseBreakDamage = Math.floor(baseDamage * (1 + (synergy.value || 0.5)));
-        enemy.takeDamage(defenseBreakDamage);
+        // Reduce enemy defense - make them take more damage from subsequent attacks
+        // Apply a debuff that increases damage taken
+        enemy.addStatusEffect({
+          type: 'root', // Re-purpose as defense break marker
+          value: synergy.value || 0.5, // 50% more damage taken
+          duration: synergy.duration || 5000,
+          remainingTime: synergy.duration || 5000,
+          source: 'synergy_defense_reduce',
+        });
+        // Immediate damage
+        enemy.takeDamage(baseDamage);
+        // Visual
+        enemy.setTint(0xff8888);
         break;
 
       case 'heal_zone':
@@ -1137,6 +1186,146 @@ export class SkillSystem {
       }
     }
     return enemies;
+  }
+
+  /**
+   * Create explosion visual effect
+   */
+  private createExplosionVisual(x: number, y: number, radius: number): void {
+    // Main explosion
+    const explosion = this.scene.add.circle(x, y, radius * 0.5, 0xff6600, 0.8);
+    explosion.setDepth(100);
+
+    // Shockwave
+    const shockwave = this.scene.add.circle(x, y, radius * 0.3, 0xffff00, 0.6);
+    shockwave.setDepth(99);
+
+    // Particle burst
+    const particles = this.scene.add.particles(x, y, 'particle_fire', {
+      speed: { min: 100, max: 250 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 0.8, end: 0 },
+      alpha: { start: 1, end: 0 },
+      lifespan: 400,
+      quantity: 20,
+      emitting: false,
+    });
+    particles.explode();
+    particles.setDepth(101);
+
+    // Animation
+    this.scene.tweens.add({
+      targets: [explosion, shockwave],
+      scaleX: 2.5,
+      scaleY: 2.5,
+      alpha: 0,
+      duration: 350,
+      onComplete: () => {
+        explosion.destroy();
+        shockwave.destroy();
+        particles.destroy();
+      },
+    });
+  }
+
+  /**
+   * Trigger chain lightning from a point
+   */
+  private triggerChainLightning(x: number, y: number, damage: number, maxChains: number, range: number): void {
+    const hitTargets = new Set<string>();
+    let currentX = x;
+    let currentY = y;
+    let currentDamage = damage;
+    let chainsRemaining = maxChains;
+
+    while (chainsRemaining > 0) {
+      const nearbyEnemies = this.findEnemiesInRange(currentX, currentY, range);
+      const nextTarget = nearbyEnemies.find(e => !hitTargets.has(e.instanceId));
+
+      if (!nextTarget) break;
+
+      hitTargets.add(nextTarget.instanceId);
+
+      // Create lightning visual
+      this.createChainBolt(currentX, currentY, nextTarget.x, nextTarget.y);
+
+      // Deal damage
+      nextTarget.takeDamage(Math.floor(currentDamage));
+      currentDamage *= 0.8; // Decay
+
+      currentX = nextTarget.x;
+      currentY = nextTarget.y;
+      chainsRemaining--;
+    }
+  }
+
+  /**
+   * Create chain lightning bolt visual
+   */
+  private createChainBolt(x1: number, y1: number, x2: number, y2: number): void {
+    const graphics = this.scene.add.graphics();
+    graphics.setDepth(100);
+
+    // Main bolt
+    graphics.lineStyle(3, 0xffff00, 1);
+    this.drawJaggedLine(graphics, x1, y1, x2, y2);
+
+    // Glow
+    graphics.lineStyle(6, 0xffff88, 0.5);
+    this.drawJaggedLine(graphics, x1, y1, x2, y2);
+
+    // End flash
+    const flash = this.scene.add.circle(x2, y2, 12, 0xffff88, 0.9);
+    flash.setDepth(101);
+
+    this.scene.tweens.add({
+      targets: [graphics, flash],
+      alpha: 0,
+      duration: 180,
+      onComplete: () => {
+        graphics.destroy();
+        flash.destroy();
+      },
+    });
+  }
+
+  /**
+   * Draw a jagged line (for lightning)
+   */
+  private drawJaggedLine(graphics: Phaser.GameObjects.Graphics, x1: number, y1: number, x2: number, y2: number): void {
+    const segments = 5;
+    const dx = (x2 - x1) / segments;
+    const dy = (y2 - y1) / segments;
+
+    graphics.beginPath();
+    graphics.moveTo(x1, y1);
+
+    for (let i = 1; i < segments; i++) {
+      const x = x1 + dx * i + (Math.random() - 0.5) * 15;
+      const y = y1 + dy * i + (Math.random() - 0.5) * 15;
+      graphics.lineTo(x, y);
+    }
+
+    graphics.lineTo(x2, y2);
+    graphics.strokePath();
+  }
+
+  /**
+   * Create refract beam visual
+   */
+  private createRefractBeam(x1: number, y1: number, x2: number, y2: number): void {
+    const graphics = this.scene.add.graphics();
+    graphics.setDepth(100);
+
+    graphics.lineStyle(2, 0x88ffff, 0.8);
+    graphics.lineBetween(x1, y1, x2, y2);
+
+    this.scene.tweens.add({
+      targets: graphics,
+      alpha: 0,
+      duration: 150,
+      onComplete: () => graphics.destroy(),
+    });
   }
 
   /**
