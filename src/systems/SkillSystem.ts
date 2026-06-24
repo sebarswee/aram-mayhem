@@ -1072,9 +1072,13 @@ export class SkillSystem {
   }
 
   /**
-   * 释放神圣之光 - 伤害+治疗
+   * 释放神圣之光 - 伤害+治疗（带能量流动）
    */
   private castHolyLight(skill: Skill, damage: number): void {
+    const healEffect = skill.effects.find(e => e.type === 'heal');
+    const healValue = healEffect?.value || 10;
+    let totalHeal = 0;
+
     // 伤害敌人
     const bodies = this.scene.physics.overlapCirc(
       this.player.x,
@@ -1086,13 +1090,28 @@ export class SkillSystem {
       const obj = body.gameObject;
       if (obj && obj instanceof Enemy && obj.active) {
         this.applyDamageToEnemy(obj, damage, skill);
+        totalHeal += healValue;
+
+        // 创建能量流动效果（从敌人到玩家）
+        this.createEnergyTransferEffect(obj.x, obj.y, this.player.x, this.player.y, 0xffcc00);
       }
     }
 
-    // 治疗自己
-    const healEffect = skill.effects.find(e => e.type === 'heal');
-    if (healEffect) {
-      this.player.heal(healEffect.value);
+    // 延迟治疗（等待能量流动动画）
+    if (totalHeal > 0) {
+      this.scene.time.delayedCall(300, () => {
+        this.player.heal(totalHeal);
+        // 治疗到达时的闪光效果
+        const healFlash = this.scene.add.circle(this.player.x, this.player.y, 30, 0x66ff66, 0.6);
+        healFlash.setDepth(100);
+        this.scene.tweens.add({
+          targets: healFlash,
+          alpha: 0,
+          scale: 1.5,
+          duration: 300,
+          onComplete: () => healFlash.destroy(),
+        });
+      });
     }
   }
 
@@ -1654,6 +1673,56 @@ export class SkillSystem {
     });
   }
 
+  /**
+   * 创建能量流动效果（从敌人到玩家）
+   * 用于吸血/圣光类技能
+   */
+  private createEnergyTransferEffect(
+    startX: number,
+    startY: number,
+    endX: number,
+    endY: number,
+    color: number = 0xffcc00 // 默认金色（圣光）
+  ): void {
+    // 能量光束
+    const beam = this.scene.add.graphics();
+    beam.lineStyle(3, color, 0.9);
+    beam.lineBetween(startX, startY, endX, endY);
+    beam.setDepth(100);
+
+    // 能量粒子流动
+    const particleCount = 5;
+    const distance = Phaser.Math.Distance.Between(startX, startY, endX, endY);
+    const angle = Phaser.Math.Angle.Between(startX, startY, endX, endY);
+    const particleSpeed = distance / 300; // 300ms到达
+
+    for (let i = 0; i < particleCount; i++) {
+      const particle = this.scene.add.circle(startX, startY, 4, color, 0.8);
+      particle.setDepth(101);
+
+      // 延迟启动，形成流动效果
+      this.scene.tweens.add({
+        targets: particle,
+        x: endX,
+        y: endY,
+        alpha: 0.6,
+        delay: i * 60,
+        duration: 300,
+        ease: 'Power2',
+        onComplete: () => particle.destroy(),
+      });
+    }
+
+    // 光束淡出
+    this.scene.tweens.add({
+      targets: beam,
+      alpha: 0,
+      delay: 300,
+      duration: 100,
+      onComplete: () => beam.destroy(),
+    });
+  }
+
   getProjectiles(): Phaser.Physics.Arcade.Group {
     return this.projectiles;
   }
@@ -1906,7 +1975,7 @@ export class SkillSystem {
   }
 
   /**
-   * 审判之光 - 伤害+治疗
+   * 审判之光 - 伤害+治疗（带能量流动）
    */
   private castJudgmentLight(skill: Skill, damage: number): void {
     const radius = skill.rangeValue;
@@ -1923,14 +1992,30 @@ export class SkillSystem {
       onComplete: () => light.destroy(),
     });
 
-    // 伤害敌人
+    // 伤害敌人并创建能量流动
     const enemies = this.findEnemiesInRange(this.player.x, this.player.y, radius);
     for (const enemy of enemies) {
       this.applyDamageToEnemy(enemy, damage, skill);
+      // 创建能量流动效果
+      this.createEnergyTransferEffect(enemy.x, enemy.y, this.player.x, this.player.y, 0xffcc00);
     }
 
-    // 治疗玩家
-    this.player.heal(healAmount);
+    // 延迟治疗（等待能量流动）
+    if (enemies.length > 0) {
+      this.scene.time.delayedCall(400, () => {
+        this.player.heal(healAmount);
+        // 治疗到达时的强烈闪光
+        const healFlash = this.scene.add.circle(this.player.x, this.player.y, 40, 0x66ff66, 0.8);
+        healFlash.setDepth(101);
+        this.scene.tweens.add({
+          targets: healFlash,
+          alpha: 0,
+          scale: 2,
+          duration: 400,
+          onComplete: () => healFlash.destroy(),
+        });
+      });
+    }
   }
 
   /**
@@ -1972,7 +2057,7 @@ export class SkillSystem {
   }
 
   /**
-   * 死亡凋零 - 持续吸血
+   * 死亡凋零 - 持续吸血（带能量流动）
    */
   private castDeathDecay(skill: Skill, damage: number): void {
     const radius = skill.rangeValue;
@@ -2001,10 +2086,14 @@ export class SkillSystem {
           const tickDamage = Math.floor(damage * 0.12);
           this.applyDamageToEnemy(enemy, tickDamage, skill);
           totalDamage += tickDamage;
+          // 创建暗紫色能量流动效果
+          this.createEnergyTransferEffect(enemy.x, enemy.y, this.player.x, this.player.y, 0x8800ff);
         }
-        // 吸血
+        // 吸血（延迟等待能量流动）
         if (totalDamage > 0) {
-          this.player.heal(Math.floor(totalDamage * lifestealPercent));
+          this.scene.time.delayedCall(200, () => {
+            this.player.heal(Math.floor(totalDamage * lifestealPercent));
+          });
         }
       },
       repeat: Math.floor(duration / tickInterval) - 1,
