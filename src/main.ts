@@ -3,6 +3,10 @@ import { GAME_CONFIG } from './config/game.config';
 import { BootScene } from './scenes/BootScene';
 import { BattleScene } from './scenes/BattleScene';
 import { ResultScene } from './scenes/ResultScene';
+import { initializeStrategies } from './strategies';
+
+// 初始化技能策略系统
+initializeStrategies();
 
 // 注册所有场景
 const scenes = [BootScene, BattleScene, ResultScene];

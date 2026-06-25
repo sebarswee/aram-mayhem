@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Skill } from '@/types';
 import { Enemy } from '@/entities/Enemy';
+import { skillStrategyRegistry } from '@/strategies';
 
 /**
  * 技能视觉效果管理器
@@ -163,43 +164,31 @@ export class SkillEffects {
    * 创建范围技能效果
    */
   createAreaEffect(skill: Skill, x: number, y: number): void {
+    // 尝试使用策略模式
+    if (skillStrategyRegistry.hasVisualStrategy(skill.id)) {
+      skillStrategyRegistry.createVisualEffect(skill.id, this.scene, x, y, skill.rangeValue, skill.elements[0]);
+      return;
+    }
+
+    // 旧版分支逻辑（仅处理未重构的技能）
     switch (skill.id) {
       case 'flame_circle':
         this.createFlameCircleEffect(x, y, skill.rangeValue);
         break;
-      case 'frost_nova':
-        this.createIceCrystalBurstEffect(x, y, skill.rangeValue);
-        break;
       case 'whirlwind':
         this.createWhirlwindEffect(x, y, skill.rangeValue);
-        break;
-      case 'poison_cloud':
-        this.createPoisonCloudEffect(x, y, skill.rangeValue);
         break;
       case 'meteor':
         this.createMeteorEffect(x, y, skill.rangeValue);
         break;
-      case 'blizzard':
-        this.createBlizzardEffect(x, y, skill.rangeValue);
-        break;
-      case 'thunder_storm':
-        this.createLightningArrayEffect(x, y, skill.rangeValue);
-        break;
       case 'ground_spike':
         this.createGroundSpikeEffect(x, y, skill.rangeValue);
-        break;
-      case 'holy_light':
-        this.createHolyLightEffect(x, y, skill.rangeValue);
         break;
       case 'black_hole':
         this.createBlackHoleEffect(x, y, skill.rangeValue);
         break;
       case 'time_stop':
         this.createTimeStopEffect(x, y, skill.rangeValue);
-        break;
-      // 新差异化技能效果
-      case 'flame_wave':
-        this.createFlameSprayEffect(x, y, skill.rangeValue);
         break;
       case 'tidal_wave':
         this.createWavePushEffect(x, y, skill.rangeValue);
@@ -228,7 +217,6 @@ export class SkillEffects {
       case 'ignite':
         this.createFlameRayEffect(x, y, skill.rangeValue);
         break;
-      // 大招效果
       case 'thunder_apocalypse':
         this.createThunderApocalypseEffect(x, y, skill.rangeValue);
         break;

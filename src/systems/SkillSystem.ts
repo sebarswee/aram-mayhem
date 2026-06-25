@@ -7,6 +7,7 @@ import { SkillEffects } from '@/graphics/SkillEffects';
 import { ElementSystem } from '@/systems/ElementSystem';
 import { specialBehaviorRegistry } from '@/systems/SpecialBehaviorRegistry';
 import { getCounterBonus, ELEMENT_COLORS as DATA_ELEMENT_COLORS } from '@/data/elements';
+import { skillStrategyRegistry, SkillExecutionContext } from '@/strategies';
 
 // 元素颜色映射 (all 8 elements)
 const ELEMENT_COLORS: Record<string, number> = {
@@ -742,57 +743,60 @@ export class SkillSystem {
     const baseDamage = skill.damage + this.player.stats.attack;
     const { damage } = this.calculateDamage(baseDamage);
 
+    // 创建执行上下文
+    const context: SkillExecutionContext = {
+      scene: this.scene,
+      player: this.player,
+      damage,
+      findEnemiesInRange: this.findEnemiesInRange.bind(this),
+      applyDamageToEnemy: this.applyDamageToEnemy.bind(this),
+      applyEffects: this.applyEffects.bind(this),
+      applyLifesteal: this.applyLifesteal.bind(this),
+    };
+
+    // 尝试使用策略模式
+    if (skillStrategyRegistry.hasStrategy(skill.id)) {
+      // 使用视觉效果系统
+      this.skillEffects.createAreaEffect(skill, this.player.x, this.player.y);
+      // 执行策略
+      skillStrategyRegistry.execute(skill, context);
+    } else {
+      // 未注册策略的技能：使用旧的分支逻辑或默认处理
+      this.castAreaLegacy(skill, damage);
+    }
+  }
+
+  /**
+   * 旧版范围技能处理（兼容未重构的技能）
+   */
+  private castAreaLegacy(skill: Skill, damage: number): void {
     // 使用新的效果系统
     this.skillEffects.createAreaEffect(skill, this.player.x, this.player.y);
 
-    // 根据技能类型处理伤害
-    if (skill.id === 'blizzard') {
-      this.castBlizzard(skill, damage);
-    } else if (skill.id === 'thunder_storm') {
-      // 雷击阵：定点雷击
-      this.castLightningArray(skill, damage);
-    } else if (skill.id === 'poison_cloud') {
-      this.castPoisonCloud(skill, damage);
-    } else if (skill.id === 'black_hole') {
+    // 根据技能类型处理伤害（仅处理未重构的技能）
+    if (skill.id === 'black_hole') {
       this.castBlackHole(skill, damage);
     } else if (skill.id === 'time_stop') {
       this.castTimeStop(skill, damage);
-    } else if (skill.id === 'holy_light') {
-      this.castHolyLight(skill, damage);
     } else if (skill.id === 'ground_spike') {
       this.castGroundSpike(skill, damage);
-    } else if (skill.id === 'flame_wave') {
-      // 火焰喷射：锥形范围
-      this.castFlameSpray(skill, damage);
     } else if (skill.id === 'tidal_wave') {
-      // 水波推进：方向性波浪
       this.castWavePush(skill, damage);
-    } else if (skill.id === 'frost_nova') {
-      // 冰晶爆发：多方向穿透
-      this.castIceCrystalBurst(skill, damage);
     } else if (skill.id === 'curse_aura') {
-      // 诅咒链：链式传播
       this.castCurseChain(skill, damage);
     } else if (skill.id === 'rock_spike') {
-      // 地刺陷阱：陷阱机制
       this.castSpikeTrap(skill, damage);
     } else if (skill.id === 'sandstorm') {
-      // 流沙陷阱：持续陷阱
       this.castQuicksandTrap(skill, damage);
     } else if (skill.id === 'static_field') {
-      // 电荷积累：叠加机制
       this.castChargeAccumulate(skill, damage);
     } else if (skill.id === 'arc_lightning') {
-      // 电磁脉冲：环形扩散
       this.castEMPPulse(skill, damage);
     } else if (skill.id === 'shadow_step') {
-      // 暗影分身：分身机制
       this.castShadowClone(skill, damage);
     } else if (skill.id === 'seismic_wave') {
-      // 地裂线：直线地裂
       this.castGroundCrackLine(skill, damage);
     } else if (skill.id === 'ignite') {
-      // 火焰射线：持续射线
       this.castFlameRay(skill, damage);
     } else if (skill.id === 'dragon_breath') {
       this.castDragonBreath(skill, damage);
@@ -817,31 +821,33 @@ export class SkillSystem {
     } else if (skill.id === 'meteor') {
       this.castMeteor(skill, damage);
     } else if (skill.id === 'tsunami') {
-      // 海啸：全屏推开
       this.castTsunami(skill, damage);
     } else if (skill.id === 'earthquake') {
-      // 大地震击：全屏眩晕
       this.castEarthquake(skill, damage);
     } else if (skill.id === 'overgrowth') {
-      // 过度生长：全屏缠绕
       this.castOvergrowth(skill, damage);
     } else if (skill.id === 'void_rift') {
-      // 虚空裂隙：持续吸引+伤害
       this.castVoidRift(skill, damage);
     } else {
-      // 其他范围技能：立即造成伤害
-      const bodies = this.scene.physics.overlapCirc(
-        this.player.x,
-        this.player.y,
-        skill.rangeValue
-      ) as Phaser.Physics.Arcade.Body[];
+      // 默认范围伤害处理
+      this.defaultAreaDamage(skill, damage);
+    }
+  }
 
-      for (const body of bodies) {
-        const obj = body.gameObject;
-        // Ensure it's actually an Enemy instance (not player, orb, food, etc.)
-        if (obj && obj instanceof Enemy && obj.active) {
-          this.applyDamageToEnemy(obj, damage, skill);
-        }
+  /**
+   * 默认范围伤害处理
+   */
+  private defaultAreaDamage(skill: Skill, damage: number): void {
+    const bodies = this.scene.physics.overlapCirc(
+      this.player.x,
+      this.player.y,
+      skill.rangeValue
+    ) as Phaser.Physics.Arcade.Body[];
+
+    for (const body of bodies) {
+      const obj = body.gameObject;
+      if (obj && obj instanceof Enemy && obj.active) {
+        this.applyDamageToEnemy(obj, damage, skill);
       }
     }
   }
