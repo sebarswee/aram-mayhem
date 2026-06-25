@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GraphicsFactory } from '@/graphics/GraphicsFactory';
+import { EnhancedGraphicsFactory } from '@/graphics/EnhancedGraphicsFactory';
 import { JoystickMode } from '@/ui/VirtualJoystick';
 import { updateGameSize } from '@/config/game.config';
 
@@ -117,8 +118,9 @@ export class BootScene extends Phaser.Scene {
         this.loadingText.setText('正在生成像素素材...');
         // 检查纹理是否已存在，避免重复生成
         if (!this.textures.exists('player')) {
-          const graphicsFactory = new GraphicsFactory(this);
-          graphicsFactory.generateAll();
+          // 使用增强版图形工厂
+          const enhancedFactory = new EnhancedGraphicsFactory(this);
+          enhancedFactory.generateEnhanced();
         }
       }
 
