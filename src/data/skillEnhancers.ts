@@ -164,10 +164,10 @@ export const SKILL_ENHANCERS: Record<string, SkillEnhancer> = {
     maxLevel: 1,
     excludeElements: ['fire'], // 火焰技能不能再附加灼烧
   },
-  freeze_add: {
-    id: 'freeze_add',
-    name: '冰冻附加',
-    description: '附加减速效果，降低敌人速度',
+  frost_add: {
+    id: 'frost_add',
+    name: '冰霜附加',
+    description: '攻击附加减速效果，降低敌人移动速度',
     rarity: 'rare',
     type: 'effect',
     value: 0.3, // 减速比例

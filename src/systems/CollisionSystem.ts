@@ -13,6 +13,7 @@ import { DropSystem } from '@/systems/DropSystem';
 import { specialBehaviorRegistry } from '@/systems/SpecialBehaviorRegistry';
 import { SkillEffects } from '@/graphics/SkillEffects';
 import { Element, Skill } from '@/types';
+import { statusEffectStrategyRegistry, StatusEffectExecutionContext, enemyAttackAbilityRegistry } from '@/strategies';
 
 export class CollisionSystem {
   private scene: Phaser.Scene;
@@ -685,71 +686,16 @@ export class CollisionSystem {
     const player = this.player;
 
     for (const effect of effects) {
-      switch (effect.type) {
-        case 'burn':
-        case 'freeze':
-        case 'stun':
-        case 'poison':
-        case 'slow':
-          // 状态效果 - 添加到敌人状态列表
-          enemy.addStatusEffect({
-            type: effect.type as any,
-            value: effect.value || 0,
-            duration: effect.duration || 2000,
-            remainingTime: effect.duration || 2000,
-            source: 'skill',
-          });
-          break;
+      // 创建执行上下文
+      const context: StatusEffectExecutionContext = {
+        scene: this.scene,
+        player,
+        enemy,
+      };
 
-        case 'knockback':
-          // 击退效果 - 立即生效
-          const angle = Phaser.Math.Angle.Between(
-            player.x,
-            player.y,
-            enemy.x,
-            enemy.y
-          );
-          const knockbackDistance = effect.value || 100;
-          enemy.x += Math.cos(angle) * knockbackDistance;
-          enemy.y += Math.sin(angle) * knockbackDistance;
-          break;
-
-        case 'damage':
-          // damage 效果已在碰撞处理中计算，不需要额外处理
-          break;
-
-        case 'heal':
-          // 治疗效果 - 恢复玩家生命
-          player.heal(effect.value || 10);
-          break;
-
-        case 'shield':
-          // 护盾效果
-          player.addShield(effect.value || 50);
-          break;
-
-        case 'defense_break':
-          // 降低敌人防御 - 使其受到更多伤害
-          enemy.addStatusEffect({
-            type: 'defense_break',
-            value: effect.value || 0.3,
-            duration: effect.duration || 5000,
-            remainingTime: effect.duration || 5000,
-            source: 'skill',
-          });
-          break;
-
-        case 'damage_reflect':
-          // 反弹伤害 - 给玩家添加反弹状态
-          player.addReflectEffect({
-            value: effect.value || 0.3,
-            duration: effect.duration || 8000,
-          });
-          break;
-
-        default:
-          console.warn(`[CollisionSystem] Unknown effect type: ${effect.type}`);
-          break;
+      // 尝试使用策略模式
+      if (statusEffectStrategyRegistry.hasStrategy(effect.type)) {
+        statusEffectStrategyRegistry.execute(effect as any, context);
       }
     }
 
@@ -811,6 +757,73 @@ export class CollisionSystem {
       }
     }
 
+    // Apply counter damage if player has counter damage effect (火焰反击)
+    if (ply.hasCounterDamage()) {
+      const counterDamage = ply.triggerCounterDamage();
+      if (counterDamage > 0) {
+        enem.takeDamage(counterDamage);
+
+        // Visual feedback for counter damage - fire burst
+        const fireBurst = this.scene.add.circle(enem.x, enem.y, 30, 0xff4400, 0.8);
+        fireBurst.setDepth(100);
+        this.scene.tweens.add({
+          targets: fireBurst,
+          alpha: 0,
+          scale: 1.5,
+          duration: 200,
+          onComplete: () => fireBurst.destroy(),
+        });
+
+        // Fire beam from player to enemy
+        const fireBeam = this.scene.add.graphics();
+        fireBeam.lineStyle(4, 0xff4400, 0.9);
+        fireBeam.lineBetween(ply.x, ply.y, enem.x, enem.y);
+        this.scene.tweens.add({
+          targets: fireBeam,
+          alpha: 0,
+          duration: 150,
+          onComplete: () => fireBeam.destroy(),
+        });
+      }
+    }
+
+    // Apply counter freeze if player has counter freeze effect (冰霜屏障)
+    if (ply.hasCounterFreeze()) {
+      const freezeDuration = ply.triggerCounterFreeze();
+      if (freezeDuration > 0) {
+        // Apply freeze to enemy
+        enem.addStatusEffect({
+          type: 'freeze',
+          value: 1,
+          duration: freezeDuration,
+          remainingTime: freezeDuration,
+          source: 'counter_freeze',
+        });
+
+        // Visual feedback for counter freeze - ice burst
+        const iceBurst = this.scene.add.circle(enem.x, enem.y, 30, 0x88ddff, 0.8);
+        iceBurst.setDepth(100);
+        this.scene.tweens.add({
+          targets: iceBurst,
+          alpha: 0,
+          scale: 1.5,
+          duration: 200,
+          onComplete: () => iceBurst.destroy(),
+        });
+
+        // Frost beam from player to enemy
+        const frostBeam = this.scene.add.graphics();
+        frostBeam.lineStyle(4, 0x88ffff, 0.9);
+        frostBeam.lineBetween(ply.x, ply.y, enem.x, enem.y);
+        this.scene.tweens.add({
+          targets: frostBeam,
+          alpha: 0,
+          duration: 150,
+          onComplete: () => frostBeam.destroy(),
+        });
+      }
+    }
+
     // Trigger enemy attack abilities
     this.triggerEnemyAttackAbilities(enem, ply);
 
@@ -843,50 +856,9 @@ export class CollisionSystem {
     const abilities = enemy.getAttackAbilities();
 
     for (const ability of abilities) {
-      switch (ability.type) {
-        case 'burn_on_contact':
-          // Apply burn to player
-          if (player.addStatusEffect) {
-            player.addStatusEffect({
-              type: 'burn',
-              value: ability.params?.damage || 5,
-              duration: ability.params?.duration || 2000,
-            });
-          }
-          break;
-
-        case 'slow_on_attack':
-          // Apply slow to player
-          if (player.addStatusEffect) {
-            player.addStatusEffect({
-              type: 'slow',
-              value: ability.params?.slow || 0.3,
-              duration: ability.params?.duration || 1500,
-            });
-          }
-          break;
-
-        case 'poison_on_attack':
-          // Apply poison to player
-          if (player.addStatusEffect) {
-            player.addStatusEffect({
-              type: 'poison',
-              value: ability.params?.damage || 5,
-              duration: ability.params?.duration || 3000,
-            });
-          }
-          break;
-
-        case 'root_on_attack':
-          // Apply root to player
-          if (player.addStatusEffect) {
-            player.addStatusEffect({
-              type: 'root',
-              value: 1,
-              duration: ability.params?.duration || 500,
-            });
-          }
-          break;
+      // 使用策略模式
+      if (enemyAttackAbilityRegistry.hasStrategy(ability.type)) {
+        enemyAttackAbilityRegistry.execute(ability.type, { enemy, player }, ability.params);
       }
     }
   }

@@ -4,6 +4,7 @@ import { Skill, SkillEnhancer, SkillEnhancement, StatBoost, PlayerStats } from '
 import { SKILL_ENHANCERS, STAT_BOOSTS, getApplicableEnhancers, selectEnhancerByRarity, getRandomStatBoost } from '@/data/skillEnhancers';
 import { getRandomUltimate } from '@/data/skills';
 import { INITIAL_PLAYER_STATS } from '@/config/balance.config';
+import { enhancementStrategyRegistry, skillValueCalculatorRegistry } from '@/strategies';
 
 /**
  * 技能强化系统
@@ -155,38 +156,9 @@ export class EnhancementSystem {
    * 应用强化效果到技能
    */
   private applyEnhancementToSkill(skill: Skill, enhancement: SkillEnhancement): void {
-    switch (enhancement.type) {
-      case 'range':
-        skill.rangeValue = Math.floor(skill.baseValues.range * (1 + enhancement.value));
-        break;
-
-      case 'damage':
-        skill.damage = Math.floor(skill.baseValues.damage * (1 + enhancement.value));
-        break;
-
-      case 'cooldown':
-        skill.cooldown = Math.floor(skill.baseValues.cooldown * (1 - enhancement.value));
-        break;
-
-      case 'pierce':
-        // 穿透效果在投射物系统中处理
-        break;
-
-      case 'split':
-        // 分裂效果在投射物系统中处理
-        break;
-
-      case 'multicast':
-        // 连射效果在技能系统中处理
-        break;
-
-      case 'projectile_count':
-        skill.baseValues.projectileCount += enhancement.value;
-        break;
-
-      case 'effect':
-        // 效果附加在碰撞系统中处理
-        break;
+    // 使用策略模式
+    if (enhancementStrategyRegistry.hasStrategy(enhancement.type)) {
+      enhancementStrategyRegistry.apply(enhancement.type, skill, enhancement);
     }
   }
 
@@ -237,24 +209,28 @@ export class EnhancementSystem {
     let split = 0;
 
     for (const enhancement of skill.enhancements) {
-      switch (enhancement.type) {
+      // 使用策略模式计算，避免 switch-case
+      const type = enhancement.type;
+      if (!skillValueCalculatorRegistry.hasCalculator(type)) continue;
+
+      switch (type) {
         case 'damage':
-          damage = Math.floor(skill.baseValues.damage * (1 + enhancement.value));
+          damage = skillValueCalculatorRegistry.calculate(type, skill.baseValues.damage, enhancement);
           break;
         case 'range':
-          range = Math.floor(skill.baseValues.range * (1 + enhancement.value));
+          range = skillValueCalculatorRegistry.calculate(type, skill.baseValues.range, enhancement);
           break;
         case 'projectile_count':
-          projectileCount += enhancement.value;
+          projectileCount = skillValueCalculatorRegistry.calculate(type, skill.baseValues.projectileCount, enhancement);
           break;
         case 'pierce':
-          pierce += enhancement.value;
+          pierce = skillValueCalculatorRegistry.calculate(type, 0, enhancement);
           break;
         case 'multicast':
-          multicast = enhancement.value;
+          multicast = skillValueCalculatorRegistry.calculate(type, 0, enhancement);
           break;
         case 'split':
-          split = enhancement.value;
+          split = skillValueCalculatorRegistry.calculate(type, 0, enhancement);
           break;
       }
     }

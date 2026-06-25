@@ -4,6 +4,8 @@ import { FrostNovaStrategy, FrostNovaVisualStrategy } from './area/ice/FrostNova
 import { BlizzardStrategy, BlizzardVisualStrategy } from './area/ice/BlizzardStrategy';
 import { ThunderStormStrategy, ThunderStormVisualStrategy } from './area/lightning/ThunderStormStrategy';
 import { ArcLightningStrategy, ArcLightningVisualStrategy, StaticFieldStrategy, ShadowStepStrategy, ShadowStepVisualStrategy, IgniteStrategy, IgniteVisualStrategy } from './area/lightning/ArcLightningStrategy';
+import { LightningFocusStrategy, LightningFocusVisualStrategy } from './area/lightning/LightningFocusStrategy';
+import { ElectricFieldStrategy, ElectricFieldVisualStrategy } from './area/lightning/ElectricFieldStrategy';
 import { HolyLightStrategy, HolyLightVisualStrategy } from './area/holy/HolyLightStrategy';
 import { PoisonCloudStrategy, PoisonCloudVisualStrategy } from './area/water/PoisonCloudStrategy';
 import { TidalWaveStrategy, TidalWaveVisualStrategy } from './area/water/TidalWaveStrategy';
@@ -48,6 +50,8 @@ export function initializeStrategies(): void {
   skillStrategyRegistry.registerBoth('thunder_storm', new ThunderStormStrategy(), new ThunderStormVisualStrategy());
   skillStrategyRegistry.registerBoth('arc_lightning', new ArcLightningStrategy(), new ArcLightningVisualStrategy());
   skillStrategyRegistry.registerBoth('static_field', new StaticFieldStrategy(), new ArcLightningVisualStrategy());
+  skillStrategyRegistry.registerBoth('lightning_focus', new LightningFocusStrategy(), new LightningFocusVisualStrategy());
+  skillStrategyRegistry.registerBoth('electric_field', new ElectricFieldStrategy(), new ElectricFieldVisualStrategy());
   skillStrategyRegistry.registerBoth('shadow_step', new ShadowStepStrategy(), new ShadowStepVisualStrategy());
   skillStrategyRegistry.registerBoth('ignite', new IgniteStrategy(), new IgniteVisualStrategy());
 
@@ -103,6 +107,10 @@ export {
   ArcLightningStrategy,
   ArcLightningVisualStrategy,
   StaticFieldStrategy,
+  LightningFocusStrategy,
+  LightningFocusVisualStrategy,
+  ElectricFieldStrategy,
+  ElectricFieldVisualStrategy,
   ShadowStepStrategy,
   ShadowStepVisualStrategy,
   IgniteStrategy,

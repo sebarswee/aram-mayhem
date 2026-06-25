@@ -1,6 +1,13 @@
 import Phaser from 'phaser';
 import { EnemyConfig, EnemyType, Element, ElementMark, BossPhase, EnemyAbility } from '@/types';
 import { COUNTER_RELATIONS, ELEMENT_COLORS, getCounterBonus } from '@/data/elements';
+import {
+  statusEffectColorRegistry,
+  enemyTypeScaleRegistry,
+  enemyPassiveAbilityRegistry,
+  enemyDeathAbilityRegistry,
+  enemyElementDeathRegistry,
+} from '@/strategies';
 
 // Status effect interface
 export interface StatusEffect {
@@ -140,40 +147,15 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     for (const ability of this.config.abilities) {
       if (ability.trigger !== 'passive') continue;
 
-      switch (ability.type) {
-        case 'hp_boost':
-          const hpMultiplier = ability.params?.multiplier || 1.5;
-          this.currentHp = Math.floor(this.config.hp * hpMultiplier);
-          this.config = { ...this.config, hp: this.currentHp };
-          break;
-
-        case 'speed_boost':
-          const speedMultiplier = ability.params?.multiplier || 1.3;
-          this.config = { ...this.config, speed: Math.floor(this.config.speed * speedMultiplier) };
-          break;
-
-        case 'damage_reduction':
-          // Handled in takeDamage
-          break;
-
-        case 'burn_on_contact':
-          // Handled in CollisionSystem when enemy hits player
-          break;
+      // 使用策略模式
+      if (enemyPassiveAbilityRegistry.hasStrategy(ability.type)) {
+        enemyPassiveAbilityRegistry.execute(ability.type, { enemy: this, ability });
       }
     }
   }
 
   private getScaleByType(type: EnemyType): number {
-    switch (type) {
-      case 'normal':
-        return 1;
-      case 'elite':
-        return 1.3;
-      case 'boss':
-        return 1.8;
-      default:
-        return 1;
-    }
+    return enemyTypeScaleRegistry.getScale(type);
   }
 
   private createShadow(): void {
@@ -289,29 +271,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
    * Apply visual color for status type
    */
   private applyStatusEffectColor(type: StatusEffect['type']): void {
-    switch (type) {
-      case 'freeze':
-        this.setTint(0x88ddff); // 淡蓝色
-        break;
-      case 'stun':
-        this.setTint(0xffff88); // 黄色
-        break;
-      case 'poison':
-        this.setTint(0x88ff88); // 绿色
-        break;
-      case 'defense_break':
-        this.setTint(0xff8888); // 红色
-        break;
-      case 'slow':
-        this.setTint(0xaaddff); // 浅蓝灰色（减速视觉）
-        break;
-      case 'burn':
-        this.setTint(0xffaa44); // 橙色（燃烧视觉）
-        break;
-      default:
-        this.applyElementTint();
-        break;
+    // 使用策略模式
+    if (statusEffectColorRegistry.hasColor(type)) {
+      const color = statusEffectColorRegistry.getColor(type as any);
+      if (color !== undefined) {
+        this.setTint(color);
+        return;
+      }
     }
+    // 没有颜色映射，恢复元素颜色
+    this.applyElementTint();
   }
 
   /**
@@ -743,58 +712,32 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private triggerDeathAbilities(): void {
     // First check for synergy death explosion
     if (this.deathExplosionParams) {
-      this.triggerExplosion(
-        this.deathExplosionParams.damage,
-        this.deathExplosionParams.radius
-      );
+      // 使用策略模式处理协同爆炸
+      if (enemyDeathAbilityRegistry.hasStrategy('explode_on_death')) {
+        enemyDeathAbilityRegistry.execute('explode_on_death', {
+          enemy: this,
+          scene: this.scene,
+          params: {
+            damage: this.deathExplosionParams.damage,
+            radius: this.deathExplosionParams.radius,
+          },
+        });
+      }
     }
 
     // Then check for ability death explosions
     for (const ability of this.config.abilities) {
       if (ability.trigger !== 'death') continue;
 
-      switch (ability.type) {
-        case 'explode_on_death':
-          this.triggerExplosion(
-            ability.params?.damage || 10,
-            ability.params?.radius || 50
-          );
-          break;
+      // 使用策略模式
+      if (enemyDeathAbilityRegistry.hasStrategy(ability.type)) {
+        enemyDeathAbilityRegistry.execute(ability.type, {
+          enemy: this,
+          scene: this.scene,
+          params: ability.params,
+        });
       }
     }
-  }
-
-  /**
-   * Trigger explosion on death
-   */
-  private triggerExplosion(damage: number, radius: number): void {
-    // Visual effect
-    const explosion = this.scene.add.circle(this.x, this.y, radius, 0xff4400, 0.6);
-    explosion.setDepth(100);
-
-    const shockwave = this.scene.add.circle(this.x, this.y, radius * 1.5, 0xffff00, 0.3);
-    shockwave.setDepth(99);
-
-    this.scene.tweens.add({
-      targets: [explosion, shockwave],
-      scaleX: 1.5,
-      scaleY: 1.5,
-      alpha: 0,
-      duration: 300,
-      onComplete: () => {
-        explosion.destroy();
-        shockwave.destroy();
-      },
-    });
-
-    // Emit event for CollisionSystem to handle damage
-    this.scene.events.emit('enemyExplosion', {
-      x: this.x,
-      y: this.y,
-      radius,
-      damage,
-      sourceEnemy: this,
-    });
   }
 
   /**
@@ -803,155 +746,18 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private createElementDeathEffect(): void {
     const color = ELEMENT_DEATH_COLORS[this.element] || 0xffffff;
 
-    switch (this.element) {
-      case 'fire':
-        this.createFireDeathEffect(color);
-        break;
-      case 'water':
-        this.createWaterDeathEffect(color);
-        break;
-      case 'ice':
-        this.createIceDeathEffect(color);
-        break;
-      case 'lightning':
-        this.createLightningDeathEffect(color);
-        break;
-      case 'holy':
-        this.createHolyDeathEffect(color);
-        break;
-      case 'shadow':
-        this.createShadowDeathEffect(color);
-        break;
-      case 'grass':
-        this.createGrassDeathEffect(color);
-        break;
-      case 'earth':
-        this.createEarthDeathEffect(color);
-        break;
-      default:
-        this.createDefaultDeathEffect(color);
-        break;
+    // 使用策略模式
+    if (enemyElementDeathRegistry.hasStrategy(this.element)) {
+      enemyElementDeathRegistry.create(this.element, {
+        x: this.x,
+        y: this.y,
+        scene: this.scene,
+        color,
+      });
+    } else {
+      // 默认效果
+      this.createDefaultDeathEffect(color);
     }
-  }
-
-  private createFireDeathEffect(color: number): void {
-    // Fire particle burst
-    const particles = this.scene.add.particles(this.x, this.y, 'particle_glow', {
-      speed: { min: 80, max: 200 },
-      scale: { start: 0.8, end: 0 },
-      alpha: { start: 1, end: 0 },
-      tint: color,
-      lifespan: 600,
-      quantity: 12,
-      emitting: false,
-    });
-    particles.explode();
-    this.scene.time.delayedCall(700, () => particles.destroy());
-  }
-
-  private createWaterDeathEffect(color: number): void {
-    // Water splash effect
-    const particles = this.scene.add.particles(this.x, this.y, 'particle_glow', {
-      speed: { min: 40, max: 120 },
-      scale: { start: 0.6, end: 0.1 },
-      alpha: { start: 0.8, end: 0 },
-      tint: color,
-      lifespan: 500,
-      quantity: 16,
-      emitting: false,
-    });
-    particles.explode();
-    this.scene.time.delayedCall(600, () => particles.destroy());
-  }
-
-  private createIceDeathEffect(color: number): void {
-    // Ice shatter effect
-    const particles = this.scene.add.particles(this.x, this.y, 'particle_glow', {
-      speed: { min: 100, max: 180 },
-      scale: { start: 0.5, end: 0 },
-      alpha: { start: 1, end: 0 },
-      tint: color,
-      lifespan: 400,
-      quantity: 20,
-      emitting: false,
-    });
-    particles.explode();
-    this.scene.time.delayedCall(500, () => particles.destroy());
-  }
-
-  private createLightningDeathEffect(color: number): void {
-    // Electric discharge effect
-    const particles = this.scene.add.particles(this.x, this.y, 'particle_glow', {
-      speed: { min: 150, max: 300 },
-      scale: { start: 0.4, end: 0 },
-      alpha: { start: 1, end: 0 },
-      tint: color,
-      lifespan: 300,
-      quantity: 24,
-      emitting: false,
-    });
-    particles.explode();
-    this.scene.time.delayedCall(400, () => particles.destroy());
-  }
-
-  private createHolyDeathEffect(color: number): void {
-    // Golden flash effect
-    const particles = this.scene.add.particles(this.x, this.y, 'particle_glow', {
-      speed: { min: 60, max: 140 },
-      scale: { start: 0.7, end: 0 },
-      alpha: { start: 1, end: 0 },
-      tint: color,
-      lifespan: 800,
-      quantity: 15,
-      emitting: false,
-    });
-    particles.explode();
-    this.scene.time.delayedCall(900, () => particles.destroy());
-  }
-
-  private createShadowDeathEffect(color: number): void {
-    // Purple mist effect
-    const particles = this.scene.add.particles(this.x, this.y, 'particle_glow', {
-      speed: { min: 30, max: 80 },
-      scale: { start: 0.9, end: 0 },
-      alpha: { start: 0.7, end: 0 },
-      tint: color,
-      lifespan: 1000,
-      quantity: 10,
-      emitting: false,
-    });
-    particles.explode();
-    this.scene.time.delayedCall(1100, () => particles.destroy());
-  }
-
-  private createGrassDeathEffect(color: number): void {
-    // Leaf scatter effect
-    const particles = this.scene.add.particles(this.x, this.y, 'particle_glow', {
-      speed: { min: 50, max: 100 },
-      scale: { start: 0.5, end: 0 },
-      alpha: { start: 1, end: 0 },
-      tint: color,
-      lifespan: 700,
-      quantity: 14,
-      emitting: false,
-    });
-    particles.explode();
-    this.scene.time.delayedCall(800, () => particles.destroy());
-  }
-
-  private createEarthDeathEffect(color: number): void {
-    // Rock debris effect
-    const particles = this.scene.add.particles(this.x, this.y, 'particle_glow', {
-      speed: { min: 70, max: 150 },
-      scale: { start: 0.6, end: 0.2 },
-      alpha: { start: 1, end: 0 },
-      tint: color,
-      lifespan: 600,
-      quantity: 18,
-      emitting: false,
-    });
-    particles.explode();
-    this.scene.time.delayedCall(700, () => particles.destroy());
   }
 
   private createDefaultDeathEffect(color: number): void {

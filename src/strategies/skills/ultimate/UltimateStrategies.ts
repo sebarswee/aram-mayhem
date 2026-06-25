@@ -79,14 +79,66 @@ export class DragonBreathVisualStrategy implements VisualEffectStrategy {
 }
 
 /**
- * 烈焰风暴策略 - 持续燃烧区域
+ * 烈焰风暴策略 - 持续燃烧区域 + 燃烧扩散机制
+ * 燃烧的敌人死亡时，燃烧效果扩散到附近敌人
  */
 export class InfernoStrategy implements SkillStrategy {
+  private burnSpreadRadius = 80; // 燃烧扩散范围
+  private activeInfernos: Set<string> = new Set(); // 跟踪活跃的inferno实例
+
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const radius = skill.rangeValue;
     const duration = 5000;
     const tickInterval = 300;
+
+    // 生成唯一实例ID
+    const instanceId = `inferno_${Date.now()}_${Math.random()}`;
+    this.activeInfernos.add(instanceId);
+
+    // 燃烧扩散配置
+    const burnValue = 12; // 燃烧伤害
+    const burnDuration = 8000; // 燃烧持续时间
+
+    // 监听敌人死亡事件，实现燃烧扩散
+    const deathHandler = (enemy: Enemy) => {
+      if (!this.activeInfernos.has(instanceId)) return;
+
+      // 检查敌人是否有来自inferno的燃烧状态
+      const hasInfernoBurn = enemy.statusEffects.some(
+        (effect) => effect.type === 'burn' && effect.source === 'inferno'
+      );
+
+      if (hasInfernoBurn) {
+        // 燃烧扩散：在死亡位置寻找附近敌人
+        const nearbyEnemies = findEnemiesInRange(enemy.x, enemy.y, this.burnSpreadRadius);
+
+        for (const nearbyEnemy of nearbyEnemies) {
+          // 应用燃烧效果
+          nearbyEnemy.addStatusEffect({
+            type: 'burn',
+            value: burnValue,
+            duration: burnDuration,
+            remainingTime: burnDuration,
+            source: 'inferno',
+          });
+        }
+
+        // 燃烧扩散视觉效果
+        const spreadEffect = scene.add.circle(enemy.x, enemy.y, this.burnSpreadRadius, 0xff6600, 0.4);
+        spreadEffect.setDepth(25);
+        scene.tweens.add({
+          targets: spreadEffect,
+          alpha: 0,
+          scale: 1.5,
+          duration: 300,
+          onComplete: () => spreadEffect.destroy(),
+        });
+      }
+    };
+
+    // 注册死亡事件监听
+    scene.events.on('enemyKilled', deathHandler);
 
     let elapsed = 0;
     const infernoTimer = scene.time.addEvent({
@@ -95,12 +147,24 @@ export class InfernoStrategy implements SkillStrategy {
         elapsed += tickInterval;
         if (elapsed >= duration) {
           infernoTimer.destroy();
+          // 清理事件监听
+          this.activeInfernos.delete(instanceId);
+          scene.events.off('enemyKilled', deathHandler);
           return;
         }
 
         const enemies = findEnemiesInRange(player.x, player.y, radius);
         for (const enemy of enemies) {
+          // 应用伤害
           applyDamageToEnemy(enemy, Math.floor(damage * 0.15), skill);
+          // 直接添加燃烧状态（标记来源为inferno）
+          enemy.addStatusEffect({
+            type: 'burn',
+            value: burnValue,
+            duration: burnDuration,
+            remainingTime: burnDuration,
+            source: 'inferno',
+          });
         }
       },
       repeat: Math.floor(duration / tickInterval) - 1,
@@ -249,7 +313,7 @@ export class AbsoluteZeroStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
     const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
     const radius = skill.rangeValue;
-    const executeThreshold = 0.15;
+    const executeThreshold = 0.10;
 
     const enemies = findEnemiesInRange(player.x, player.y, radius);
     for (const enemy of enemies) {

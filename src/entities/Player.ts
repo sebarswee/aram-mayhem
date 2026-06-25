@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { PlayerStats, Skill, Element } from '@/types';
 import { INITIAL_PLAYER_STATS } from '@/config/balance.config';
 import { WORLD_WIDTH, WORLD_HEIGHT } from '@/config/game.config';
+import { passiveEffectStrategyRegistry, PassiveEffectData, getThornsStrategy } from '@/strategies';
 
 /**
  * Status effect types that can be applied to the player
@@ -19,6 +20,26 @@ export interface PlayerStatusEffect {
 export interface ReflectEffect {
   value: number;      // Percentage of damage to reflect (e.g., 0.3 = 30%)
   duration: number;
+  remainingTime: number;
+}
+
+/**
+ * Counter effect - fixed damage on being hit
+ */
+export interface CounterDamageEffect {
+  value: number;      // Fixed damage to deal
+  remainingTriggers: number;  // How many more times it can trigger
+  duration: number;
+  remainingTime: number;
+}
+
+/**
+ * Counter freeze effect - freezes attacker
+ */
+export interface CounterFreezeEffect {
+  duration: number;   // Freeze duration in ms
+  remainingTriggers: number;  // How many more times it can trigger
+  effectDuration: number;  // Total effect duration
   remainingTime: number;
 }
 
@@ -49,6 +70,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   // Reflect effects system
   private reflectEffects: ReflectEffect[] = [];
+
+  // Counter damage effects system (火焰反击)
+  private counterDamageEffects: CounterDamageEffect[] = [];
+
+  // Counter freeze effects system (冰霜屏障)
+  private counterFreezeEffects: CounterFreezeEffect[] = [];
 
   // Element resistance system
   public elementResistance: Partial<Record<Element, number>> = {};
@@ -82,6 +109,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     // 创建发光效果
     this.createGlowEffect();
+
+    // 设置荆棘策略的player引用
+    getThornsStrategy().setPlayer(this);
   }
 
   /**
@@ -179,56 +209,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private applyPassiveEffect(skill: Skill): void {
     if (!skill.passiveEffect) return;
 
-    const effect = skill.passiveEffect;
-    switch (effect.type) {
-      case 'max_hp':
-        this.stats.maxHp *= (1 + effect.value);
-        this.stats.currentHp *= (1 + effect.value);
-        break;
-      case 'lifesteal':
-        this.stats.lifesteal += effect.value * 100;
-        break;
-      case 'dodge':
-        // Store dodge chance in stats
-        (this.stats as any).dodgeChance = ((this.stats as any).dodgeChance || 0) + effect.value;
-        break;
-      case 'crit_boost':
-        this.stats.critRate += effect.value;
-        this.stats.critDamage += effect.value;
-        break;
-      case 'berserker':
-        // Store berserker value for attack calculation
-        (this.stats as any).berserkerValue = ((this.stats as any).berserkerValue || 0) + effect.value;
-        break;
-      case 'speed':
-        this.stats.speed *= (1 + effect.value);
-        break;
-      case 'cooldown_reduction':
-        this.stats.cooldownReduction = (this.stats.cooldownReduction || 0) + effect.value;
-        break;
-      case 'regen':
-        // Store regen value for update loop
-        (this.stats as any).hpRegen = ((this.stats as any).hpRegen || 0) + effect.value;
-        break;
-      case 'element_damage':
-        this.stats.skillDamageBonus = (this.stats.skillDamageBonus || 0) + effect.value;
-        break;
-      case 'luck':
-        (this.stats as any).luck = ((this.stats as any).luck || 0) + effect.value;
-        break;
-      case 'thorns':
-        this.addReflectEffect({ value: effect.value, duration: 999999999 });
-        break;
-      case 'shield_boost':
-        (this.stats as any).shieldBoost = ((this.stats as any).shieldBoost || 0) + effect.value;
-        break;
-      case 'element_boost':
-        // 元素伤害加成（针对特定元素）
-        if (effect.element) {
-          const key = `elementBoost_${effect.element}` as string;
-          (this.stats as any)[key] = ((this.stats as any)[key] || 0) + effect.value;
-        }
-        break;
+    const effect: PassiveEffectData = {
+      type: skill.passiveEffect.type,
+      value: skill.passiveEffect.value,
+      element: skill.passiveEffect.element,
+    };
+
+    // 尝试使用策略模式
+    if (passiveEffectStrategyRegistry.hasStrategy(effect.type)) {
+      passiveEffectStrategyRegistry.execute(effect, this.stats);
     }
   }
 
@@ -346,6 +335,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.reflectEffects = this.reflectEffects.filter(effect => {
       effect.remainingTime -= delta;
       return effect.remainingTime > 0;
+    });
+
+    // Update counter damage effects
+    this.counterDamageEffects = this.counterDamageEffects.filter(effect => {
+      effect.remainingTime -= delta;
+      return effect.remainingTime > 0 && effect.remainingTriggers > 0;
+    });
+
+    // Update counter freeze effects
+    this.counterFreezeEffects = this.counterFreezeEffects.filter(effect => {
+      effect.remainingTime -= delta;
+      return effect.remainingTime > 0 && effect.remainingTriggers > 0;
     });
   }
 
@@ -686,6 +687,72 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     return this.reflectEffects.length > 0;
   }
 
+  /**
+   * 添加反击伤害效果（火焰反击）
+   */
+  addCounterDamageEffect(effect: { value: number; duration: number; maxTriggers: number }): void {
+    this.counterDamageEffects.push({
+      value: effect.value,
+      remainingTriggers: effect.maxTriggers,
+      duration: effect.duration,
+      remainingTime: effect.duration,
+    });
+  }
+
+  /**
+   * 检查是否有反击伤害效果
+   */
+  hasCounterDamage(): boolean {
+    return this.counterDamageEffects.some(e => e.remainingTriggers > 0);
+  }
+
+  /**
+   * 触发并消耗反击伤害效果
+   * @returns 反击伤害值，如果没有可用的则返回0
+   */
+  triggerCounterDamage(): number {
+    for (const effect of this.counterDamageEffects) {
+      if (effect.remainingTriggers > 0) {
+        effect.remainingTriggers--;
+        return effect.value;
+      }
+    }
+    return 0;
+  }
+
+  /**
+   * 添加反击冻结效果（冰霜屏障）
+   */
+  addCounterFreezeEffect(effect: { duration: number; effectDuration: number; maxTriggers: number }): void {
+    this.counterFreezeEffects.push({
+      duration: effect.duration,
+      remainingTriggers: effect.maxTriggers,
+      effectDuration: effect.effectDuration,
+      remainingTime: effect.effectDuration,
+    });
+  }
+
+  /**
+   * 检查是否有反击冻结效果
+   */
+  hasCounterFreeze(): boolean {
+    return this.counterFreezeEffects.some(e => e.remainingTriggers > 0);
+  }
+
+  /**
+   * 触发并消耗反击冻结效果
+   * @returns 冻结持续时间（毫秒），如果没有可用的则返回0
+   */
+  triggerCounterFreeze(): number {
+    for (const effect of this.counterFreezeEffects) {
+      if (effect.remainingTriggers > 0) {
+        effect.remainingTriggers--;
+        return effect.duration;
+      }
+    }
+    return 0;
+  }
+
   heal(amount: number): void {
     const oldHp = this.stats.currentHp;
     this.stats.currentHp = Math.min(
@@ -720,6 +787,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.statusEffectTickTimers.clear();
     this.shieldValue = 0;
     this.isInvincible = false;
+    this.reflectEffects = [];
+    this.counterDamageEffects = [];
+    this.counterFreezeEffects = [];
     this.initializeElementResistance();
     this.updateVisualTint();
 

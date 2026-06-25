@@ -63,13 +63,13 @@ export class ArcLightningVisualStrategy implements VisualEffectStrategy {
 
 /**
  * 电荷积累策略 - 叠加机制
- * 对范围内敌人施加电荷，3层时爆发大量伤害
+ * 对范围内敌人施加电荷，2层时爆发大量伤害
  */
 export class StaticFieldStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
     const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
     const range = skill.rangeValue;
-    const maxStacks = 3;
+    const maxStacks = 2;
     const enemies = findEnemiesInRange(player.x, player.y, range);
     if (enemies.length === 0) return;
 
@@ -210,85 +210,88 @@ export class ShadowStepVisualStrategy implements VisualEffectStrategy {
 }
 
 /**
- * 火焰射线策略 - 持续射线伤害
- * 持续2秒跟踪最近敌人的火焰射线
+ * 聚焦灼烧策略 - 单体高伤害，命中附加燃烧
+ * 锁定最近敌人，造成一次性高伤害并附加持续燃烧
  */
 export class IgniteStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
     const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
     const range = skill.rangeValue;
-    const duration = 2000;
-    const tickInterval = 150;
-    const rayWidth = 30;
 
-    const ray = scene.add.graphics();
-    ray.setDepth(40);
+    // 找最近的敌人作为目标
+    const enemies = findEnemiesInRange(player.x, player.y, range);
+    if (enemies.length === 0) return;
 
-    let elapsed = 0;
-    const rayTimer = scene.time.addEvent({
-      delay: tickInterval,
-      callback: () => {
-        elapsed += tickInterval;
-        if (elapsed >= duration) {
-          rayTimer.destroy();
-          ray.destroy();
-          return;
-        }
+    let target: Enemy | null = null;
+    let minDist = Infinity;
+    for (const enemy of enemies) {
+      const dist = Phaser.Math.Distance.Between(player.x, player.y, enemy.x, enemy.y);
+      if (dist < minDist) {
+        minDist = dist;
+        target = enemy;
+      }
+    }
 
-        // 找最近敌人
-        const enemies = findEnemiesInRange(player.x, player.y, range + 100);
-        let currentTarget: Enemy | null = null;
-        let minDist = Infinity;
-        for (const enemy of enemies) {
-          const dist = Phaser.Math.Distance.Between(player.x, player.y, enemy.x, enemy.y);
-          if (dist < minDist) {
-            minDist = dist;
-            currentTarget = enemy;
-          }
-        }
+    if (!target) return;
 
-        const targetAngle = currentTarget
-          ? Phaser.Math.Angle.Between(player.x, player.y, currentTarget.x, currentTarget.y)
-          : 0;
+    // 计算目标角度
+    const targetAngle = Phaser.Math.Angle.Between(player.x, player.y, target.x, target.y);
 
-        ray.clear();
-        ray.lineStyle(rayWidth, 0xff4400, 0.6);
-        ray.lineBetween(
-          player.x, player.y,
-          player.x + Math.cos(targetAngle) * range,
-          player.y + Math.sin(targetAngle) * range
-        );
+    // 创建聚焦光束视觉效果
+    const beam = scene.add.graphics();
+    beam.setDepth(40);
 
-        // 对射线上的敌人造成伤害
-        const enemiesInRange = findEnemiesInRange(player.x, player.y, range);
-        for (const enemy of enemiesInRange) {
-          const enemyAngle = Phaser.Math.Angle.Between(player.x, player.y, enemy.x, enemy.y);
-          const angleDiff = Math.abs(Phaser.Math.Angle.Wrap(enemyAngle - targetAngle));
-          if (angleDiff < 0.2) {
-            applyDamageToEnemy(enemy, damage, skill);
-          }
-        }
+    // 绘制聚焦光束（更粗、更亮）
+    beam.lineStyle(40, 0xff6600, 0.9);
+    beam.lineBetween(player.x, player.y, target.x, target.y);
+
+    // 添加命中闪光效果
+    const hitFlash = scene.add.circle(target.x, target.y, 30, 0xff8800, 0.8);
+    hitFlash.setDepth(41);
+
+    // 对目标造成高伤害（一次性）
+    applyDamageToEnemy(target, damage, skill);
+
+    // 光束快速消散
+    scene.tweens.add({
+      targets: [beam, hitFlash],
+      alpha: 0,
+      scaleX: 2,
+      scaleY: 2,
+      duration: 300,
+      onComplete: () => {
+        beam.destroy();
+        hitFlash.destroy();
       },
-      repeat: Math.floor(duration / tickInterval) - 1,
     });
   }
 }
 
 /**
- * 火焰射线视觉效果策略
+ * 聚焦灼烧视觉效果策略
  */
 export class IgniteVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    const ray = scene.add.graphics();
-    ray.lineStyle(30, 0xff4400, 0.6);
-    ray.lineBetween(x, y, x + radius, y);
-    ray.setDepth(40);
+    // 聚焦光束效果
+    const beam = scene.add.graphics();
+    beam.lineStyle(40, 0xff6600, 0.9);
+    beam.lineBetween(x, y, x + radius, y);
+    beam.setDepth(40);
+
+    // 命中点闪光
+    const hitFlash = scene.add.circle(x + radius, y, 30, 0xff8800, 0.8);
+    hitFlash.setDepth(41);
 
     scene.tweens.add({
-      targets: ray,
+      targets: [beam, hitFlash],
       alpha: 0,
-      duration: 2000,
-      onComplete: () => ray.destroy(),
+      scaleX: 2,
+      scaleY: 2,
+      duration: 300,
+      onComplete: () => {
+        beam.destroy();
+        hitFlash.destroy();
+      },
     });
   }
 }

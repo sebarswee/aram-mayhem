@@ -7,7 +7,15 @@ import { SkillEffects } from '@/graphics/SkillEffects';
 import { ElementSystem } from '@/systems/ElementSystem';
 import { specialBehaviorRegistry } from '@/systems/SpecialBehaviorRegistry';
 import { getCounterBonus, ELEMENT_COLORS as DATA_ELEMENT_COLORS } from '@/data/elements';
-import { skillStrategyRegistry, SkillExecutionContext, synergyStrategyRegistry, SynergyExecutionContext } from '@/strategies';
+import {
+  skillStrategyRegistry,
+  SkillExecutionContext,
+  synergyStrategyRegistry,
+  SynergyExecutionContext,
+  statusEffectStrategyRegistry,
+  StatusEffectExecutionContext,
+  buffSkillStrategyRegistry,
+} from '@/strategies';
 
 // 元素颜色映射 (all 8 elements)
 const ELEMENT_COLORS: Record<string, number> = {
@@ -595,6 +603,10 @@ export class SkillSystem {
    * 释放增益技能
    */
   private castBuff(skill: Skill): void {
+    // 计算基础伤害
+    const baseDamage = skill.damage + this.player.stats.attack;
+    const { damage } = this.calculateDamage(baseDamage);
+
     // 处理护盾效果
     const shieldEffect = skill.effects.find(e => e.type === 'shield');
     if (shieldEffect) {
@@ -648,47 +660,35 @@ export class SkillSystem {
       });
     }
 
-    // 特殊技能效果
-    if (skill.id === 'purify') {
-      // 净化：清除负面状态
-      this.player.clearDebuffs();
-    }
-
-    if (skill.id === 'halo') {
-      // 光环：持续治疗
-      this.createHaloEffect(skill);
-    }
-
-    if (skill.id === 'blessing') {
-      // 祝福：提升攻击力和暴击
-      this.player.addStatusEffect({
-        type: 'attack_boost',
-        value: 0.3,
-        duration: 10000,
+    // 处理反击伤害效果（火焰反击）
+    const counterDamageEffect = skill.effects.find(e => e.type === 'counter_damage');
+    if (counterDamageEffect) {
+      this.player.addCounterDamageEffect({
+        value: counterDamageEffect.value,
+        duration: counterDamageEffect.duration || 10000,
+        maxTriggers: 5,
       });
     }
 
-    if (skill.id === 'sanctuary') {
-      // 圣域：无敌+持续治疗
-      this.player.isInvincible = true;
-      this.scene.time.delayedCall(3000, () => {
-        this.player.isInvincible = false;
+    // 处理反击冻结效果（冰霜屏障）
+    const counterFreezeEffect = skill.effects.find(e => e.type === 'counter_freeze');
+    if (counterFreezeEffect) {
+      this.player.addCounterFreezeEffect({
+        duration: counterFreezeEffect.value,
+        effectDuration: counterFreezeEffect.duration || 8000,
+        maxTriggers: 3,
       });
-      this.createHaloEffect(skill);
     }
 
-    if (skill.id === 'earth_guardian') {
-      // 大地守护：巨大护盾
-      const guardian = this.scene.add.circle(this.player.x, this.player.y, 50, 0xaa8844, 0.4);
-      guardian.setStrokeStyle(3, 0xaa8844, 0.9);
-      guardian.setDepth(48);
-      this.scene.tweens.add({
-        targets: guardian,
-        alpha: 0,
-        scale: 1.5,
-        duration: 2000,
-        onComplete: () => guardian.destroy(),
-      });
+    // 使用策略模式处理特殊Buff技能
+    if (buffSkillStrategyRegistry.hasStrategy(skill.id)) {
+      const context = {
+        scene: this.scene,
+        player: this.player,
+        skill,
+        damage,
+      };
+      buffSkillStrategyRegistry.execute(skill.id, context);
     }
   }
 
@@ -973,112 +973,28 @@ export class SkillSystem {
   }
 
   /**
-   * Apply skill effects to enemy using enemy's addStatusEffect method
+   * Apply skill effects to enemy using status effect strategies
    */
   private applyEffects(enemy: Enemy, effects: Skill['effects']): void {
     for (const effect of effects) {
-      switch (effect.type) {
-        case 'burn':
-          enemy.addStatusEffect({
-            type: 'burn',
-            value: effect.value,
-            duration: effect.duration || 3000,
-            remainingTime: effect.duration || 3000,
-            source: 'skill',
-          });
-          break;
+      // 跳过已在伤害计算阶段处理的类型
+      if (effect.type === 'damage') {
+        continue; // 基础伤害已在 applyDamageToEnemy 中处理
+      }
 
-        case 'freeze':
-          enemy.addStatusEffect({
-            type: 'freeze',
-            value: 0,
-            duration: effect.duration || 1000,
-            remainingTime: effect.duration || 1000,
-            source: 'skill',
-          });
-          break;
+      // 创建执行上下文
+      const context: StatusEffectExecutionContext = {
+        scene: this.scene,
+        player: this.player,
+        enemy,
+      };
 
-        case 'stun':
-          enemy.addStatusEffect({
-            type: 'stun',
-            value: 0,
-            duration: effect.duration || 1000,
-            remainingTime: effect.duration || 1000,
-            source: 'skill',
-          });
-          break;
-
-        case 'poison':
-          enemy.addStatusEffect({
-            type: 'poison',
-            value: effect.value,
-            duration: effect.duration || 3000,
-            remainingTime: effect.duration || 3000,
-            source: 'skill',
-          });
-          break;
-
-        case 'slow':
-          enemy.addStatusEffect({
-            type: 'slow',
-            value: effect.value, // value is the slow percentage (e.g., 0.3 = 30% slow)
-            duration: effect.duration || 2000,
-            remainingTime: effect.duration || 2000,
-            source: 'skill',
-          });
-          break;
-
-        case 'knockback':
-          // 击退效果 - 立即生效
-          const player = this.player;
-          const angle = Phaser.Math.Angle.Between(
-            player.x,
-            player.y,
-            enemy.x,
-            enemy.y
-          );
-          const knockbackDistance = effect.value || 100;
-          enemy.x += Math.cos(angle) * knockbackDistance;
-          enemy.y += Math.sin(angle) * knockbackDistance;
-          break;
-
-        case 'damage':
-          // damage 效果已在投射物命中或范围技能中处理，这里不需要额外处理
-          break;
-
-        case 'heal':
-          // 治疗效果 - 恢复玩家生命
-          this.player.heal(effect.value || 10);
-          break;
-
-        case 'shield':
-          // 护盾效果 - 给玩家添加护盾
-          this.player.addShield(effect.value || 50);
-          break;
-
-        case 'defense_break':
-          // 降低敌人防御 - 使其受到更多伤害
-          enemy.addStatusEffect({
-            type: 'defense_break',
-            value: effect.value || 0.3, // 30%额外伤害
-            duration: effect.duration || 5000,
-            remainingTime: effect.duration || 5000,
-            source: 'skill',
-          });
-          break;
-
-        case 'damage_reflect':
-          // 反弹伤害 - 给玩家添加反弹状态
-          this.player.addReflectEffect({
-            value: effect.value || 0.3, // 反弹30%伤害
-            duration: effect.duration || 8000,
-          });
-          break;
-
-        default:
-          // 其他效果暂不处理
-          console.warn(`[SkillSystem] Unknown effect type: ${effect.type}`);
-          break;
+      // 尝试使用策略模式
+      if (statusEffectStrategyRegistry.hasStrategy(effect.type)) {
+        statusEffectStrategyRegistry.execute(effect, context);
+      } else {
+        // 未知效果
+        console.warn(`[SkillSystem] Unknown effect type: ${effect.type}`);
       }
     }
   }
@@ -1591,7 +1507,7 @@ export class SkillSystem {
    */
   private castAbsoluteZero(skill: Skill, damage: number): void {
     const radius = skill.rangeValue;
-    const executeThreshold = 0.15; // 15%血量以下秒杀
+    const executeThreshold = 0.10; // 10%血量以下秒杀
 
     // 极寒视觉效果
     const freeze = this.scene.add.circle(this.player.x, this.player.y, radius, 0x88ffff, 0.5);
@@ -2286,7 +2202,7 @@ export class SkillSystem {
    */
   private castChargeAccumulate(skill: Skill, damage: number): void {
     const range = skill.rangeValue;
-    const maxStacks = 3;
+    const maxStacks = 2;
     const enemies = this.findEnemiesInRange(this.player.x, this.player.y, range);
     if (enemies.length === 0) return;
 

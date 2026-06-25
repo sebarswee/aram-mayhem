@@ -5,6 +5,7 @@ import Phaser from 'phaser';
 import { Skill, SkillEffect } from '@/types';
 import { Projectile, ProjectileConfig } from '@/entities/Projectile';
 import { Enemy } from '@/entities/Enemy';
+import { specialBehaviorConfigRegistry } from '@/strategies';
 
 /**
  * 特殊行为类型定义
@@ -281,70 +282,9 @@ export class SpecialBehaviorRegistry {
     for (const behavior of skill.specialBehaviors) {
       const parsed = this.parseBehavior(behavior);
 
-      switch (parsed.id) {
-        case 'pierce':
-          config.pierceCount = (config.pierceCount || 0) + (parsed.value || 1);
-          break;
-
-        case 'split':
-          config.splitCount = parsed.value || 2;
-          break;
-
-        case 'chain':
-          config.chainRemaining = parsed.value || 3;
-          config.chainRange = config.chainRange || 150;
-          config.chainDamageDecay = config.chainDamageDecay || 0.8;
-          break;
-
-        case 'chain_add':
-          config.chainRemaining = (config.chainRemaining || 0) + (parsed.value || 1);
-          break;
-
-        case 'chain_decay':
-          config.chainDamageDecay = parsed.value || 0.9;
-          break;
-
-        case 'chain_range':
-          config.chainRange = (config.chainRange || 150) * (parsed.value || 1);
-          break;
-
-        case 'homing':
-          config.isHoming = true;
-          break;
-
-        case 'instant_hit':
-          config.isInstant = true;
-          break;
-
-        case 'explode_on_hit':
-          config.explodeOnHit = true;
-          config.explodeRadius = 80;
-          config.explodeDamage = 1.0; // 爆炸造成100%伤害
-          break;
-
-        case 'leave_slow_field':
-          config.leaveSlowField = true;
-          config.slowFieldValue = 0.5;
-          config.slowFieldDuration = 3000;
-          break;
-
-        case 'shatter':
-          config.shatterMultiplier = parsed.value || 1.5;
-          break;
-
-        // multicast 和 rapid_fire 在 SkillSystem 中处理
-        case 'multicast':
-        case 'rapid_fire':
-          // 这些行为在 SkillSystem.castProjectile 中处理
-          break;
-
-        // 以下行为需要特殊系统处理（area_blizzard, meteor_fall 等）
-        case 'area_blizzard':
-        case 'meteor_fall':
-        case 'summon_lightning_storm':
-        case 'arc_between_targets':
-          // 这些需要特殊的投射物行为，暂时跳过
-          break;
+      // 使用策略模式
+      if (specialBehaviorConfigRegistry.hasStrategy(parsed.id)) {
+        specialBehaviorConfigRegistry.apply(parsed.id, config, parsed);
       }
     }
   }

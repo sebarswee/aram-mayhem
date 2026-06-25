@@ -29,7 +29,9 @@
       "Bash(head -1383 src/graphics/GraphicsFactory.ts)",
       "Bash(tail -n +1386 src/graphics/GraphicsFactory.ts)",
       "Bash(mv /tmp/GraphicsFactory_fixed.ts src/graphics/GraphicsFactory.ts)",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(awk -F: '{print $1}')",
+      "Bash(awk -F\"'\" '{print $2}')"
     ]
   }
 }

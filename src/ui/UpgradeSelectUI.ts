@@ -409,7 +409,7 @@ export class UpgradeSelectUI {
       projectile_count_1: '🎯',
       projectile_count_2: '🎯',
       burn_add: '🔥',
-      freeze_add: '❄️',
+      frost_add: '❄️',
       chain_add: '⚡',
       poison_add: '☠️',
     };

@@ -66,10 +66,10 @@ export const SKILLS: Record<string, Skill> = {
     element: 'water',
     category: 'projectile',
     cooldown: 1200,
-    damage: 12,
+    damage: 15,
     rangeValue: 350,
     speed: 320,
-    effects: [{ type: 'damage', value: 12 }, { type: 'slow', value: 0.3, duration: 2000 }],
+    effects: [{ type: 'damage', value: 15 }, { type: 'slow', value: 0.3, duration: 2000 }],
   }),
 
   tidal_wave: createSkill({
@@ -256,15 +256,18 @@ export const SKILLS: Record<string, Skill> = {
 
   stone_skin: createSkill({
     id: 'stone_skin',
-    name: '石肤术',
-    description: '获得护盾并提升防御',
+    name: '岩石壁垒',
+    description: '在前方召唤岩石墙阻挡敌人，自身获得护盾',
     type: 'basic',
     element: 'earth',
-    category: 'buff',
-    cooldown: 12000,
+    category: 'area',  // 改为 area 类别（召唤障碍物）
+    cooldown: 10000,
     damage: 0,
-    rangeValue: 0,
-    effects: [{ type: 'shield', value: 30 }],
+    rangeValue: 120,  // 岩石墙距离
+    effects: [
+      { type: 'shield', value: 40 },  // 自身护盾
+      { type: 'barrier', value: 3000 },  // 岩石墙持续3秒
+    ],
   }),
 
   seismic_wave: createSkill({
@@ -282,32 +285,35 @@ export const SKILLS: Record<string, Skill> = {
 
   // ===== 新增基础技能 =====
 
-  // 火 - 火焰射线
+  // 火 - 聚焦灼烧（单体高伤害，命中附加燃烧）
   ignite: createSkill({
     id: 'ignite',
-    name: '火焰射线',
-    description: '发射持续火焰射线，灼烧路径上敌人',
+    name: '聚焦灼烧',
+    description: '聚焦火焰灼烧单体目标，命中后附加持续燃烧',
     type: 'basic',
     element: 'fire',
     category: 'area',
-    cooldown: 3500,
-    damage: 6,
+    cooldown: 2500,
+    damage: 25,
     rangeValue: 300,
-    effects: [{ type: 'damage', value: 6 }, { type: 'burn', value: 12, duration: 4000 }],
+    effects: [{ type: 'damage', value: 25 }, { type: 'burn', value: 15, duration: 3000 }],
   }),
 
-  // 火 - 火焰护盾
+  // 火 - 火焰反击
   flame_shield: createSkill({
     id: 'flame_shield',
-    name: '火焰护盾',
-    description: '获得护盾，攻击者被灼烧',
+    name: '火焰反击',
+    description: '获得护盾，受击时反弹伤害（最多5次）',
     type: 'basic',
     element: 'fire',
     category: 'buff',
-    cooldown: 15000,
+    cooldown: 12000,
     damage: 0,
     rangeValue: 0,
-    effects: [{ type: 'shield', value: 40 }, { type: 'burn', value: 10, duration: 3000 }],
+    effects: [
+      { type: 'shield', value: 25 },  // 降低护盾值
+      { type: 'counter_damage', value: 20, duration: 10000 },  // 反击伤害
+    ],
   }),
 
   // 水 - 水流冲刺
@@ -352,18 +358,21 @@ export const SKILLS: Record<string, Skill> = {
     effects: [{ type: 'damage', value: 5 }, { type: 'freeze', value: 1, duration: 2000 }],
   }),
 
-  // 冰 - 寒冰护甲
+  // 冰 - 冰霜屏障
   frost_armor: createSkill({
     id: 'frost_armor',
-    name: '寒冰护甲',
-    description: '获得护盾，攻击者被减速',
+    name: '冰霜屏障',
+    description: '获得护盾，受击时冻结攻击者（最多3次）',
     type: 'basic',
     element: 'ice',
     category: 'buff',
-    cooldown: 14000,
+    cooldown: 10000,
     damage: 0,
     rangeValue: 0,
-    effects: [{ type: 'shield', value: 35 }],
+    effects: [
+      { type: 'shield', value: 20 },  // 降低护盾值
+      { type: 'counter_freeze', value: 1000, duration: 8000 },  // 冻结攻击者1秒
+    ],
   }),
 
   // 雷 - 电荷积累
@@ -375,9 +384,9 @@ export const SKILLS: Record<string, Skill> = {
     element: 'lightning',
     category: 'area',
     cooldown: 5500,
-    damage: 8,
+    damage: 12,
     rangeValue: 200,
-    effects: [{ type: 'damage', value: 8 }, { type: 'stun', value: 0, duration: 300 }],
+    effects: [{ type: 'damage', value: 12 }, { type: 'stun', value: 0, duration: 300 }],
   }),
 
   // 雷 - 电磁脉冲
@@ -392,6 +401,34 @@ export const SKILLS: Record<string, Skill> = {
     damage: 20,
     rangeValue: 280,
     effects: [{ type: 'damage', value: 20 }, { type: 'stun', value: 0, duration: 600 }],
+  }),
+
+  // 雷 - 雷电聚焦（单体高伤害）
+  lightning_focus: createSkill({
+    id: 'lightning_focus',
+    name: '雷电聚焦',
+    description: '凝聚雷电之力，对单体敌人造成高额伤害并麻痹',
+    type: 'basic',
+    element: 'lightning',
+    category: 'projectile',
+    cooldown: 3000,
+    damage: 45,
+    rangeValue: 250,
+    effects: [{ type: 'damage', value: 45 }, { type: 'stun', value: 1.5, duration: 1500 }],
+  }),
+
+  // 雷 - 电场（区域持续麻痹）
+  electric_field: createSkill({
+    id: 'electric_field',
+    name: '电场',
+    description: '在当前位置创建电场，区域内敌人持续麻痹并受到低额伤害',
+    type: 'basic',
+    element: 'lightning',
+    category: 'area',
+    cooldown: 4000,
+    damage: 5,
+    rangeValue: 150,
+    effects: [{ type: 'damage', value: 5 }, { type: 'stun', value: 0.5, duration: 500 }],
   }),
 
   // 光 - 光环
@@ -460,10 +497,10 @@ export const SKILLS: Record<string, Skill> = {
     element: 'grass',
     category: 'projectile',
     cooldown: 2200,
-    damage: 18,
+    damage: 22,
     rangeValue: 320,
     speed: 280,
-    effects: [{ type: 'damage', value: 18 }],
+    effects: [{ type: 'damage', value: 22 }],
   }),
 
   // 草 - 荆棘
@@ -528,9 +565,9 @@ export const SKILLS: Record<string, Skill> = {
     element: 'lightning',
     category: 'area',
     cooldown: 18000,
-    damage: 40,
+    damage: 30,
     rangeValue: 400,
-    effects: [{ type: 'damage', value: 40 }, { type: 'stun', value: 0, duration: 300 }],
+    effects: [{ type: 'damage', value: 30 }, { type: 'stun', value: 0, duration: 300 }],
   }),
 
   holy_judgment: createSkill({
@@ -601,11 +638,11 @@ export const SKILLS: Record<string, Skill> = {
     effects: [{ type: 'damage', value: 65 }, { type: 'burn', value: 20, duration: 6000 }],
   }),
 
-  // 火 - 烈焰风暴
+  // 火 - 烈焰风暴（燃烧扩散机制）
   inferno: createSkill({
     id: 'inferno',
     name: '烈焰风暴',
-    description: '召唤火焰风暴，持续燃烧周围敌人',
+    description: '召唤火焰风暴，燃烧敌人死亡时扩散燃烧到附近敌人',
     type: 'ultimate',
     element: 'fire',
     category: 'area',
@@ -613,6 +650,7 @@ export const SKILLS: Record<string, Skill> = {
     damage: 30,
     rangeValue: 200,
     effects: [{ type: 'damage', value: 30 }, { type: 'burn', value: 12, duration: 8000 }],
+    specialBehaviors: ['burn_spread'],
   }),
 
   // 水 - 深渊漩涡
@@ -652,9 +690,9 @@ export const SKILLS: Record<string, Skill> = {
     element: 'ice',
     category: 'area',
     cooldown: 35000,
-    damage: 100,
+    damage: 80,
     rangeValue: 180,
-    effects: [{ type: 'damage', value: 100 }, { type: 'freeze', value: 1, duration: 5000 }],
+    effects: [{ type: 'damage', value: 80 }, { type: 'freeze', value: 1, duration: 4000 }],
   }),
 
   // 雷 - 雷霆万钧
@@ -794,7 +832,7 @@ export const SKILLS: Record<string, Skill> = {
     enhancements: [],
     evolutions: [],
     baseValues: { damage: 0, range: 0, cooldown: 0, projectileCount: 0 },
-    passiveEffect: { type: 'lifesteal', value: 0.05 },
+    passiveEffect: { type: 'lifesteal', value: 0.08 },
   },
 
   tough_body: {
@@ -838,7 +876,7 @@ export const SKILLS: Record<string, Skill> = {
     enhancements: [],
     evolutions: [],
     baseValues: { damage: 0, range: 0, cooldown: 0, projectileCount: 0 },
-    passiveEffect: { type: 'dodge', value: 0.08 },
+    passiveEffect: { type: 'dodge', value: 0.12 },
   },
 
   // 输出类
@@ -1084,7 +1122,7 @@ export const SKILLS: Record<string, Skill> = {
     enhancements: [],
     evolutions: [],
     baseValues: { damage: 0, range: 0, cooldown: 0, projectileCount: 0 },
-    passiveEffect: { type: 'regen', value: 2 },
+    passiveEffect: { type: 'regen', value: 3 },
   },
 
   vengeance_soul: {
