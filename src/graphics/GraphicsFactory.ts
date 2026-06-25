@@ -33,14 +33,21 @@ export class GraphicsFactory {
   }
 
   /**
-   * 创建玩家精灵 - 像素风格角色
+   * 创建玩家精灵 - 像素风格角色（增强版）
    */
   private createPlayerSprite(): void {
     const size = 48;
     const graphics = this.scene.add.graphics();
 
+    // 外发光边缘
+    graphics.lineStyle(2, 0x66ccff, 0.5);
+    graphics.strokeCircle(size / 2, size / 2, 20);
+
     // 身体主体 - 深蓝色斗篷
     this.drawPixelCircle(graphics, size / 2, size / 2, 16, 0x2d4a6f);
+
+    // 中层 - 蓝色过渡
+    this.drawPixelCircle(graphics, size / 2, size / 2, 14, 0x3a5d8a);
 
     // 内层 - 浅蓝色
     this.drawPixelCircle(graphics, size / 2, size / 2, 12, 0x4a7db8);
@@ -48,14 +55,23 @@ export class GraphicsFactory {
     // 头部
     this.drawPixelCircle(graphics, size / 2, size / 2 - 4, 8, 0xffdbac);
 
+    // 头部高光
+    graphics.fillStyle(0xffffff, 0.3);
+    graphics.fillRect(size / 2 - 3, size / 2 - 10, 6, 2);
+
     // 眼睛
     graphics.fillStyle(0x1a1a2e, 1);
     graphics.fillRect(size / 2 - 4, size / 2 - 6, 2, 2);
     graphics.fillRect(size / 2 + 2, size / 2 - 6, 2, 2);
 
-    // 发光光环
-    graphics.lineStyle(2, 0x66ccff, 0.8);
-    graphics.strokeCircle(size / 2, size / 2, 18);
+    // 眼睛高光
+    graphics.fillStyle(0xffffff, 0.7);
+    graphics.fillRect(size / 2 - 4, size / 2 - 7, 1, 1);
+    graphics.fillRect(size / 2 + 2, size / 2 - 7, 1, 1);
+
+    // 内部发光光环
+    graphics.lineStyle(1, 0x88ddff, 0.4);
+    graphics.strokeCircle(size / 2, size / 2, 16);
 
     graphics.generateTexture('player', size, size);
     graphics.destroy();
@@ -133,19 +149,31 @@ export class GraphicsFactory {
   }
 
   /**
-   * 史莱姆精灵
+   * 史莱姆精灵（增强版）
    */
   private createSlimeSprite(key: string, color: number): void {
     const size = 40;
     const graphics = this.scene.add.graphics();
 
+    // 底部阴影
+    graphics.fillStyle(0x000000, 0.15);
+    graphics.fillEllipse(size / 2, size / 2 + 8, 30, 10);
+
     // 身体 - 椭圆形
     graphics.fillStyle(color, 1);
     graphics.fillEllipse(size / 2, size / 2 + 4, 32, 24);
 
+    // 身体暗部
+    graphics.fillStyle(this.darken(color, 0.25), 0.4);
+    graphics.fillEllipse(size / 2, size / 2 + 6, 26, 12);
+
     // 高光
-    graphics.fillStyle(0xffffff, 0.4);
-    graphics.fillEllipse(size / 2 - 6, size / 2 - 2, 8, 6);
+    graphics.fillStyle(0xffffff, 0.45);
+    graphics.fillEllipse(size / 2 - 6, size / 2 - 2, 10, 7);
+
+    // 次高光
+    graphics.fillStyle(0xffffff, 0.25);
+    graphics.fillEllipse(size / 2 + 4, size / 2, 5, 4);
 
     // 眼睛
     graphics.fillStyle(0x111111, 1);

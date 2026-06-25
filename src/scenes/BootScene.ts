@@ -118,9 +118,8 @@ export class BootScene extends Phaser.Scene {
         this.loadingText.setText('正在生成像素素材...');
         // 检查纹理是否已存在，避免重复生成
         if (!this.textures.exists('player')) {
-          // 使用增强版图形工厂
-          const enhancedFactory = new EnhancedGraphicsFactory(this);
-          enhancedFactory.generateEnhanced();
+          const graphicsFactory = new GraphicsFactory(this);
+          graphicsFactory.generateAll();
         }
       }
 
