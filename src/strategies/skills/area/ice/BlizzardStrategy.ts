@@ -14,13 +14,15 @@ export class BlizzardStrategy implements SkillStrategy {
     const radius = skill.rangeValue;
     const duration = 3000;
     const tickInterval = 500;
-    let elapsed = 0;
+
+    let tickCount = 0;
+    const maxTicks = Math.floor(duration / tickInterval);
 
     const damageTimer = scene.time.addEvent({
       delay: tickInterval,
       callback: () => {
-        elapsed += tickInterval;
-        if (elapsed >= duration) {
+        tickCount++;
+        if (tickCount > maxTicks) {
           damageTimer.destroy();
           return;
         }
@@ -31,11 +33,15 @@ export class BlizzardStrategy implements SkillStrategy {
           const tickDamage = Math.floor(damage * 0.3);
           applyDamageToEnemy(enemy, tickDamage, skill);
           // 应用冻结效果
-          applyEffects(enemy, skill.effects);
-          applyLifesteal(tickDamage);
+          if (applyEffects && skill.effects) {
+            applyEffects(enemy, skill.effects);
+          }
+          if (applyLifesteal) {
+            applyLifesteal(tickDamage);
+          }
         }
       },
-      repeat: Math.floor(duration / tickInterval) - 1,
+      repeat: maxTicks - 1,
     });
   }
 }
@@ -45,34 +51,55 @@ export class BlizzardStrategy implements SkillStrategy {
  */
 export class BlizzardVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 雪花粒子系统
-    const blizzard = scene.add.particles(x, y, 'particle_ice', {
-      speed: { min: 50, max: 150 },
-      angle: { min: 0, max: 360 },
-      scale: { start: 0.5, end: 0 },
-      alpha: { start: 0.8, end: 0 },
-      lifespan: 1500,
-      frequency: 50,
-      quantity: 2,
-    });
-    blizzard.setDepth(20);
-
     // 霜冻区域
-    const frostZone = scene.add.circle(x, y, radius, 0x88ddff, 0.2);
+    const frostZone = scene.add.circle(x, y, radius, 0x88ddff, 0.25);
     frostZone.setDepth(19);
 
-    // 3秒后停止
-    scene.time.delayedCall(3000, () => {
-      blizzard.stop();
+    // 雪花效果 - 使用简单图形代替粒子系统
+    const snowflakes: Phaser.GameObjects.Arc[] = [];
+    for (let i = 0; i < 15; i++) {
+      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+      const dist = Phaser.Math.FloatBetween(0, radius);
+      const startX = x + Math.cos(angle) * dist;
+      const startY = y + Math.sin(angle) * dist;
+
+      const snowflake = scene.add.circle(startX, startY, Phaser.Math.Between(3, 6), 0xffffff, 0.8);
+      snowflake.setDepth(20);
+      snowflakes.push(snowflake);
+
+      // 雪花飘动动画
       scene.tweens.add({
-        targets: [blizzard, frostZone],
+        targets: snowflake,
+        y: snowflake.y - Phaser.Math.Between(30, 60),
+        x: snowflake.x + Phaser.Math.Between(-20, 20),
         alpha: 0,
-        duration: 500,
+        duration: Phaser.Math.Between(1000, 1500),
+        repeat: 2,
         onComplete: () => {
-          blizzard.destroy();
-          frostZone.destroy();
+          snowflake.destroy();
         },
       });
+    }
+
+    // 脉动效果
+    scene.tweens.add({
+      targets: frostZone,
+      scaleX: 1.1,
+      scaleY: 1.1,
+      alpha: 0.15,
+      duration: 500,
+      yoyo: true,
+      repeat: 5,
+      onComplete: () => {
+        scene.tweens.add({
+          targets: frostZone,
+          alpha: 0,
+          duration: 500,
+          onComplete: () => {
+            frostZone.destroy();
+          },
+        });
+      },
     });
   }
 }
