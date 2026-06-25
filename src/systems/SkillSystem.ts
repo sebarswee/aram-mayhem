@@ -747,58 +747,74 @@ export class SkillSystem {
 
     // 根据技能类型处理伤害
     if (skill.id === 'blizzard') {
-      // 暴风雪：持续伤害
       this.castBlizzard(skill, damage);
     } else if (skill.id === 'thunder_storm') {
-      // 雷霆风暴：随机雷击
-      this.castThunderStorm(skill, damage);
+      // 雷击阵：定点雷击
+      this.castLightningArray(skill, damage);
     } else if (skill.id === 'poison_cloud') {
-      // 毒雾：持续伤害
       this.castPoisonCloud(skill, damage);
     } else if (skill.id === 'black_hole') {
-      // 黑洞：持续伤害
       this.castBlackHole(skill, damage);
     } else if (skill.id === 'time_stop') {
-      // 时间停止：范围眩晕
       this.castTimeStop(skill, damage);
     } else if (skill.id === 'holy_light') {
-      // 神圣之光：伤害+治疗
       this.castHolyLight(skill, damage);
     } else if (skill.id === 'ground_spike') {
-      // 地刺：伤害+击退
       this.castGroundSpike(skill, damage);
+    } else if (skill.id === 'flame_wave') {
+      // 火焰喷射：锥形范围
+      this.castFlameSpray(skill, damage);
+    } else if (skill.id === 'tidal_wave') {
+      // 水波推进：方向性波浪
+      this.castWavePush(skill, damage);
+    } else if (skill.id === 'frost_nova') {
+      // 冰晶爆发：多方向穿透
+      this.castIceCrystalBurst(skill, damage);
+    } else if (skill.id === 'curse_aura') {
+      // 诅咒链：链式传播
+      this.castCurseChain(skill, damage);
+    } else if (skill.id === 'rock_spike') {
+      // 地刺陷阱：陷阱机制
+      this.castSpikeTrap(skill, damage);
+    } else if (skill.id === 'sandstorm') {
+      // 流沙陷阱：持续陷阱
+      this.castQuicksandTrap(skill, damage);
+    } else if (skill.id === 'static_field') {
+      // 电荷积累：叠加机制
+      this.castChargeAccumulate(skill, damage);
+    } else if (skill.id === 'arc_lightning') {
+      // 电磁脉冲：环形扩散
+      this.castEMPPulse(skill, damage);
+    } else if (skill.id === 'shadow_step') {
+      // 暗影分身：分身机制
+      this.castShadowClone(skill, damage);
+    } else if (skill.id === 'seismic_wave') {
+      // 地裂线：直线地裂
+      this.castGroundCrackLine(skill, damage);
+    } else if (skill.id === 'ignite') {
+      // 火焰射线：持续射线
+      this.castFlameRay(skill, damage);
     } else if (skill.id === 'dragon_breath') {
-      // 炎龙吐息：扇形持续火焰
       this.castDragonBreath(skill, damage);
     } else if (skill.id === 'inferno') {
-      // 烈焰风暴：持续燃烧区域
       this.castInferno(skill, damage);
     } else if (skill.id === 'abyss_vortex') {
-      // 深渊漩涡：持续吸引
       this.castAbyssVortex(skill, damage);
     } else if (skill.id === 'frozen_domain') {
-      // 冰封领域：持续冻结
       this.castFrozenDomain(skill, damage);
     } else if (skill.id === 'absolute_zero') {
-      // 绝对零度：秒杀低血量
       this.castAbsoluteZero(skill, damage);
     } else if (skill.id === 'thunder_apocalypse') {
-      // 雷霆万钧：全屏连锁雷击
       this.castThunderApocalypse(skill, damage);
     } else if (skill.id === 'judgment_light') {
-      // 审判之光：伤害+治疗
       this.castJudgmentLight(skill, damage);
     } else if (skill.id === 'shadow_descent') {
-      // 暗影降临：降防+持续伤害
       this.castShadowDescent(skill, damage);
     } else if (skill.id === 'death_decay') {
-      // 死亡凋零：持续吸血
       this.castDeathDecay(skill, damage);
     } else if (skill.id === 'mountain_collapse') {
-      // 山崩地裂：范围伤害+击飞
       this.castMountainCollapse(skill, damage);
     } else if (skill.id === 'meteor') {
-      // 陨石坠落：大范围爆炸
       this.castMeteor(skill, damage);
     } else if (skill.id === 'tsunami') {
       // 海啸：全屏推开
@@ -2264,6 +2280,572 @@ export class SkillSystem {
           enemy.y += Math.sin(angle) * 25;
           // 伤害
           this.applyDamageToEnemy(enemy, Math.floor(damage * 0.25), skill);
+        }
+      },
+      repeat: Math.floor(duration / tickInterval) - 1,
+    });
+  }
+
+  // ==================== 新差异化技能实现 ====================
+
+  /**
+   * 火焰喷射 - 锥形范围持续伤害
+   */
+  private castFlameSpray(skill: Skill, damage: number): void {
+    const coneAngle = Math.PI / 3;
+    const range = skill.rangeValue;
+    const duration = 1500;
+    const tickInterval = 200;
+
+    const cone = this.scene.add.graphics();
+    cone.fillStyle(0xff4400, 0.4);
+    cone.beginPath();
+    cone.moveTo(this.player.x, this.player.y);
+    cone.arc(this.player.x, this.player.y, range, -coneAngle / 2, coneAngle / 2);
+    cone.closePath();
+    cone.fill();
+    cone.setDepth(25);
+
+    let elapsed = 0;
+    const sprayTimer = this.scene.time.addEvent({
+      delay: tickInterval,
+      callback: () => {
+        elapsed += tickInterval;
+        if (elapsed >= duration) {
+          sprayTimer.destroy();
+          cone.destroy();
+          return;
+        }
+        const enemies = this.findEnemiesInRange(this.player.x, this.player.y, range);
+        for (const enemy of enemies) {
+          const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, enemy.x, enemy.y);
+          if (Math.abs(angle) < coneAngle / 2) {
+            this.applyDamageToEnemy(enemy, Math.floor(damage * 0.25), skill);
+          }
+        }
+      },
+      repeat: Math.floor(duration / tickInterval) - 1,
+    });
+  }
+
+  /**
+   * 水波推进 - 方向性波浪
+   */
+  private castWavePush(skill: Skill, damage: number): void {
+    const range = skill.rangeValue;
+    const waveSpeed = 300;
+    const waveWidth = 60;
+
+    const target = this.findNearestEnemy(this.findEnemiesInRange(this.player.x, this.player.y, range + 100));
+    if (!target) return;
+
+    const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
+    const wave = this.scene.add.graphics();
+    wave.fillStyle(0x4488ff, 0.6);
+    wave.fillRect(-waveWidth / 2, 0, waveWidth, 50);
+    wave.setPosition(this.player.x, this.player.y);
+    wave.setRotation(angle);
+    wave.setDepth(25);
+
+    let distance = 0;
+    const hitEnemies = new Set<string>();
+    const waveTimer = this.scene.time.addEvent({
+      delay: 50,
+      callback: () => {
+        distance += waveSpeed * 0.05;
+        if (distance >= range) {
+          waveTimer.destroy();
+          wave.destroy();
+          return;
+        }
+        const cx = this.player.x + Math.cos(angle) * distance;
+        const cy = this.player.y + Math.sin(angle) * distance;
+        wave.setPosition(cx, cy);
+        const enemies = this.findEnemiesInRange(cx, cy, waveWidth);
+        for (const enemy of enemies) {
+          if (!hitEnemies.has(enemy.instanceId)) {
+            hitEnemies.add(enemy.instanceId);
+            this.applyDamageToEnemy(enemy, damage, skill);
+            enemy.x += Math.cos(angle) * 30;
+            enemy.y += Math.sin(angle) * 30;
+          }
+        }
+      },
+      repeat: range / (waveSpeed * 0.05),
+    });
+  }
+
+  /**
+   * 冰晶爆发 - 多方向穿透
+   */
+  private castIceCrystalBurst(skill: Skill, damage: number): void {
+    const crystalCount = 8;
+    const range = skill.rangeValue;
+    const angleStep = (Math.PI * 2) / crystalCount;
+    const hitEnemies = new Set<string>();
+
+    for (let i = 0; i < crystalCount; i++) {
+      const angle = angleStep * i;
+      const crystal = this.scene.add.graphics();
+      crystal.fillStyle(0x88ddff, 0.9);
+      crystal.fillTriangle(0, -15, -8, 8, 8, 8);
+      crystal.setPosition(this.player.x, this.player.y);
+      crystal.setRotation(angle);
+      crystal.setDepth(40);
+
+      this.scene.tweens.add({
+        targets: crystal,
+        x: this.player.x + Math.cos(angle) * range,
+        y: this.player.y + Math.sin(angle) * range,
+        alpha: 0.5,
+        duration: 400,
+        onUpdate: () => {
+          const enemies = this.findEnemiesInRange(crystal.x, crystal.y, 20);
+          for (const enemy of enemies) {
+            if (!hitEnemies.has(enemy.instanceId)) {
+              hitEnemies.add(enemy.instanceId);
+              this.applyDamageToEnemy(enemy, damage, skill);
+            }
+          }
+        },
+        onComplete: () => crystal.destroy(),
+      });
+    }
+  }
+
+  /**
+   * 雷击阵 - 定点雷击
+   */
+  private castLightningArray(skill: Skill, damage: number): void {
+    const strikeCount = 3;
+    const range = skill.rangeValue;
+    const enemies = this.findEnemiesInRange(this.player.x, this.player.y, range);
+    const targets = enemies.slice(0, strikeCount);
+
+    targets.forEach((enemy, index) => {
+      const warning = this.scene.add.circle(enemy.x, enemy.y, 30, 0xffff00, 0.3);
+      warning.setDepth(20);
+
+      this.scene.time.delayedCall(500 + index * 200, () => {
+        warning.destroy();
+        const lightning = this.scene.add.graphics();
+        lightning.lineStyle(4, 0xffff00, 1);
+        lightning.lineBetween(enemy.x, enemy.y - 100, enemy.x, enemy.y);
+        lightning.setDepth(100);
+
+        const flash = this.scene.add.circle(enemy.x, enemy.y, 40, 0xffffff, 0.9);
+        flash.setDepth(101);
+
+        if (enemy.active) {
+          this.applyDamageToEnemy(enemy, damage, skill);
+        }
+
+        this.scene.tweens.add({
+          targets: [lightning, flash],
+          alpha: 0,
+          duration: 150,
+          onComplete: () => {
+            lightning.destroy();
+            flash.destroy();
+          },
+        });
+      });
+    });
+  }
+
+  /**
+   * 诅咒链 - 链式传播
+   */
+  private castCurseChain(skill: Skill, damage: number): void {
+    const maxChains = 4;
+    const chainRange = 150;
+
+    const startEnemy = this.findNearestEnemy(
+      this.findEnemiesInRange(this.player.x, this.player.y, skill.rangeValue)
+    );
+    if (!startEnemy) return;
+
+    const hitEnemies = new Set<string>();
+    let currentEnemy = startEnemy;
+    let chainCount = 0;
+
+    while (currentEnemy && chainCount < maxChains) {
+      hitEnemies.add(currentEnemy.instanceId);
+      this.applyDamageToEnemy(currentEnemy, damage, skill);
+
+      const curseEffect = this.scene.add.circle(currentEnemy.x, currentEnemy.y, 20, 0x8800ff, 0.5);
+      curseEffect.setDepth(100);
+      this.scene.tweens.add({
+        targets: curseEffect,
+        alpha: 0,
+        scale: 1.5,
+        duration: 300,
+        onComplete: () => curseEffect.destroy(),
+      });
+
+      const nearbyEnemies = this.findEnemiesInRange(currentEnemy.x, currentEnemy.y, chainRange)
+        .filter(e => !hitEnemies.has(e.instanceId));
+
+      if (nearbyEnemies.length > 0) {
+        const nextEnemy = nearbyEnemies[0];
+        const chain = this.scene.add.graphics();
+        chain.lineStyle(3, 0x8800ff, 0.8);
+        chain.lineBetween(currentEnemy.x, currentEnemy.y, nextEnemy.x, nextEnemy.y);
+        chain.setDepth(99);
+        this.scene.time.delayedCall(200, () => chain.destroy());
+        currentEnemy = nextEnemy;
+        chainCount++;
+      } else {
+        break;
+      }
+    }
+  }
+
+  /**
+   * 地刺陷阱 - 陷阱机制
+   */
+  private castSpikeTrap(skill: Skill, damage: number): void {
+    const trapCount = 3;
+    const trapRadius = skill.rangeValue;
+    const trapDuration = 5000;
+
+    for (let i = 0; i < trapCount; i++) {
+      const angle = (i / trapCount) * Math.PI * 2 + Math.random() * 0.5;
+      const dist = 80 + Math.random() * 60;
+      const trapX = this.player.x + Math.cos(angle) * dist;
+      const trapY = this.player.y + Math.sin(angle) * dist;
+
+      const trap = this.scene.add.circle(trapX, trapY, 25, 0x886644, 0.5);
+      trap.setStrokeStyle(2, 0xaa8866, 0.8);
+      trap.setDepth(20);
+
+      this.scene.tweens.add({
+        targets: trap,
+        scale: 1.2,
+        alpha: 0.7,
+        duration: 500,
+        yoyo: true,
+        repeat: -1,
+      });
+
+      const checkTimer = this.scene.time.addEvent({
+        delay: 100,
+        callback: () => {
+          const enemies = this.findEnemiesInRange(trapX, trapY, trapRadius);
+          if (enemies.length > 0) {
+            checkTimer.destroy();
+            trap.destroy();
+
+            const spikes = this.scene.add.graphics();
+            spikes.fillStyle(0x886644, 1);
+            for (let j = 0; j < 5; j++) {
+              const spikeAngle = (j / 5) * Math.PI * 2;
+              spikes.fillTriangle(
+                trapX + Math.cos(spikeAngle) * 15,
+                trapY + Math.sin(spikeAngle) * 15 - 20,
+                trapX + Math.cos(spikeAngle) * 25 - 5,
+                trapY + Math.sin(spikeAngle) * 25,
+                trapX + Math.cos(spikeAngle) * 25 + 5,
+                trapY + Math.sin(spikeAngle) * 25
+              );
+            }
+            spikes.setDepth(40);
+
+            for (const enemy of enemies) {
+              this.applyDamageToEnemy(enemy, damage, skill);
+            }
+            this.scene.time.delayedCall(300, () => spikes.destroy());
+          }
+        },
+        repeat: trapDuration / 100,
+      });
+
+      this.scene.time.delayedCall(trapDuration, () => {
+        checkTimer.destroy();
+        trap.destroy();
+      });
+    }
+  }
+
+  /**
+   * 流沙陷阱 - 持续陷阱
+   */
+  private castQuicksandTrap(skill: Skill, damage: number): void {
+    const radius = skill.rangeValue;
+    const duration = 4000;
+    const tickInterval = 400;
+
+    const quicksand = this.scene.add.circle(this.player.x, this.player.y, radius, 0x886633, 0.4);
+    quicksand.setDepth(20);
+
+    this.scene.tweens.add({
+      targets: quicksand,
+      angle: 360,
+      duration: 2000,
+      repeat: -1,
+    });
+
+    let elapsed = 0;
+    const trapTimer = this.scene.time.addEvent({
+      delay: tickInterval,
+      callback: () => {
+        elapsed += tickInterval;
+        if (elapsed >= duration) {
+          trapTimer.destroy();
+          quicksand.destroy();
+          return;
+        }
+        const enemies = this.findEnemiesInRange(this.player.x, this.player.y, radius);
+        for (const enemy of enemies) {
+          this.applyDamageToEnemy(enemy, damage, skill);
+          enemy.addStatusEffect({
+            type: 'slow',
+            value: 0.5,
+            duration: 500,
+            remainingTime: 500,
+            source: 'quicksand',
+          });
+        }
+      },
+      repeat: Math.floor(duration / tickInterval) - 1,
+    });
+  }
+
+  /**
+   * 电荷积累 - 叠加机制
+   */
+  private castChargeAccumulate(skill: Skill, damage: number): void {
+    const range = skill.rangeValue;
+    const maxStacks = 3;
+    const enemies = this.findEnemiesInRange(this.player.x, this.player.y, range);
+    if (enemies.length === 0) return;
+
+    const arc = this.scene.add.graphics();
+    arc.lineStyle(2, 0xffff00, 0.8);
+    arc.setDepth(99);
+
+    let prevX = this.player.x;
+    let prevY = this.player.y;
+
+    enemies.forEach((enemy) => {
+      arc.lineBetween(prevX, prevY, enemy.x, enemy.y);
+      prevX = enemy.x;
+      prevY = enemy.y;
+
+      if (!(enemy as any).chargeStacks) (enemy as any).chargeStacks = 0;
+      (enemy as any).chargeStacks++;
+
+      const chargeText = this.scene.add.text(enemy.x, enemy.y - 30, `⚡${(enemy as any).chargeStacks}`, {
+        fontSize: '14px',
+        color: '#ffff00',
+      });
+      chargeText.setOrigin(0.5);
+      chargeText.setDepth(100);
+
+      if ((enemy as any).chargeStacks >= maxStacks) {
+        const burst = this.scene.add.circle(enemy.x, enemy.y, 50, 0xffff00, 0.8);
+        burst.setDepth(101);
+        this.applyDamageToEnemy(enemy, damage * 2, skill);
+        (enemy as any).chargeStacks = 0;
+
+        this.scene.tweens.add({
+          targets: [burst, chargeText],
+          alpha: 0,
+          scale: 1.5,
+          duration: 200,
+          onComplete: () => {
+            burst.destroy();
+            chargeText.destroy();
+          },
+        });
+      } else {
+        this.scene.time.delayedCall(500, () => chargeText.destroy());
+      }
+
+      this.applyDamageToEnemy(enemy, damage * 0.5, skill);
+    });
+
+    this.scene.time.delayedCall(200, () => arc.destroy());
+  }
+
+  /**
+   * 电磁脉冲 - 环形扩散
+   */
+  private castEMPPulse(skill: Skill, damage: number): void {
+    const range = skill.rangeValue;
+    const pulseWidth = 40;
+    const hitEnemies = new Set<string>();
+
+    const pulse = this.scene.add.circle(this.player.x, this.player.y, 20, 0xffff00, 0.6);
+    pulse.setStrokeStyle(4, 0xffffff, 0.8);
+    pulse.setDepth(100);
+
+    this.scene.tweens.add({
+      targets: pulse,
+      radius: range,
+      alpha: 0,
+      duration: 600,
+      onUpdate: () => {
+        const currentRadius = (pulse as any).radius;
+        const enemies = this.findEnemiesInRange(this.player.x, this.player.y, currentRadius + pulseWidth);
+        for (const enemy of enemies) {
+          const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
+          if (dist >= currentRadius - pulseWidth && dist <= currentRadius + pulseWidth) {
+            if (!hitEnemies.has(enemy.instanceId)) {
+              hitEnemies.add(enemy.instanceId);
+              this.applyDamageToEnemy(enemy, damage, skill);
+            }
+          }
+        }
+      },
+      onComplete: () => pulse.destroy(),
+    });
+  }
+
+  /**
+   * 暗影分身 - 分身机制
+   */
+  private castShadowClone(skill: Skill, damage: number): void {
+    const clone = this.scene.add.container(this.player.x, this.player.y);
+    clone.setDepth(40);
+
+    const body = this.scene.add.circle(0, 0, 15, 0x8800ff, 0.7);
+    const glow = this.scene.add.circle(0, 0, 20, 0x6600aa, 0.4);
+    clone.add([glow, body]);
+
+    this.scene.tweens.add({
+      targets: clone,
+      alpha: 0.5,
+      scale: 1.1,
+      duration: 300,
+      yoyo: true,
+      repeat: -1,
+    });
+
+    const cloneDuration = 3000;
+    const attractTimer = this.scene.time.addEvent({
+      delay: 200,
+      callback: () => {
+        const enemies = this.findEnemiesInRange(clone.x, clone.y, 80);
+        for (const enemy of enemies) {
+          const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, clone.x, clone.y);
+          enemy.x += Math.cos(angle) * 10;
+          enemy.y += Math.sin(angle) * 10;
+        }
+      },
+      repeat: cloneDuration / 200 - 1,
+    });
+
+    this.scene.time.delayedCall(cloneDuration, () => {
+      attractTimer.destroy();
+      this.scene.tweens.add({
+        targets: clone,
+        alpha: 0,
+        scale: 0.5,
+        duration: 300,
+        onComplete: () => clone.destroy(),
+      });
+    });
+  }
+
+  /**
+   * 地裂线 - 直线地裂
+   */
+  private castGroundCrackLine(skill: Skill, damage: number): void {
+    const range = skill.rangeValue;
+    const lineWidth = 60;
+    const hitEnemies = new Set<string>();
+
+    const target = this.findNearestEnemy(
+      this.findEnemiesInRange(this.player.x, this.player.y, range + 100)
+    );
+    if (!target) return;
+
+    const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
+
+    const crack = this.scene.add.graphics();
+    crack.fillStyle(0x664422, 0.8);
+    crack.fillRect(0, -lineWidth / 2, range, lineWidth);
+    crack.setPosition(this.player.x, this.player.y);
+    crack.setRotation(angle);
+    crack.setDepth(25);
+
+    crack.setScale(0, 1);
+    this.scene.tweens.add({
+      targets: crack,
+      scaleX: 1,
+      duration: 300,
+      onUpdate: () => {
+        const enemies = this.findEnemiesInRange(this.player.x, this.player.y, range);
+        for (const enemy of enemies) {
+          if (hitEnemies.has(enemy.instanceId)) continue;
+          const enemyAngle = Phaser.Math.Angle.Between(this.player.x, this.player.y, enemy.x, enemy.y);
+          const angleDiff = Math.abs(Phaser.Math.Angle.Wrap(enemyAngle - angle));
+          if (angleDiff < 0.3) {
+            hitEnemies.add(enemy.instanceId);
+            this.applyDamageToEnemy(enemy, damage, skill);
+            enemy.x += Math.cos(angle) * 50;
+            enemy.y += Math.sin(angle) * 50;
+          }
+        }
+      },
+      onComplete: () => {
+        this.scene.tweens.add({
+          targets: crack,
+          alpha: 0,
+          duration: 200,
+          onComplete: () => crack.destroy(),
+        });
+      },
+    });
+  }
+
+  /**
+   * 火焰射线 - 持续射线伤害
+   */
+  private castFlameRay(skill: Skill, damage: number): void {
+    const range = skill.rangeValue;
+    const duration = 2000;
+    const tickInterval = 150;
+    const rayWidth = 30;
+
+    const ray = this.scene.add.graphics();
+    ray.lineStyle(rayWidth, 0xff4400, 0.6);
+    ray.setDepth(40);
+
+    let elapsed = 0;
+    const rayTimer = this.scene.time.addEvent({
+      delay: tickInterval,
+      callback: () => {
+        elapsed += tickInterval;
+        if (elapsed >= duration) {
+          rayTimer.destroy();
+          ray.destroy();
+          return;
+        }
+
+        const currentTarget = this.findNearestEnemy(
+          this.findEnemiesInRange(this.player.x, this.player.y, range + 100)
+        );
+        const targetAngle = currentTarget
+          ? Phaser.Math.Angle.Between(this.player.x, this.player.y, currentTarget.x, currentTarget.y)
+          : 0;
+
+        ray.clear();
+        ray.lineStyle(rayWidth, 0xff4400, 0.6);
+        ray.lineBetween(
+          this.player.x, this.player.y,
+          this.player.x + Math.cos(targetAngle) * range,
+          this.player.y + Math.sin(targetAngle) * range
+        );
+
+        const enemies = this.findEnemiesInRange(this.player.x, this.player.y, range);
+        for (const enemy of enemies) {
+          const enemyAngle = Phaser.Math.Angle.Between(this.player.x, this.player.y, enemy.x, enemy.y);
+          const angleDiff = Math.abs(Phaser.Math.Angle.Wrap(enemyAngle - targetAngle));
+          if (angleDiff < 0.2) {
+            this.applyDamageToEnemy(enemy, damage, skill);
+          }
         }
       },
       repeat: Math.floor(duration / tickInterval) - 1,
