@@ -178,86 +178,14 @@ export class SkillEffects {
       case 'whirlwind':
         this.createWhirlwindEffect(x, y, skill.rangeValue);
         break;
-      case 'meteor':
-        this.createMeteorEffect(x, y, skill.rangeValue);
-        break;
-      case 'ground_spike':
-        this.createGroundSpikeEffect(x, y, skill.rangeValue);
-        break;
       case 'black_hole':
         this.createBlackHoleEffect(x, y, skill.rangeValue);
         break;
       case 'time_stop':
         this.createTimeStopEffect(x, y, skill.rangeValue);
         break;
-      case 'tidal_wave':
-        this.createWavePushEffect(x, y, skill.rangeValue);
-        break;
-      case 'curse_aura':
-        this.createCurseChainEffect(x, y, skill.rangeValue);
-        break;
-      case 'rock_spike':
-        this.createSpikeTrapEffect(x, y, skill.rangeValue);
-        break;
-      case 'sandstorm':
-        this.createQuicksandTrapEffect(x, y, skill.rangeValue);
-        break;
-      case 'static_field':
-        this.createChargeAccumulateEffect(x, y, skill.rangeValue);
-        break;
-      case 'arc_lightning':
-        this.createEMPPulseEffect(x, y, skill.rangeValue);
-        break;
-      case 'shadow_step':
-        this.createShadowCloneEffect(x, y, skill.rangeValue);
-        break;
-      case 'seismic_wave':
-        this.createGroundCrackLineEffect(x, y, skill.rangeValue);
-        break;
-      case 'ignite':
-        this.createFlameRayEffect(x, y, skill.rangeValue);
-        break;
-      case 'thunder_apocalypse':
-        this.createThunderApocalypseEffect(x, y, skill.rangeValue);
-        break;
-      case 'dragon_breath':
-        this.createDragonBreathEffect(x, y, skill.rangeValue);
-        break;
-      case 'inferno':
-        this.createInfernoEffect(x, y, skill.rangeValue);
-        break;
-      case 'abyss_vortex':
-        this.createAbyssVortexEffect(x, y, skill.rangeValue);
-        break;
-      case 'frozen_domain':
-        this.createFrozenDomainEffect(x, y, skill.rangeValue);
-        break;
-      case 'absolute_zero':
-        this.createAbsoluteZeroEffect(x, y, skill.rangeValue);
-        break;
-      case 'judgment_light':
-        this.createJudgmentLightEffect(x, y, skill.rangeValue);
-        break;
-      case 'shadow_descent':
-        this.createShadowDescentEffect(x, y, skill.rangeValue);
-        break;
-      case 'death_decay':
-        this.createDeathDecayEffect(x, y, skill.rangeValue);
-        break;
-      case 'mountain_collapse':
-        this.createMountainCollapseEffect(x, y, skill.rangeValue);
-        break;
-      case 'earthquake':
-        this.createEarthquakeEffect(x, y, skill.rangeValue);
-        break;
-      case 'tsunami':
-        this.createTsunamiEffect(x, y, skill.rangeValue);
-        break;
-      case 'overgrowth':
-        this.createOvergrowthEffect(x, y, skill.rangeValue);
-        break;
-      case 'void_rift':
-        this.createVoidRiftEffect(x, y, skill.rangeValue);
+      case 'ground_spike':
+        this.createGroundSpikeEffect(x, y, skill.rangeValue);
         break;
       default:
         this.createDefaultAreaEffect(x, y, skill.rangeValue, skill.elements[0]);
