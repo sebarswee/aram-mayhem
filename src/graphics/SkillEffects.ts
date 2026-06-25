@@ -168,7 +168,7 @@ export class SkillEffects {
         this.createFlameCircleEffect(x, y, skill.rangeValue);
         break;
       case 'frost_nova':
-        this.createFrostNovaEffect(x, y, skill.rangeValue);
+        this.createIceCrystalBurstEffect(x, y, skill.rangeValue);
         break;
       case 'whirlwind':
         this.createWhirlwindEffect(x, y, skill.rangeValue);
@@ -183,7 +183,7 @@ export class SkillEffects {
         this.createBlizzardEffect(x, y, skill.rangeValue);
         break;
       case 'thunder_storm':
-        this.createThunderStormEffect(x, y, skill.rangeValue);
+        this.createLightningArrayEffect(x, y, skill.rangeValue);
         break;
       case 'ground_spike':
         this.createGroundSpikeEffect(x, y, skill.rangeValue);
@@ -197,13 +197,38 @@ export class SkillEffects {
       case 'time_stop':
         this.createTimeStopEffect(x, y, skill.rangeValue);
         break;
-      // 新增技能效果
+      // 新差异化技能效果
       case 'flame_wave':
-        this.createFlameWaveEffect(x, y, skill.rangeValue);
+        this.createFlameSprayEffect(x, y, skill.rangeValue);
         break;
       case 'tidal_wave':
-        this.createTidalWaveEffect(x, y, skill.rangeValue);
+        this.createWavePushEffect(x, y, skill.rangeValue);
         break;
+      case 'curse_aura':
+        this.createCurseChainEffect(x, y, skill.rangeValue);
+        break;
+      case 'rock_spike':
+        this.createSpikeTrapEffect(x, y, skill.rangeValue);
+        break;
+      case 'sandstorm':
+        this.createQuicksandTrapEffect(x, y, skill.rangeValue);
+        break;
+      case 'static_field':
+        this.createChargeAccumulateEffect(x, y, skill.rangeValue);
+        break;
+      case 'arc_lightning':
+        this.createEMPPulseEffect(x, y, skill.rangeValue);
+        break;
+      case 'shadow_step':
+        this.createShadowCloneEffect(x, y, skill.rangeValue);
+        break;
+      case 'seismic_wave':
+        this.createGroundCrackLineEffect(x, y, skill.rangeValue);
+        break;
+      case 'ignite':
+        this.createFlameRayEffect(x, y, skill.rangeValue);
+        break;
+      // 大招效果
       case 'thunder_apocalypse':
         this.createThunderApocalypseEffect(x, y, skill.rangeValue);
         break;
@@ -1456,6 +1481,263 @@ export class SkillEffects {
           particles.destroy();
         },
       });
+    });
+  }
+
+  // ==================== 新差异化技能视觉效果 ====================
+
+  /**
+   * 火焰喷射效果 - 锥形
+   */
+  private createFlameSprayEffect(x: number, y: number, radius: number): void {
+    const cone = this.scene.add.graphics();
+    cone.fillStyle(0xff4400, 0.6);
+    cone.beginPath();
+    cone.moveTo(x, y);
+    cone.arc(x, y, radius, -Math.PI / 6, Math.PI / 6);
+    cone.closePath();
+    cone.fill();
+    cone.setDepth(25);
+
+    this.scene.tweens.add({
+      targets: cone,
+      alpha: 0,
+      duration: 500,
+      onComplete: () => cone.destroy(),
+    });
+  }
+
+  /**
+   * 水波推进效果 - 方向性波浪
+   */
+  private createWavePushEffect(x: number, y: number, radius: number): void {
+    const wave = this.scene.add.graphics();
+    wave.fillStyle(0x4488ff, 0.5);
+    wave.fillEllipse(x + radius / 2, y, 60, 40);
+    wave.setDepth(25);
+
+    this.scene.tweens.add({
+      targets: wave,
+      x: radius,
+      alpha: 0,
+      duration: 400,
+      onComplete: () => wave.destroy(),
+    });
+  }
+
+  /**
+   * 冰晶爆发效果 - 多方向穿透
+   */
+  private createIceCrystalBurstEffect(x: number, y: number, radius: number): void {
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const crystal = this.scene.add.graphics();
+      crystal.fillStyle(0x88ddff, 0.9);
+      crystal.fillTriangle(0, -15, -8, 8, 8, 8);
+      crystal.setPosition(x, y);
+      crystal.setRotation(angle);
+      crystal.setDepth(40);
+
+      this.scene.tweens.add({
+        targets: crystal,
+        x: x + Math.cos(angle) * radius,
+        y: y + Math.sin(angle) * radius,
+        alpha: 0,
+        duration: 400,
+        onComplete: () => crystal.destroy(),
+      });
+    }
+  }
+
+  /**
+   * 雷击阵效果 - 定点雷击
+   */
+  private createLightningArrayEffect(x: number, y: number, radius: number): void {
+    const warning = this.scene.add.circle(x, y, radius, 0xffff00, 0.2);
+    warning.setDepth(20);
+
+    this.scene.tweens.add({
+      targets: warning,
+      alpha: 0.4,
+      duration: 200,
+      yoyo: true,
+      repeat: 2,
+      onComplete: () => warning.destroy(),
+    });
+  }
+
+  /**
+   * 诅咒链效果 - 链式传播
+   */
+  private createCurseChainEffect(x: number, y: number, radius: number): void {
+    const curse = this.scene.add.circle(x, y, radius, 0x8800ff, 0.4);
+    curse.setDepth(20);
+
+    this.scene.tweens.add({
+      targets: curse,
+      alpha: 0,
+      scale: 1.5,
+      duration: 400,
+      onComplete: () => curse.destroy(),
+    });
+  }
+
+  /**
+   * 地刺陷阱效果
+   */
+  private createSpikeTrapEffect(x: number, y: number, radius: number): void {
+    const trap = this.scene.add.circle(x, y, 25, 0x886644, 0.5);
+    trap.setStrokeStyle(2, 0xaa8866, 0.8);
+    trap.setDepth(20);
+
+    this.scene.tweens.add({
+      targets: trap,
+      scale: 1.2,
+      alpha: 0.7,
+      duration: 300,
+      yoyo: true,
+      repeat: -1,
+    });
+
+    this.scene.time.delayedCall(5000, () => trap.destroy());
+  }
+
+  /**
+   * 流沙陷阱效果
+   */
+  private createQuicksandTrapEffect(x: number, y: number, radius: number): void {
+    const quicksand = this.scene.add.circle(x, y, radius, 0x886633, 0.4);
+    quicksand.setDepth(20);
+
+    this.scene.tweens.add({
+      targets: quicksand,
+      angle: 360,
+      duration: 2000,
+      repeat: 2,
+    });
+
+    this.scene.time.delayedCall(4000, () => quicksand.destroy());
+  }
+
+  /**
+   * 电荷积累效果
+   */
+  private createChargeAccumulateEffect(x: number, y: number, radius: number): void {
+    const field = this.scene.add.circle(x, y, radius, 0xffff00, 0.3);
+    field.setDepth(20);
+
+    // 电弧视觉效果
+    for (let i = 0; i < 5; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const arc = this.scene.add.graphics();
+      arc.lineStyle(2, 0xffff00, 0.6);
+      arc.lineBetween(
+        x + Math.cos(angle) * 20,
+        y + Math.sin(angle) * 20,
+        x + Math.cos(angle) * radius,
+        y + Math.sin(angle) * radius
+      );
+      arc.setDepth(21);
+
+      this.scene.time.delayedCall(200, () => arc.destroy());
+    }
+
+    this.scene.tweens.add({
+      targets: field,
+      alpha: 0,
+      duration: 300,
+      onComplete: () => field.destroy(),
+    });
+  }
+
+  /**
+   * 电磁脉冲效果 - 环形扩散
+   */
+  private createEMPPulseEffect(x: number, y: number, radius: number): void {
+    const pulse = this.scene.add.circle(x, y, 20, 0xffff00, 0.6);
+    pulse.setStrokeStyle(4, 0xffffff, 0.8);
+    pulse.setDepth(100);
+
+    this.scene.tweens.add({
+      targets: pulse,
+      radius: radius,
+      alpha: 0,
+      duration: 600,
+      onComplete: () => pulse.destroy(),
+    });
+  }
+
+  /**
+   * 暗影分身效果
+   */
+  private createShadowCloneEffect(x: number, y: number, _radius: number): void {
+    const clone = this.scene.add.container(x, y);
+    clone.setDepth(40);
+
+    const body = this.scene.add.circle(0, 0, 15, 0x8800ff, 0.7);
+    const glow = this.scene.add.circle(0, 0, 20, 0x6600aa, 0.4);
+    clone.add([glow, body]);
+
+    this.scene.tweens.add({
+      targets: clone,
+      alpha: 0.5,
+      scale: 1.1,
+      duration: 300,
+      yoyo: true,
+      repeat: -1,
+    });
+
+    this.scene.time.delayedCall(3000, () => {
+      this.scene.tweens.add({
+        targets: clone,
+        alpha: 0,
+        scale: 0.5,
+        duration: 300,
+        onComplete: () => clone.destroy(),
+      });
+    });
+  }
+
+  /**
+   * 地裂线效果 - 直线
+   */
+  private createGroundCrackLineEffect(x: number, y: number, radius: number): void {
+    const crack = this.scene.add.graphics();
+    crack.fillStyle(0x664422, 0.8);
+    crack.fillRect(0, -30, radius, 60);
+    crack.setPosition(x, y);
+    crack.setDepth(25);
+
+    crack.setScale(0, 1);
+    this.scene.tweens.add({
+      targets: crack,
+      scaleX: 1,
+      duration: 300,
+      onComplete: () => {
+        this.scene.tweens.add({
+          targets: crack,
+          alpha: 0,
+          duration: 200,
+          onComplete: () => crack.destroy(),
+        });
+      },
+    });
+  }
+
+  /**
+   * 火焰射线效果
+   */
+  private createFlameRayEffect(x: number, y: number, radius: number): void {
+    const ray = this.scene.add.graphics();
+    ray.lineStyle(30, 0xff4400, 0.6);
+    ray.lineBetween(x, y, x + radius, y);
+    ray.setDepth(40);
+
+    this.scene.tweens.add({
+      targets: ray,
+      alpha: 0,
+      duration: 2000,
+      onComplete: () => ray.destroy(),
     });
   }
 }
