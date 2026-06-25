@@ -483,6 +483,9 @@ export class BattleScene extends Phaser.Scene {
       }
     }
 
+    // 更新碰撞系统（清理过期记录）
+    this.collisionSystem?.update();
+
     // 更新HUD
     this.hud.update();
 

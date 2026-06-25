@@ -25,6 +25,10 @@ export class CollisionSystem {
   private dropSystem: DropSystem | null = null;
   private enemyAbilitySystem: EnemyAbilitySystem | null = null;
 
+  // 碰撞冷却追踪 - 防止同一敌人短时间内多次触发碰撞
+  private enemyCollisionCooldowns: Map<string, number> = new Map();
+  private readonly COLLISION_COOLDOWN = 500; // 碰撞冷却时间（毫秒）
+
   constructor(
     scene: Phaser.Scene,
     player: Player,
@@ -38,6 +42,19 @@ export class CollisionSystem {
     this.skillEffects = new SkillEffects(scene);
 
     this.setupCollisions();
+  }
+
+  /**
+   * 更新方法 - 定期清理过期的碰撞冷却记录
+   */
+  update(): void {
+    const now = Date.now();
+    // 清理超过2秒未更新的碰撞冷却记录
+    for (const [enemyId, lastTime] of this.enemyCollisionCooldowns.entries()) {
+      if (now - lastTime > 2000) {
+        this.enemyCollisionCooldowns.delete(enemyId);
+      }
+    }
   }
 
   /**
@@ -714,6 +731,14 @@ export class CollisionSystem {
 
     if (!ply.active || !enem.active) return;
 
+    // 碰撞冷却检查 - 防止同一敌人短时间内多次触发碰撞
+    const now = Date.now();
+    const lastCollision = this.enemyCollisionCooldowns.get(enem.instanceId) || 0;
+    if (now - lastCollision < this.COLLISION_COOLDOWN) {
+      return; // 冷却期内，跳过此次碰撞
+    }
+    this.enemyCollisionCooldowns.set(enem.instanceId, now);
+
     // Calculate actual distance to ensure real collision
     const distance = Phaser.Math.Distance.Between(ply.x, ply.y, enem.x, enem.y);
     const collisionDistance = 30; // Reasonable collision distance
@@ -725,6 +750,22 @@ export class CollisionSystem {
 
     // Enemy collision damage
     ply.takeDamage(enemyDamage);
+
+    // 玩家击退效果 - 将玩家推开（防止重叠）
+    if (ply.body) {
+      const pushAngle = Phaser.Math.Angle.Between(enem.x, enem.y, ply.x, ply.y);
+      const pushSpeed = 250; // 击退速度
+      (ply.body as Phaser.Physics.Arcade.Body).setVelocity(
+        Math.cos(pushAngle) * pushSpeed,
+        Math.sin(pushAngle) * pushSpeed
+      );
+
+      // 短暂禁用玩家控制，避免立即返回
+      ply.isInvincible = true;
+      this.scene.time.delayedCall(300, () => {
+        ply.isInvincible = false;
+      });
+    }
 
     // Apply reflect damage if player has reflect effect
     if (ply.hasReflect()) {
@@ -897,5 +938,7 @@ export class CollisionSystem {
 
   destroy(): void {
     // Phaser automatically cleans up overlap handlers
+    // 清理碰撞冷却记录
+    this.enemyCollisionCooldowns.clear();
   }
 }
