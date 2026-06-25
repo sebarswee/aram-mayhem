@@ -14,13 +14,15 @@ export class PoisonCloudStrategy implements SkillStrategy {
     const radius = skill.rangeValue;
     const duration = 3000;
     const tickInterval = 500;
-    let elapsed = 0;
+
+    let tickCount = 0;
+    const maxTicks = Math.floor(duration / tickInterval);
 
     const damageTimer = scene.time.addEvent({
       delay: tickInterval,
       callback: () => {
-        elapsed += tickInterval;
-        if (elapsed >= duration) {
+        tickCount++;
+        if (tickCount > maxTicks) {
           damageTimer.destroy();
           return;
         }
@@ -30,11 +32,13 @@ export class PoisonCloudStrategy implements SkillStrategy {
         for (const enemy of enemies) {
           const tickDamage = Math.floor(damage * 0.3);
           applyDamageToEnemy(enemy, tickDamage, skill);
-          // 中毒效果
-          enemy.setTint(0x44ff44);
+          // 应用中毒效果
+          if (applyEffects && skill.effects) {
+            applyEffects(enemy, skill.effects);
+          }
         }
       },
-      repeat: Math.floor(duration / tickInterval) - 1,
+      repeat: maxTicks - 1,
     });
   }
 }
@@ -44,35 +48,49 @@ export class PoisonCloudStrategy implements SkillStrategy {
  */
 export class PoisonCloudVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 毒雾粒子系统
-    const poison = scene.add.particles(x, y, 'particle_glow', {
-      speed: { min: 30, max: 80 },
-      angle: { min: 0, max: 360 },
-      scale: { start: 0.8, end: 0 },
-      alpha: { start: 0.6, end: 0 },
-      tint: 0x44ff44,
-      lifespan: 2000,
-      frequency: 80,
-      quantity: 3,
-    });
-    poison.setDepth(20);
-
-    // 毒雾区域
-    const poisonZone = scene.add.circle(x, y, radius, 0x44ff44, 0.15);
+    // 毒雾区域 - 使用简单的圆形而非粒子系统
+    const poisonZone = scene.add.circle(x, y, radius, 0x44ff44, 0.3);
     poisonZone.setDepth(19);
 
-    // 3秒后停止
-    scene.time.delayedCall(3000, () => {
-      poison.stop();
+    // 毒雾波动效果
+    scene.tweens.add({
+      targets: poisonZone,
+      scaleX: 1.1,
+      scaleY: 1.1,
+      alpha: 0.2,
+      duration: 500,
+      yoyo: true,
+      repeat: 5,
+      onComplete: () => {
+        scene.tweens.add({
+          targets: poisonZone,
+          alpha: 0,
+          duration: 500,
+          onComplete: () => {
+            poisonZone.destroy();
+          },
+        });
+      },
+    });
+
+    // 添加一些简单的毒气飘动效果
+    for (let i = 0; i < 5; i++) {
+      const offsetX = Phaser.Math.Between(-radius * 0.5, radius * 0.5);
+      const offsetY = Phaser.Math.Between(-radius * 0.5, radius * 0.5);
+      const bubble = scene.add.circle(x + offsetX, y + offsetY, 15, 0x44ff44, 0.4);
+      bubble.setDepth(20);
+
       scene.tweens.add({
-        targets: [poison, poisonZone],
+        targets: bubble,
+        y: bubble.y - 30,
         alpha: 0,
-        duration: 500,
+        duration: 1500,
+        delay: i * 200,
+        repeat: 2,
         onComplete: () => {
-          poison.destroy();
-          poisonZone.destroy();
+          bubble.destroy();
         },
       });
-    });
+    }
   }
 }
