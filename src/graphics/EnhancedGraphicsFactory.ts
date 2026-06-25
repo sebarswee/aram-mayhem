@@ -20,6 +20,9 @@ export class EnhancedGraphicsFactory {
     this.createEnhancedProjectileSprites();
     this.createEnhancedParticles();
     this.createUIElements();
+    this.createFoodSprites();
+    this.createExpOrbSprites();
+    this.createEffectSprites();
   }
 
   /**
@@ -582,5 +585,134 @@ export class EnhancedGraphicsFactory {
     const g = Math.max(0, ((color >> 8) & 0xff) * (1 - amount));
     const b = Math.max(0, (color & 0xff) * (1 - amount));
     return (r << 16) | (g << 8) | b;
+  }
+
+  /**
+   * 创建食物精灵
+   */
+  private createFoodSprites(): void {
+    const size = 24;
+    const graphics = this.scene.add.graphics();
+
+    // 血瓶
+    graphics.fillStyle(0xff4444, 1);
+    graphics.fillEllipse(size / 2, size / 2 + 2, 10, 14);
+    graphics.fillStyle(0xff6666, 0.6);
+    graphics.fillEllipse(size / 2 - 2, size / 2, 4, 6);
+
+    // 瓶口
+    graphics.fillStyle(0x666666, 1);
+    graphics.fillRect(size / 2 - 3, size / 2 - 8, 6, 4);
+
+    graphics.generateTexture('food_health', size, size);
+    graphics.destroy();
+
+    // 魔力瓶
+    const manaGraphics = this.scene.add.graphics();
+    manaGraphics.fillStyle(0x4488ff, 1);
+    manaGraphics.fillEllipse(size / 2, size / 2 + 2, 10, 14);
+    manaGraphics.fillStyle(0x66aaff, 0.6);
+    manaGraphics.fillEllipse(size / 2 - 2, size / 2, 4, 6);
+    manaGraphics.fillStyle(0x666666, 1);
+    manaGraphics.fillRect(size / 2 - 3, size / 2 - 8, 6, 4);
+
+    manaGraphics.generateTexture('food_mana', size, size);
+    manaGraphics.destroy();
+  }
+
+  /**
+   * 创建经验球精灵
+   */
+  private createExpOrbSprites(): void {
+    const size = 16;
+    const graphics = this.scene.add.graphics();
+
+    // 小经验球
+    graphics.fillStyle(0x44ff44, 0.3);
+    graphics.fillCircle(size / 2, size / 2, 7);
+    graphics.fillStyle(0x44ff44, 1);
+    graphics.fillCircle(size / 2, size / 2, 5);
+    graphics.fillStyle(0x88ff88, 0.8);
+    graphics.fillCircle(size / 2 - 1, size / 2 - 1, 2);
+
+    graphics.generateTexture('exp_orb', size, size);
+    graphics.destroy();
+
+    // 大经验球
+    const largeGraphics = this.scene.add.graphics();
+    largeGraphics.fillStyle(0xffcc00, 0.3);
+    largeGraphics.fillCircle(size, size, 12);
+    largeGraphics.fillStyle(0xffcc00, 1);
+    largeGraphics.fillCircle(size, size, 9);
+    largeGraphics.fillStyle(0xffee88, 0.8);
+    largeGraphics.fillCircle(size - 2, size - 2, 4);
+
+    largeGraphics.generateTexture('exp_orb_large', size * 2, size * 2);
+    largeGraphics.destroy();
+  }
+
+  /**
+   * 创建效果精灵
+   */
+  private createEffectSprites(): void {
+    // 爆炸效果
+    const size = 64;
+    const graphics = this.scene.add.graphics();
+
+    // 基础爆炸纹理
+    graphics.fillStyle(0xff6600, 0.4);
+    graphics.fillCircle(size / 2, size / 2, 30);
+    graphics.fillStyle(0xff8800, 0.6);
+    graphics.fillCircle(size / 2, size / 2, 20);
+    graphics.fillStyle(0xffaa00, 0.8);
+    graphics.fillCircle(size / 2, size / 2, 12);
+    graphics.fillStyle(0xffcc44, 1);
+    graphics.fillCircle(size / 2, size / 2, 6);
+
+    graphics.generateTexture('effect_explosion', size, size);
+    graphics.destroy();
+
+    // 白色像素（用于各种效果）
+    const white = this.scene.add.graphics();
+    white.fillStyle(0xffffff, 1);
+    white.fillRect(0, 0, 4, 4);
+    white.generateTexture('pixel_white', 4, 4);
+    white.destroy();
+
+    // 各种元素效果纹理
+    this.createElementalEffectTextures();
+  }
+
+  /**
+   * 创建元素效果纹理
+   */
+  private createElementalEffectTextures(): void {
+    const elements = [
+      { key: 'effect_fire', color: 0xff4400 },
+      { key: 'effect_water', color: 0x4488ff },
+      { key: 'effect_ice', color: 0x88ddff },
+      { key: 'effect_lightning', color: 0xffff44 },
+      { key: 'effect_holy', color: 0xffcc00 },
+      { key: 'effect_shadow', color: 0x8800ff },
+      { key: 'effect_grass', color: 0x44ff44 },
+      { key: 'effect_earth', color: 0xaa8844 },
+    ];
+
+    for (const element of elements) {
+      const size = 48;
+      const graphics = this.scene.add.graphics();
+
+      graphics.fillStyle(element.color, 0.3);
+      graphics.fillCircle(size / 2, size / 2, 22);
+      graphics.fillStyle(element.color, 0.6);
+      graphics.fillCircle(size / 2, size / 2, 16);
+      graphics.fillStyle(element.color, 1);
+      graphics.fillCircle(size / 2, size / 2, 10);
+      graphics.fillStyle(0xffffff, 0.7);
+      graphics.fillCircle(size / 2 - 2, size / 2 - 2, 4);
+
+      graphics.generateTexture(element.key, size, size);
+      graphics.destroy();
+    }
   }
 }
