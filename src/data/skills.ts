@@ -46,15 +46,15 @@ export const SKILLS: Record<string, Skill> = {
 
   flame_wave: createSkill({
     id: 'flame_wave',
-    name: '烈焰波',
-    description: '向前释放火焰波，持续灼烧',
+    name: '火焰喷射',
+    description: '向前喷射锥形火焰，持续灼烧',
     type: 'basic',
     element: 'fire',
     category: 'area',
-    cooldown: 2500,
-    damage: 20,
-    rangeValue: 150,
-    effects: [{ type: 'damage', value: 20 }, { type: 'burn', value: 8, duration: 4000 }],
+    cooldown: 3000,
+    damage: 8,
+    rangeValue: 180,
+    effects: [{ type: 'damage', value: 8 }, { type: 'burn', value: 10, duration: 3000 }],
   }),
 
   // ===== 水属性 =====
@@ -74,15 +74,15 @@ export const SKILLS: Record<string, Skill> = {
 
   tidal_wave: createSkill({
     id: 'tidal_wave',
-    name: '潮汐',
-    description: '释放水流，推开敌人并减速',
+    name: '水波推进',
+    description: '向前释放水流波浪，击退路径上敌人',
     type: 'basic',
     element: 'water',
     category: 'area',
-    cooldown: 3000,
-    damage: 18,
-    rangeValue: 120,
-    effects: [{ type: 'damage', value: 18 }, { type: 'knockback', value: 100 }, { type: 'slow', value: 0.4, duration: 2000 }],
+    cooldown: 3500,
+    damage: 20,
+    rangeValue: 300,
+    effects: [{ type: 'damage', value: 20 }, { type: 'knockback', value: 80 }, { type: 'slow', value: 0.3, duration: 2000 }],
   }),
 
   // ===== 冰属性 =====
@@ -102,15 +102,15 @@ export const SKILLS: Record<string, Skill> = {
 
   frost_nova: createSkill({
     id: 'frost_nova',
-    name: '冰霜新星',
-    description: '释放冰霜冲击波，冻结周围',
+    name: '冰晶爆发',
+    description: '释放8个冰晶向四周射出，冻结路径敌人',
     type: 'basic',
     element: 'ice',
     category: 'area',
-    cooldown: 4000,
-    damage: 25,
-    rangeValue: 150,
-    effects: [{ type: 'damage', value: 25 }, { type: 'freeze', value: 1, duration: 2000 }],
+    cooldown: 4500,
+    damage: 22,
+    rangeValue: 200,
+    effects: [{ type: 'damage', value: 22 }, { type: 'freeze', value: 1, duration: 1500 }],
   }),
 
   // ===== 电属性 =====
@@ -133,15 +133,15 @@ export const SKILLS: Record<string, Skill> = {
 
   thunder_storm: createSkill({
     id: 'thunder_storm',
-    name: '雷暴',
-    description: '召唤雷暴，随机雷击敌人',
+    name: '雷击阵',
+    description: '在范围内标记3个雷击点，延迟后精确雷击',
     type: 'basic',
     element: 'lightning',
     category: 'area',
-    cooldown: 3500,
-    damage: 22,
-    rangeValue: 200,
-    effects: [{ type: 'damage', value: 22 }, { type: 'stun', value: 0, duration: 500 }],
+    cooldown: 4000,
+    damage: 28,
+    rangeValue: 250,
+    effects: [{ type: 'damage', value: 28 }, { type: 'stun', value: 0, duration: 600 }],
   }),
 
   // ===== 光属性 =====
@@ -188,15 +188,15 @@ export const SKILLS: Record<string, Skill> = {
 
   curse_aura: createSkill({
     id: 'curse_aura',
-    name: '诅咒光环',
-    description: '释放诅咒，降低敌人攻防',
+    name: '诅咒链',
+    description: '诅咒最近敌人并连锁传播，降低防御',
     type: 'basic',
     element: 'shadow',
     category: 'area',
-    cooldown: 4000,
-    damage: 10,
-    rangeValue: 140,
-    effects: [{ type: 'damage', value: 10 }, { type: 'defense_break', value: 0.3, duration: 5000 }],
+    cooldown: 4500,
+    damage: 12,
+    rangeValue: 180,
+    effects: [{ type: 'damage', value: 12 }, { type: 'defense_break', value: 0.35, duration: 4000 }],
   }),
 
   // ===== 草属性 =====
@@ -230,28 +230,28 @@ export const SKILLS: Record<string, Skill> = {
   // ===== 土属性 =====
   rock_spike: createSkill({
     id: 'rock_spike',
-    name: '岩刺',
-    description: '地面刺出岩石，击飞敌人',
+    name: '地刺陷阱',
+    description: '在地面生成地刺，敌人踩中触发击飞',
     type: 'basic',
     element: 'earth',
     category: 'area',
-    cooldown: 2500,
-    damage: 22,
-    rangeValue: 130,
-    effects: [{ type: 'damage', value: 22 }, { type: 'knockback', value: 80 }],
+    cooldown: 5000,
+    damage: 25,
+    rangeValue: 100,
+    effects: [{ type: 'damage', value: 25 }, { type: 'knockback', value: 100 }, { type: 'stun', value: 0, duration: 500 }],
   }),
 
   sandstorm: createSkill({
     id: 'sandstorm',
-    name: '沙暴',
-    description: '召唤沙暴，眩晕敌人',
+    name: '流沙陷阱',
+    description: '创建流沙区域，敌人进入持续减速受伤',
     type: 'basic',
     element: 'earth',
     category: 'area',
-    cooldown: 4000,
-    damage: 18,
-    rangeValue: 160,
-    effects: [{ type: 'damage', value: 18 }, { type: 'stun', value: 0, duration: 1000 }],
+    cooldown: 6000,
+    damage: 12,
+    rangeValue: 120,
+    effects: [{ type: 'damage', value: 12 }, { type: 'slow', value: 0.5, duration: 3000 }],
   }),
 
   stone_skin: createSkill({
@@ -267,7 +267,34 @@ export const SKILLS: Record<string, Skill> = {
     effects: [{ type: 'shield', value: 30 }],
   }),
 
+  seismic_wave: createSkill({
+    id: 'seismic_wave',
+    name: '地裂线',
+    description: '向指定方向撕裂地面，击飞路径敌人',
+    type: 'basic',
+    element: 'earth',
+    category: 'area',
+    cooldown: 4000,
+    damage: 20,
+    rangeValue: 280,
+    effects: [{ type: 'damage', value: 20 }, { type: 'knockback', value: 120 }, { type: 'stun', value: 0, duration: 400 }],
+  }),
+
   // ===== 新增基础技能 =====
+
+  // 火 - 火焰射线
+  ignite: createSkill({
+    id: 'ignite',
+    name: '火焰射线',
+    description: '发射持续火焰射线，灼烧路径上敌人',
+    type: 'basic',
+    element: 'fire',
+    category: 'area',
+    cooldown: 3500,
+    damage: 6,
+    rangeValue: 300,
+    effects: [{ type: 'damage', value: 6 }, { type: 'burn', value: 12, duration: 4000 }],
+  }),
 
   // 火 - 火焰护盾
   flame_shield: createSkill({
@@ -281,21 +308,6 @@ export const SKILLS: Record<string, Skill> = {
     damage: 0,
     rangeValue: 0,
     effects: [{ type: 'shield', value: 40 }, { type: 'burn', value: 10, duration: 3000 }],
-  }),
-
-  // 火 - 点燃
-  ignite: createSkill({
-    id: 'ignite',
-    name: '点燃',
-    description: '点燃最近敌人，造成持续伤害',
-    type: 'basic',
-    element: 'fire',
-    category: 'projectile',
-    cooldown: 2000,
-    damage: 8,
-    rangeValue: 250,
-    speed: 400,
-    effects: [{ type: 'damage', value: 8 }, { type: 'burn', value: 15, duration: 5000 }],
   }),
 
   // 水 - 水流冲刺
@@ -354,36 +366,32 @@ export const SKILLS: Record<string, Skill> = {
     effects: [{ type: 'shield', value: 35 }],
   }),
 
-  // 雷 - 静电场
+  // 雷 - 电荷积累
   static_field: createSkill({
     id: 'static_field',
-    name: '静电场',
-    description: '创建电场，持续伤害范围敌人',
+    name: '电荷积累',
+    description: '电弧在敌人间跳跃，叠加电荷后爆发',
     type: 'basic',
     element: 'lightning',
     category: 'area',
-    cooldown: 5000,
-    damage: 12,
-    rangeValue: 120,
-    effects: [{ type: 'damage', value: 12 }],
+    cooldown: 5500,
+    damage: 8,
+    rangeValue: 200,
+    effects: [{ type: 'damage', value: 8 }, { type: 'stun', value: 0, duration: 300 }],
   }),
 
-  // 雷 - 电弧
+  // 雷 - 电磁脉冲
   arc_lightning: createSkill({
     id: 'arc_lightning',
-    name: '电弧',
-    description: '释放电弧，在敌人间跳跃',
+    name: '电磁脉冲',
+    description: '释放向外扩散的电磁脉冲波，眩晕敌人',
     type: 'basic',
     element: 'lightning',
-    category: 'projectile',
-    cooldown: 1800,
-    damage: 14,
-    rangeValue: 350,
-    speed: 450,
-    effects: [{ type: 'damage', value: 14 }],
-    chainCount: 4,
-    chainRange: 120,
-    chainDamageDecay: 0.75,
+    category: 'area',
+    cooldown: 4500,
+    damage: 20,
+    rangeValue: 280,
+    effects: [{ type: 'damage', value: 20 }, { type: 'stun', value: 0, duration: 600 }],
   }),
 
   // 光 - 光环
@@ -414,11 +422,11 @@ export const SKILLS: Record<string, Skill> = {
     effects: [{ type: 'shield', value: 20 }],
   }),
 
-  // 暗 - 暗影步
+  // 暗 - 暗影分身
   shadow_step: createSkill({
     id: 'shadow_step',
-    name: '暗影步',
-    description: '瞬移并留下毒云',
+    name: '暗影分身',
+    description: '召唤暗影分身吸引敌人，被攻击时爆炸',
     type: 'basic',
     element: 'shadow',
     category: 'area',
@@ -470,20 +478,6 @@ export const SKILLS: Record<string, Skill> = {
     damage: 0,
     rangeValue: 0,
     effects: [{ type: 'damage_reflect', value: 0.25, duration: 8000 }],
-  }),
-
-  // 土 - 地震波
-  seismic_wave: createSkill({
-    id: 'seismic_wave',
-    name: '地震波',
-    description: '释放地震波，击退敌人',
-    type: 'basic',
-    element: 'earth',
-    category: 'area',
-    cooldown: 3500,
-    damage: 16,
-    rangeValue: 180,
-    effects: [{ type: 'damage', value: 16 }, { type: 'knockback', value: 120 }],
   }),
 
   // ===== 大招（8个）=====
