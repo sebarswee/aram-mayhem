@@ -33,6 +33,48 @@ export class GraphicsFactory {
   }
 
   /**
+   * 只生成敌人精灵
+   */
+  generateEnemySprites(): void {
+    this.createEnemySprites();
+  }
+
+  /**
+   * 只生成投射物精灵
+   */
+  generateProjectileSprites(): void {
+    this.createProjectileSprites();
+  }
+
+  /**
+   * 只生成效果精灵
+   */
+  generateEffectSprites(): void {
+    this.createEffectSprites();
+  }
+
+  /**
+   * 只生成粒子
+   */
+  generateParticles(): void {
+    this.createParticles();
+  }
+
+  /**
+   * 只生成食物精灵
+   */
+  generateFoodSprites(): void {
+    this.createFoodSprites();
+  }
+
+  /**
+   * 只生成经验球精灵
+   */
+  generateExpOrbSprites(): void {
+    this.createExpOrbSprites();
+  }
+
+  /**
    * 创建玩家精灵 - 像素风格角色（增强版）
    */
   private createPlayerSprite(): void {

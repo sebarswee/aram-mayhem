@@ -29,6 +29,20 @@ export class BootScene extends Phaser.Scene {
     const width = this.scale.width;
     const height = this.scale.height;
     updateGameSize(width, height);
+
+    // 加载玩家精灵表素材
+    this.load.spritesheet('player_idle', 'assets/characters/player/player_idle.png', {
+      frameWidth: 64,
+      frameHeight: 64,
+    });
+    this.load.spritesheet('player_move', 'assets/characters/player/player_move.png', {
+      frameWidth: 64,
+      frameHeight: 64,
+    });
+    this.load.spritesheet('player_attack', 'assets/characters/player/player_attack.png', {
+      frameWidth: 64,
+      frameHeight: 64,
+    });
   }
 
   create(): void {
@@ -93,6 +107,11 @@ export class BootScene extends Phaser.Scene {
     barHeight: number,
     barY: number
   ): Promise<void> {
+    // 添加加载错误处理
+    this.load.on('loaderror', (file: Phaser.Loader.File) => {
+      console.warn(`Failed to load: ${file.key}, falling back to generated textures`);
+    });
+
     // 模拟加载进度，因为 GraphicsFactory 是同步的
     const steps = 10;
     const delayPerStep = 100; // 每步100ms
@@ -117,10 +136,22 @@ export class BootScene extends Phaser.Scene {
       // 在进度50%时生成纹理（如果不存在）
       if (i === 5) {
         this.loadingText.setText('正在生成像素素材...');
-        // 检查纹理是否已存在，避免重复生成
-        if (!this.textures.exists('player')) {
+        // 检查玩家素材是否已加载，如果没有则生成程序化纹理
+        if (!this.textures.exists('player_idle')) {
+          console.log('[BootScene] Player assets not loaded, generating fallback textures');
           const graphicsFactory = new GraphicsFactory(this);
           graphicsFactory.generateAll();
+        } else {
+          console.log('[BootScene] Player assets loaded successfully, skipping generated textures');
+          // 仍然需要生成其他素材（敌人、投射物等）
+          const graphicsFactory = new GraphicsFactory(this);
+          graphicsFactory.generateEnemySprites();
+          graphicsFactory.generateProjectileSprites();
+          graphicsFactory.generateEffectSprites();
+          graphicsFactory.generateParticles();
+          graphicsFactory.generateSkillIcons();
+          graphicsFactory.generateFoodSprites();
+          graphicsFactory.generateExpOrbSprites();
         }
       }
 
