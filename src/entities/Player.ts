@@ -594,8 +594,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     // 计算实际伤害(考虑防御)
-    const actualDamage = Math.max(1, finalDamage - this.stats.defense * 0.5);
-    this.stats.currentHp = Math.max(0, this.stats.currentHp - actualDamage);
+    const actualDamage = Math.max(1, Math.floor(finalDamage - this.stats.defense * 0.5));
+    this.stats.currentHp = Math.max(0, Math.floor(this.stats.currentHp - actualDamage));
     this.lastDamageTime = now;
 
     // Emit damage event for visual feedback
@@ -754,10 +754,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   heal(amount: number): void {
+    const healAmount = Math.floor(amount);
     const oldHp = this.stats.currentHp;
     this.stats.currentHp = Math.min(
       this.stats.maxHp,
-      this.stats.currentHp + amount
+      Math.floor(this.stats.currentHp + healAmount)
     );
     // Emit heal event for UI updates
     const actualHeal = this.stats.currentHp - oldHp;
@@ -812,8 +813,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // HP 回复（被动技能）
     const hpRegen = (this.stats as any).hpRegen || 0;
     if (hpRegen > 0) {
-      const healAmount = hpRegen * (delta / 1000);
-      this.stats.currentHp = Math.min(this.stats.maxHp, this.stats.currentHp + healAmount);
+      const healAmount = Math.floor(hpRegen * (delta / 1000));
+      if (healAmount > 0) {
+        this.stats.currentHp = Math.min(this.stats.maxHp, Math.floor(this.stats.currentHp + healAmount));
+      }
     }
 
     // 更新发光效果位置

@@ -551,7 +551,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (attackerElement) {
       const counterBonus = getCounterBonus(attackerElement, this.element);
       if (counterBonus > 0) {
-        finalDamage = amount * (1 + counterBonus);
+        finalDamage = Math.floor(amount * (1 + counterBonus));
         isCounter = true;
         // Visual feedback for counter hit
         this.showCounterEffect();
@@ -561,13 +561,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     // Apply damage reduction ability
     const damageReduction = this.getDamageReduction();
     if (damageReduction > 0) {
-      finalDamage = finalDamage * (1 - damageReduction);
+      finalDamage = Math.floor(finalDamage * (1 - damageReduction));
     }
 
     // Apply defense break (increase damage taken)
     const defenseBreak = this.getDefenseBreakBonus();
     if (defenseBreak > 0) {
-      finalDamage = finalDamage * (1 + defenseBreak);
+      finalDamage = Math.floor(finalDamage * (1 + defenseBreak));
     }
 
     // Apply shield first
@@ -592,7 +592,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       }
     }
 
-    this.currentHp -= finalDamage;
+    this.currentHp = Math.floor(this.currentHp - finalDamage);
 
     // Check boss phase transition
     if (this.bossPhases) {
@@ -668,7 +668,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
    * Heal enemy
    */
   heal(value: number): void {
-    this.currentHp = Math.min(this.maxHp, this.currentHp + value);
+    const healAmount = Math.floor(value);
+    this.currentHp = Math.min(this.maxHp, Math.floor(this.currentHp + healAmount));
     this.showHealEffect();
   }
 

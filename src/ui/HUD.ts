@@ -800,7 +800,7 @@ export class HUD {
     // 文字
     this.hpText.setPosition(padding + barWidth / 2, padding + barHeight / 2);
     this.hpText.setText(
-      `${Math.floor(this.player.stats.currentHp)} / ${this.player.stats.maxHp}`
+      `${Math.floor(this.player.stats.currentHp)} / ${Math.floor(this.player.stats.maxHp)}`
     );
   }
 
