@@ -60,7 +60,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   public readonly MAX_ULTIMATE_SKILLS = 2;
 
   private lastDamageTime: number = 0;
-  private glowSprite: Phaser.GameObjects.Sprite | null = null;
   public isInvincible: boolean = false;
   private shieldValue: number = 0;
 
@@ -113,9 +112,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // 初始化元素抗性
     this.initializeElementResistance();
 
-    // 创建发光效果
-    this.createGlowEffect();
-
     // 如果使用精灵表纹理，立即播放待机动画
     if (scene.textures.exists('player_idle') && scene.anims.exists('player_idle_anim')) {
       this.play('player_idle_anim');
@@ -141,16 +137,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       grass: 0,
       earth: 0,
     };
-  }
-
-  private createGlowEffect(): void {
-    // 使用静态纹理或当前帧作为发光效果
-    const textureKey = this.scene.textures.exists('player_idle') ? 'player_idle' : 'player';
-    this.glowSprite = this.scene.add.sprite(this.x, this.y, textureKey, 0);
-    this.glowSprite.setAlpha(0.3);
-    this.glowSprite.setTint(0x66ccff);
-    this.glowSprite.setScale(1.3);
-    this.glowSprite.setDepth(49);
   }
 
   /**
@@ -435,10 +421,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.setTint(0x44ff44); // Green tint
         break;
       case 'shield':
-        // Blue glow for shield is handled by glowSprite
-        if (this.glowSprite) {
-          this.glowSprite.setTint(0x4488ff);
-        }
+        // Shield visual handled by tint
         break;
       case 'speed_boost':
         this.createSpeedTrailParticles();
@@ -481,20 +464,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.setTint(0x88ccff);
     } else {
       this.setTint(0xffffff);
-    }
-
-    // Update glow based on shield
-    if (this.glowSprite) {
-      if (this.hasShield()) {
-        this.glowSprite.setTint(0x4488ff);
-        this.glowSprite.setAlpha(0.4);
-      } else if (this.hasStatusEffect('attack_boost')) {
-        this.glowSprite.setTint(0xff4444);
-        this.glowSprite.setAlpha(0.35);
-      } else {
-        this.glowSprite.setTint(0x66ccff);
-        this.glowSprite.setAlpha(0.3);
-      }
     }
   }
 
@@ -886,25 +855,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (this.body?.velocity.x && this.body.velocity.x !== 0) {
       this.setFlipX(this.body.velocity.x < 0);
     }
-
-    // 更新发光效果位置和帧
-    if (this.glowSprite) {
-      this.glowSprite.setPosition(this.x, this.y);
-      // 同步当前动画帧
-      if (this.frame) {
-        this.glowSprite.setFrame(this.frame.name);
-      }
-      // 同步翻转状态
-      this.glowSprite.setFlipX(this.flipX);
-      // 轻微的脉动效果
-      this.glowSprite.setAlpha(0.2 + Math.sin(Date.now() / 300) * 0.1);
-    }
   }
 
   destroy(): void {
-    if (this.glowSprite) {
-      this.glowSprite.destroy();
-    }
     // Clean up particle emitters
     this.particleEmitters.forEach(emitter => emitter.destroy());
     this.particleEmitters.clear();
