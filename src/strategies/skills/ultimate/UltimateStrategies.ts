@@ -174,6 +174,9 @@ export class InfernoStrategy implements SkillStrategy {
     const burnValue = 12;
     const burnDuration = 8000;
 
+    // 存储需要清理的 tweens
+    const activeTweens: Phaser.Tweens.Tween[] = [];
+
     // 多层燃烧区域
     const infernoLayers: Phaser.GameObjects.Arc[] = [];
     const layerConfigs = [
@@ -188,7 +191,7 @@ export class InfernoStrategy implements SkillStrategy {
       layer.setDepth(17 + i);
       infernoLayers.push(layer);
 
-      scene.tweens.add({
+      const tween = scene.tweens.add({
         targets: layer,
         scaleX: 1.08,
         scaleY: 1.08,
@@ -197,6 +200,7 @@ export class InfernoStrategy implements SkillStrategy {
         yoyo: true,
         repeat: -1,
       });
+      activeTweens.push(tween);
     });
 
     // 火焰粒子系统
@@ -270,6 +274,12 @@ export class InfernoStrategy implements SkillStrategy {
           infernoTimer.destroy();
           this.activeInfernos.delete(instanceId);
           scene.events.off('enemyKilled', deathHandler);
+          // 停止所有无限重复的 tweens
+          activeTweens.forEach(tween => {
+            if (tween && tween.isPlaying()) {
+              tween.stop();
+            }
+          });
           infernoLayers.forEach(l => l.destroy());
           fireParticles.destroy();
           return;
