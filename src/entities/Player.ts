@@ -89,7 +89,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private isAttacking: boolean = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
-    super(scene, x, y, 'player');
+    // 优先使用新的精灵表纹理，否则回退到程序化生成的纹理
+    const textureKey = scene.textures.exists('player_idle') ? 'player_idle' : 'player';
+    super(scene, x, y, textureKey);
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -113,6 +115,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     // 创建发光效果
     this.createGlowEffect();
+
+    // 如果使用精灵表纹理，立即播放待机动画
+    if (scene.textures.exists('player_idle') && scene.anims.exists('player_idle_anim')) {
+      this.play('player_idle_anim');
+    }
 
     // 设置荆棘策略的player引用
     getThornsStrategy().setPlayer(this);
