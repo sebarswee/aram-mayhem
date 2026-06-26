@@ -875,6 +875,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       }
     }
 
+    // 根据移动方向翻转角色
+    if (this.body?.velocity.x && this.body.velocity.x !== 0) {
+      this.setFlipX(this.body.velocity.x < 0);
+    }
+
     // 更新发光效果位置和帧
     if (this.glowSprite) {
       this.glowSprite.setPosition(this.x, this.y);
@@ -882,6 +887,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       if (this.frame) {
         this.glowSprite.setFrame(this.frame.name);
       }
+      // 同步翻转状态
+      this.glowSprite.setFlipX(this.flipX);
       // 轻微的脉动效果
       this.glowSprite.setAlpha(0.2 + Math.sin(Date.now() / 300) * 0.1);
     }

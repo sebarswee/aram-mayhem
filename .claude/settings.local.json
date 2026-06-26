@@ -35,7 +35,11 @@
       "Bash(git merge *)",
       "Bash(git stash *)",
       "Bash(node *)",
-      "Bash(grep -E \"\\\\.ts$\")"
+      "Bash(grep -E \"\\\\.ts$\")",
+      "Bash(file *)",
+      "Bash(bash *)",
+      "Bash(curl -s http://localhost:5173)",
+      "Bash(identify public/assets/characters/player/*.png)"
     ]
   }
 }

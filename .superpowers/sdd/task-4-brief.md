@@ -1,99 +1,116 @@
-# Task 4: BootScene - 资源加载场景
+### Task 4: 修改 GraphicsFactory 保留备用
 
-## File to Create
-`src/scenes/BootScene.ts`
+**Files:**
+- Modify: `src/graphics/GraphicsFactory.ts`
 
-## Code
+- [ ] **Step 1: 拆分 generateAll 为独立方法**
+
+在 `src/graphics/GraphicsFactory.ts` 中，将私有方法改为公共方法：
+
 ```typescript
-import Phaser from 'phaser';
+/**
+ * 生成所有游戏素材
+ */
+generateAll(): void {
+  this.createPlayerSprite();
+  this.createEnemySprites();
+  this.createProjectileSprites();
+  this.createEffectSprites();
+  this.createParticles();
+  this.createSkillIcons();
+  this.createFoodSprites();
+  this.createExpOrbSprites();
+}
 
-export class BootScene extends Phaser.Scene {
-  constructor() {
-    super({ key: 'BootScene' });
-  }
+/**
+ * 只生成敌人素材
+ */
+generateEnemySprites(): void {
+  this.createEnemySprites();
+}
 
-  preload(): void {
-    // 显示加载进度
-    const width = this.cameras.main.width;
-    const height = this.cameras.main.height;
+/**
+ * 只生成投射物素材
+ */
+generateProjectileSprites(): void {
+  this.createProjectileSprites();
+}
 
-    const progressBox = this.add.graphics();
-    const progressBar = this.add.graphics();
+/**
+ * 只生成效果素材
+ */
+generateEffectSprites(): void {
+  this.createEffectSprites();
+}
 
-    const loadingText = this.add.text(width / 2, height / 2 - 50, '加载中...', {
-      font: '20px Arial',
-      color: '#ffffff',
-    });
-    loadingText.setOrigin(0.5, 0.5);
+/**
+ * 只生成粒子素材
+ */
+generateParticles(): void {
+  this.createParticles();
+}
 
-    const percentText = this.add.text(width / 2, height / 2, '0%', {
-      font: '18px Arial',
-      color: '#ffffff',
-    });
-    percentText.setOrigin(0.5, 0.5);
+/**
+ * 只生成技能图标
+ */
+generateSkillIcons(): void {
+  this.createSkillIcons();
+}
 
-    progressBox.fillStyle(0x222222, 0.8);
-    progressBox.fillRect(width / 2 - 160, height / 2 + 20, 320, 30);
+/**
+ * 只生成食物素材
+ */
+generateFoodSprites(): void {
+  this.createFoodSprites();
+}
 
-    // 加载进度事件
-    this.load.on('progress', (value: number) => {
-      percentText.setText(Math.floor(value * 100) + '%');
-      progressBar.clear();
-      progressBar.fillStyle(0x00ff00, 1);
-      progressBar.fillRect(width / 2 - 155, height / 2 + 25, 310 * value, 20);
-    });
-
-    this.load.on('complete', () => {
-      progressBar.destroy();
-      progressBox.destroy();
-      loadingText.destroy();
-      percentText.destroy();
-    });
-
-    // 加载占位符资源(使用Phaser内置图形)
-    // 后续替换为实际资源
-  }
-
-  create(): void {
-    // 初始化全局游戏状态
-    this.registry.set('gameState', this.createInitialState());
-
-    // 跳转到战斗场景
-    this.scene.start('BattleScene');
-  }
-
-  private createInitialState() {
-    return {
-      stats: {
-        maxHp: 100,
-        currentHp: 100,
-        attack: 10,
-        defense: 5,
-        speed: 200,
-        critRate: 0.05,
-        critDamage: 1.5,
-      },
-      skills: [],
-      runes: [],
-      level: 1,
-      exp: 0,
-      expToNext: 10,
-      wave: 1,
-      kills: 0,
-      bossesKilled: 0,
-      isPaused: false,
-      isDead: false,
-      isUpgrading: false,
-    };
-  }
+/**
+ * 只生成经验球素材
+ */
+generateExpOrbSprites(): void {
+  this.createExpOrbSprites();
 }
 ```
 
-## Commit
-Message: "feat: add BootScene for resource loading\n\nCo-Authored-By: Claude <noreply@anthropic.com>"
+- [ ] **Step 2: 验证构建通过**
 
-## Note
-This file already exists as a placeholder. Replace it with the full implementation.
+运行：`npm run build`
 
-## Report
-Write to `.superpowers/sdd/task-4-report.md`
+- [ ] **Step 3: 提交**
+
+```bash
+git add src/graphics/GraphicsFactory.ts
+git commit -m "refactor: GraphicsFactory 支持独立生成素材
+
+- 拆分 generateAll 为独立方法
+- 保留玩家纹理生成作为备用
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+```
+
+---
+
+## 测试清单
+
+- [ ] 素材正确加载（控制台无错误）
+- [ ] 待机动画正常播放
+- [ ] 移动动画正常播放
+- [ ] 移动停止后回到待机动画
+- [ ] 发光效果与动画同步
+- [ ] 如果素材加载失败，回退到程序化生成
+- [ ] 游戏整体运行正常
+
+---
+
+## 回滚方案
+
+如果出现严重问题，可以快速回退：
+
+1. 删除 BootScene 中的素材加载代码
+2. Player 类恢复使用 `'player'` 纹理
+3. GraphicsFactory.generateAll() 正常调用
+
+回退命令：
+```bash
+git revert HEAD~4  # 回退最近4个提交
+```
