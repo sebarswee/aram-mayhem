@@ -99,14 +99,6 @@ export class BlizzardStrategy implements SkillStrategy {
       delay: tickInterval,
       callback: () => {
         tickCount++;
-        if (tickCount > maxTicks) {
-          damageTimer.destroy();
-          frostParticles.destroy();
-          snowParticles.destroy();
-          frostLayers.forEach(l => l.destroy());
-          vortex.destroy();
-          return;
-        }
 
         const enemies = findEnemiesInRange(centerX, centerY, radius);
         for (const enemy of enemies) {
@@ -132,6 +124,15 @@ export class BlizzardStrategy implements SkillStrategy {
         }
       },
       repeat: maxTicks - 1,
+    });
+
+    // 使用 delayedCall 确保清理逻辑一定会执行
+    scene.time.delayedCall(duration, () => {
+      damageTimer.destroy();
+      frostParticles.destroy();
+      snowParticles.destroy();
+      frostLayers.forEach(l => l.destroy());
+      vortex.destroy();
     });
   }
 }

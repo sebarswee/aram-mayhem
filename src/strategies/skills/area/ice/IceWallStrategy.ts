@@ -98,8 +98,60 @@ export class IceWallStrategy implements SkillStrategy {
       repeat: -1,
     });
 
+    // 冰墙阻挡逻辑 - 检测接近冰墙的敌人并推开
+    const blockCheckTimer = scene.time.addEvent({
+      delay: 50, // 每50ms检测一次
+      callback: () => {
+        // 使用更大的检测范围确保覆盖整个冰墙
+        const checkRadius = Math.max(wallWidth, wallHeight) / 2 + 50;
+        const enemies = findEnemiesInRange(wallX, wallY, checkRadius);
+        for (const enemy of enemies) {
+          if (!enemy.active) continue;
+
+          // 检查敌人是否在冰墙的碰撞范围内
+          const dx = enemy.x - wallX;
+          const dy = enemy.y - wallY;
+
+          // 将坐标旋转到冰墙的本地坐标系
+          const cos = Math.cos(-playerAngle);
+          const sin = Math.sin(-playerAngle);
+          const localX = dx * cos - dy * sin;
+          const localY = dx * sin + dy * cos;
+
+          // 检查敌人是否在冰墙矩形范围内（稍微扩大一点）
+          const halfWidth = wallWidth / 2 + 20;
+          const halfHeight = wallHeight / 2 + 20;
+
+          if (Math.abs(localX) < halfWidth && Math.abs(localY) < halfHeight) {
+            // 敌人在冰墙范围内，将其推开
+            const pushAngle = Phaser.Math.Angle.Between(wallX, wallY, enemy.x, enemy.y);
+            const pushDistance = 25;
+            const newX = wallX + Math.cos(pushAngle) * pushDistance;
+            const newY = wallY + Math.sin(pushAngle) * pushDistance;
+
+            // 平滑推开敌人
+            scene.tweens.add({
+              targets: enemy,
+              x: newX,
+              y: newY,
+              duration: 100,
+              ease: 'Power1',
+            });
+
+            // 停止敌人的移动
+            const body = (enemy as any).body;
+            if (body) {
+              body.setVelocity(0, 0);
+            }
+          }
+        }
+      },
+      repeat: Math.floor(duration / 50) - 1,
+    });
+
     // 持续时间后消失
     scene.time.delayedCall(duration, () => {
+      blockCheckTimer.destroy();
       iceParticles.destroy();
 
       // 消散粒子

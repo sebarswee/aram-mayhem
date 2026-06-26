@@ -100,18 +100,6 @@ export class FlameWaveStrategy implements SkillStrategy {
       delay: tickInterval,
       callback: () => {
         elapsed += tickInterval;
-        if (elapsed >= duration) {
-          sprayTimer.destroy();
-          updateEvent.destroy();
-          // 淡出动画
-          scene.tweens.add({
-            targets: flameContainer,
-            alpha: 0,
-            duration: 200,
-            onComplete: () => flameContainer.destroy(),
-          });
-          return;
-        }
 
         const enemies = findEnemiesInRange(player.x, player.y, range);
         for (const enemy of enemies) {
@@ -123,6 +111,19 @@ export class FlameWaveStrategy implements SkillStrategy {
         }
       },
       repeat: Math.floor(duration / tickInterval) - 1,
+    });
+
+    // 使用 delayedCall 确保清理逻辑一定会执行
+    scene.time.delayedCall(duration, () => {
+      sprayTimer.destroy();
+      updateEvent.destroy();
+      // 淡出动画
+      scene.tweens.add({
+        targets: flameContainer,
+        alpha: 0,
+        duration: 200,
+        onComplete: () => flameContainer.destroy(),
+      });
     });
   }
 }

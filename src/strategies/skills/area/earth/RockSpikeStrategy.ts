@@ -63,11 +63,15 @@ export class RockSpikeStrategy implements SkillStrategy {
       });
 
       // 检测触发
+      let triggered = false;
       const checkTimer = scene.time.addEvent({
         delay: 100,
         callback: () => {
+          if (triggered) return;
+
           const enemies = findEnemiesInRange(trapX, trapY, trapRadius);
           if (enemies.length > 0) {
+            triggered = true;
             checkTimer.destroy();
             trapOuter.destroy();
             trapMid.destroy();
@@ -151,6 +155,7 @@ export class RockSpikeStrategy implements SkillStrategy {
       });
 
       scene.time.delayedCall(trapDuration, () => {
+        if (triggered) return; // 如果已触发，跳过销毁
         checkTimer.destroy();
         trapOuter.destroy();
         trapMid.destroy();

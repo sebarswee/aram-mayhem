@@ -84,13 +84,6 @@ export class PoisonCloudStrategy implements SkillStrategy {
       delay: tickInterval,
       callback: () => {
         tickCount++;
-        if (tickCount > maxTicks) {
-          damageTimer.destroy();
-          poisonParticles.destroy();
-          risingParticles.destroy();
-          poisonLayers.forEach(l => l.destroy());
-          return;
-        }
 
         // 检测范围内敌人
         const enemies = findEnemiesInRange(centerX, centerY, radius);
@@ -114,6 +107,14 @@ export class PoisonCloudStrategy implements SkillStrategy {
         }
       },
       repeat: maxTicks - 1,
+    });
+
+    // 使用 delayedCall 确保清理逻辑一定会执行
+    scene.time.delayedCall(duration, () => {
+      damageTimer.destroy();
+      poisonParticles.destroy();
+      risingParticles.destroy();
+      poisonLayers.forEach(l => l.destroy());
     });
   }
 }
