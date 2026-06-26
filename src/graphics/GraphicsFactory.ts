@@ -1365,88 +1365,51 @@ export class GraphicsFactory {
    * 创建经验球精灵
    */
   private createExpOrbSprites(): void {
-    // 经验球发光背景
-    this.createExpOrbGlowSprite();
-
-    // 青色粒子（用于拖尾效果）
-    this.createCyanParticle();
-
-    // 三种尺寸的经验球
+    // 三种尺寸的经验球（精简版，只有主体和核心）
     const sizes: Array<{ name: string; radius: number; color: number }> = [
-      { name: 'small', radius: 6, color: 0x66ffff },
-      { name: 'medium', radius: 10, color: 0x44ffff },
-      { name: 'large', radius: 16, color: 0x00ffff },
+      { name: 'small', radius: 5, color: 0x66ffff },
+      { name: 'medium', radius: 8, color: 0x44ffff },
+      { name: 'large', radius: 12, color: 0x00ffff },
     ];
 
     for (const { name, radius, color } of sizes) {
       this.createExpOrbSprite(`exp_orb_${name}`, radius, color);
     }
+
+    // 发光纹理（单一尺寸，用于所有经验球）
+    const glowSize = 24;
+    const graphics = this.scene.add.graphics();
+    graphics.fillStyle(0x00ffff, 0.25);
+    graphics.fillCircle(glowSize / 2, glowSize / 2, 10);
+    graphics.generateTexture('exp_orb_glow', glowSize, glowSize);
+    graphics.destroy();
+
+    // 青色粒子（简化版）
+    const particleSize = 8;
+    const particleGraphics = this.scene.add.graphics();
+    particleGraphics.fillStyle(0x00ffff, 0.7);
+    particleGraphics.fillCircle(particleSize / 2, particleSize / 2, 3);
+    particleGraphics.generateTexture('particle_cyan', particleSize, particleSize);
+    particleGraphics.destroy();
   }
 
   /**
-   * 创建单个经验球精灵
+   * 创建单个经验球精灵（精简版）
    */
   private createExpOrbSprite(key: string, radius: number, color: number): void {
-    const size = radius * 2 + 8;
+    const size = radius * 2 + 4;
     const graphics = this.scene.add.graphics();
     const center = size / 2;
-
-    // 外层光晕
-    graphics.fillStyle(color, 0.3);
-    graphics.fillCircle(center, center, radius + 3);
 
     // 主体
-    graphics.fillStyle(color, 0.8);
+    graphics.fillStyle(color, 0.9);
     graphics.fillCircle(center, center, radius);
 
-    // 核心 - 更亮的中心
-    graphics.fillStyle(0xffffff, 0.9);
-    graphics.fillCircle(center, center, radius * 0.5);
-
-    // 高光点
-    graphics.fillStyle(0xffffff, 1);
-    graphics.fillCircle(center - radius * 0.3, center - radius * 0.3, radius * 0.25);
+    // 核心（高亮中心）
+    graphics.fillStyle(0xffffff, 0.8);
+    graphics.fillCircle(center, center, radius * 0.4);
 
     graphics.generateTexture(key, size, size);
-    graphics.destroy();
-  }
-
-  /**
-   * 创建经验球发光精灵
-   */
-  private createExpOrbGlowSprite(): void {
-    const size = 40;
-    const graphics = this.scene.add.graphics();
-    const center = size / 2;
-
-    // 多层发光效果
-    graphics.fillStyle(0x00ffff, 0.15);
-    graphics.fillCircle(center, center, 18);
-
-    graphics.fillStyle(0x00ffff, 0.25);
-    graphics.fillCircle(center, center, 12);
-
-    graphics.fillStyle(0x00ffff, 0.35);
-    graphics.fillCircle(center, center, 6);
-
-    graphics.generateTexture('exp_orb_glow', size, size);
-    graphics.destroy();
-  }
-
-  /**
-   * 创建青色粒子（经验球拖尾用）
-   */
-  private createCyanParticle(): void {
-    const size = 12;
-    const graphics = this.scene.add.graphics();
-
-    graphics.fillStyle(0x00ffff, 0.8);
-    graphics.fillCircle(size / 2, size / 2, 4);
-
-    graphics.fillStyle(0xffffff, 0.6);
-    graphics.fillCircle(size / 2, size / 2, 2);
-
-    graphics.generateTexture('particle_cyan', size, size);
     graphics.destroy();
   }
 
