@@ -15,6 +15,7 @@ declare global {
 
 export class BootScene extends Phaser.Scene {
   private joystickMode: JoystickMode = 'follow';
+  private progressBox!: Phaser.GameObjects.Graphics;
   private loadingBar!: Phaser.GameObjects.Graphics;
   private loadingText!: Phaser.GameObjects.Text;
   private percentText!: Phaser.GameObjects.Text;
@@ -60,9 +61,9 @@ export class BootScene extends Phaser.Scene {
     const barHeight = Math.min(20, height * 0.03);
     const barY = height * 0.5;
 
-    const progressBox = this.add.graphics();
-    progressBox.fillStyle(0x333355, 0.8);
-    progressBox.fillRoundedRect(width / 2 - barWidth / 2, barY, barWidth, barHeight, 5);
+    this.progressBox = this.add.graphics();
+    this.progressBox.fillStyle(0x333355, 0.8);
+    this.progressBox.fillRoundedRect(width / 2 - barWidth / 2, barY, barWidth, barHeight, 5);
 
     // 加载进度条
     this.loadingBar = this.add.graphics();
@@ -143,6 +144,7 @@ export class BootScene extends Phaser.Scene {
     await this.delay(300);
 
     // 清理加载界面
+    this.progressBox.destroy();
     this.loadingBar.destroy();
     this.loadingText.destroy();
     this.percentText.destroy();
