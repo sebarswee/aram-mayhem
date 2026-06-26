@@ -318,6 +318,9 @@ export class SkillSystem {
   private castSkill(skill: Skill, target: Enemy): void {
     this.player.skillCooldowns.set(skill.id, skill.cooldown);
 
+    // 触发玩家攻击动画
+    this.player.playAttackAnimation();
+
     // 检查连射强化
     const multicastCount = this.getMulticastCount(skill);
 
