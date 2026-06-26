@@ -53,6 +53,12 @@ export class VirtualJoystick {
     this.thumb.setScrollFactor(0);
     this.thumb.setDepth(1001);
 
+    // 跟随模式下，初始隐藏摇杆，只在触摸时显示
+    if (this.mode === 'follow') {
+      this.base.setAlpha(0);
+      this.thumb.setAlpha(0);
+    }
+
     this.setupEvents();
   }
 
@@ -85,17 +91,19 @@ export class VirtualJoystick {
 
   private handlePointerDown(pointer: Phaser.Input.Pointer): void {
     if (this.isDisabled) return;
-    const width = this.scene.scale.width;
-    // 只响应左半屏的触摸
-    if (pointer.x <= width / 2) {
-      this.pointer = pointer;
-      // 摇杆出现在手指位置
-      this.baseX = pointer.x;
-      this.baseY = pointer.y;
-      this.base.setPosition(this.baseX, this.baseY);
-      this.thumb.setPosition(this.baseX, this.baseY);
-      this.updatePosition(pointer.x, pointer.y);
-    }
+
+    // 跟随模式：全屏响应，摇杆出现在手指位置
+    this.pointer = pointer;
+    this.baseX = pointer.x;
+    this.baseY = pointer.y;
+    this.base.setPosition(this.baseX, this.baseY);
+    this.thumb.setPosition(this.baseX, this.baseY);
+
+    // 显示摇杆
+    this.base.setAlpha(0.5);
+    this.thumb.setAlpha(0.8);
+
+    this.updatePosition(pointer.x, pointer.y);
   }
 
   private handlePointerMove(pointer: Phaser.Input.Pointer): void {
@@ -144,13 +152,18 @@ export class VirtualJoystick {
     this.thumb.setPosition(this.baseX, this.baseY);
     this.vector.set(0, 0);
 
-    // 跟随模式下，重置到默认位置（隐藏状态）
+    // 跟随模式下，隐藏摇杆
     if (this.mode === 'follow') {
+      this.base.setAlpha(0);
+      this.thumb.setAlpha(0);
+
+      // 重置到默认位置（准备下一次触摸）
       const height = this.scene.scale.height;
       const padding = Math.min(100, this.scene.scale.width * 0.15, height * 0.1);
       this.baseX = padding;
       this.baseY = height - padding;
       this.base.setPosition(this.baseX, this.baseY);
+      this.thumb.setPosition(this.baseX, this.baseY);
     }
   }
 
@@ -181,6 +194,22 @@ export class VirtualJoystick {
     this.scene.input.off('pointerdown', this.boundPointerDown);
     this.base.removeAllListeners();
     this.setupEvents();
+
+    // 切换到固定模式时，显示摇杆在固定位置
+    if (mode === 'fixed') {
+      this.base.setAlpha(0.5);
+      this.thumb.setAlpha(0.8);
+      const height = this.scene.scale.height;
+      const padding = Math.min(100, this.scene.scale.width * 0.15, height * 0.1);
+      this.baseX = padding;
+      this.baseY = height - padding;
+      this.base.setPosition(this.baseX, this.baseY);
+      this.thumb.setPosition(this.baseX, this.baseY);
+    } else {
+      // 切换到跟随模式时，隐藏摇杆
+      this.base.setAlpha(0);
+      this.thumb.setAlpha(0);
+    }
   }
 
   setDisabled(disabled: boolean): void {
