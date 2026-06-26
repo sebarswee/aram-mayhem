@@ -197,6 +197,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   public applyElementTint(): void {
+    // 有精灵表动画的敌人不应用元素 tint，保持原始颜色
+    if (this.hasSpriteAnimation) {
+      this.clearTint();
+      return;
+    }
     const elementColor = ELEMENT_COLORS[this.element];
     if (elementColor) {
       this.setTint(elementColor);
