@@ -5,7 +5,7 @@ import Phaser from 'phaser';
 
 /**
  * 火焰喷射策略 - 锥形范围持续伤害
- * 向前方60度锥形喷射火焰，持续1.5秒
+ * 向前方60度锥形喷射火焰，持续1.5秒，跟随角色移动
  */
 export class FlameWaveStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
@@ -16,51 +16,54 @@ export class FlameWaveStrategy implements SkillStrategy {
     const tickInterval = 200;
 
     const nearestEnemy = findNearestEnemy(player.x, player.y, range + 100);
-    const playerAngle = nearestEnemy
+    const initialAngle = nearestEnemy
       ? Phaser.Math.Angle.Between(player.x, player.y, nearestEnemy.x, nearestEnemy.y)
-      : 0;
+      : (player as any).body?.angle || 0;
+
+    // 创建跟随玩家的容器
+    const flameContainer = scene.add.container(player.x, player.y);
+    flameContainer.setDepth(24);
 
     // 多层锥形视觉效果
     const coneOuter = scene.add.graphics();
     coneOuter.fillStyle(0xff2200, 0.25);
     coneOuter.beginPath();
-    coneOuter.moveTo(player.x, player.y);
-    coneOuter.arc(player.x, player.y, range * 1.1, playerAngle - coneAngle / 2, playerAngle + coneAngle / 2);
+    coneOuter.moveTo(0, 0);
+    coneOuter.arc(0, 0, range * 1.1, -coneAngle / 2, coneAngle / 2);
     coneOuter.closePath();
     coneOuter.fill();
-    coneOuter.setDepth(24);
 
     const coneMid = scene.add.graphics();
     coneMid.fillStyle(0xff6600, 0.35);
     coneMid.beginPath();
-    coneMid.moveTo(player.x, player.y);
-    coneMid.arc(player.x, player.y, range * 0.85, playerAngle - coneAngle / 2, playerAngle + coneAngle / 2);
+    coneMid.moveTo(0, 0);
+    coneMid.arc(0, 0, range * 0.85, -coneAngle / 2, coneAngle / 2);
     coneMid.closePath();
     coneMid.fill();
-    coneMid.setDepth(25);
 
     const coneInner = scene.add.graphics();
     coneInner.fillStyle(0xffaa00, 0.5);
     coneInner.beginPath();
-    coneInner.moveTo(player.x, player.y);
-    coneInner.arc(player.x, player.y, range * 0.6, playerAngle - coneAngle / 2, playerAngle + coneAngle / 2);
+    coneInner.moveTo(0, 0);
+    coneInner.arc(0, 0, range * 0.6, -coneAngle / 2, coneAngle / 2);
     coneInner.closePath();
     coneInner.fill();
-    coneInner.setDepth(26);
 
     const coneCore = scene.add.graphics();
     coneCore.fillStyle(0xffff00, 0.6);
     coneCore.beginPath();
-    coneCore.moveTo(player.x, player.y);
-    coneCore.arc(player.x, player.y, range * 0.35, playerAngle - coneAngle / 2, playerAngle + coneAngle / 2);
+    coneCore.moveTo(0, 0);
+    coneCore.arc(0, 0, range * 0.35, -coneAngle / 2, coneAngle / 2);
     coneCore.closePath();
     coneCore.fill();
-    coneCore.setDepth(27);
+
+    flameContainer.add([coneOuter, coneMid, coneInner, coneCore]);
+    flameContainer.setRotation(initialAngle);
 
     // 火焰粒子喷发
-    const fireParticles = scene.add.particles(player.x, player.y, 'particle_fire_core', {
+    const fireParticles = scene.add.particles(0, 0, 'particle_fire_core', {
       speed: { min: 150, max: 350 },
-      angle: { min: (playerAngle - coneAngle / 2) * 180 / Math.PI, max: (playerAngle + coneAngle / 2) * 180 / Math.PI },
+      angle: { min: -coneAngle / 2 * 180 / Math.PI, max: coneAngle / 2 * 180 / Math.PI },
       scale: { start: 0.8, end: 0 },
       alpha: { start: 0.9, end: 0 },
       tint: [0xff4400, 0xff6600, 0xffaa00, 0xffff00],
@@ -68,12 +71,12 @@ export class FlameWaveStrategy implements SkillStrategy {
       frequency: 30,
       quantity: 3,
     });
-    fireParticles.setDepth(28);
+    flameContainer.add(fireParticles);
 
     // 火花粒子
-    const sparkParticles = scene.add.particles(player.x, player.y, 'particle_fire_spark', {
+    const sparkParticles = scene.add.particles(0, 0, 'particle_fire_spark', {
       speed: { min: 200, max: 400 },
-      angle: { min: (playerAngle - coneAngle / 2) * 180 / Math.PI, max: (playerAngle + coneAngle / 2) * 180 / Math.PI },
+      angle: { min: -coneAngle / 2 * 180 / Math.PI, max: coneAngle / 2 * 180 / Math.PI },
       scale: { start: 0.5, end: 0 },
       alpha: { start: 1, end: 0 },
       tint: [0xffffff, 0xffff00, 0xffaa00],
@@ -81,7 +84,16 @@ export class FlameWaveStrategy implements SkillStrategy {
       frequency: 40,
       quantity: 2,
     });
-    sparkParticles.setDepth(29);
+    flameContainer.add(sparkParticles);
+
+    // 更新位置跟随玩家
+    const updateEvent = scene.time.addEvent({
+      delay: 16, // ~60fps
+      callback: () => {
+        flameContainer.setPosition(player.x, player.y);
+      },
+      repeat: Math.floor(duration / 16),
+    });
 
     let elapsed = 0;
     const sprayTimer = scene.time.addEvent({
@@ -90,19 +102,21 @@ export class FlameWaveStrategy implements SkillStrategy {
         elapsed += tickInterval;
         if (elapsed >= duration) {
           sprayTimer.destroy();
-          coneOuter.destroy();
-          coneMid.destroy();
-          coneInner.destroy();
-          coneCore.destroy();
-          fireParticles.destroy();
-          sparkParticles.destroy();
+          updateEvent.destroy();
+          // 淡出动画
+          scene.tweens.add({
+            targets: flameContainer,
+            alpha: 0,
+            duration: 200,
+            onComplete: () => flameContainer.destroy(),
+          });
           return;
         }
 
         const enemies = findEnemiesInRange(player.x, player.y, range);
         for (const enemy of enemies) {
           const enemyAngle = Phaser.Math.Angle.Between(player.x, player.y, enemy.x, enemy.y);
-          const angleDiff = Math.abs(Phaser.Math.Angle.Wrap(enemyAngle - playerAngle));
+          const angleDiff = Math.abs(Phaser.Math.Angle.Wrap(enemyAngle - initialAngle));
           if (angleDiff < coneAngle / 2) {
             applyDamageToEnemy(enemy, Math.floor(damage * 0.25), skill);
           }
