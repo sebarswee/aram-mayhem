@@ -153,6 +153,8 @@ export class BootScene extends Phaser.Scene {
           graphicsFactory.generateFoodSprites();
           graphicsFactory.generateExpOrbSprites();
         }
+        // 创建玩家动画
+        this.createPlayerAnimations();
       }
 
       // 在进度80%时初始化状态
@@ -392,5 +394,48 @@ export class BootScene extends Phaser.Scene {
       isDead: false,
       isUpgrading: false,
     };
+  }
+
+  /**
+   * 创建玩家动画
+   */
+  private createPlayerAnimations(): void {
+    // 检查素材是否存在
+    if (!this.textures.exists('player_idle')) {
+      console.warn('[BootScene] Player textures not loaded, skipping animations');
+      return;
+    }
+
+    // 待机动画
+    if (!this.anims.exists('player_idle_anim')) {
+      this.anims.create({
+        key: 'player_idle_anim',
+        frames: this.anims.generateFrameNumbers('player_idle', { start: 0, end: 3 }),
+        frameRate: 8,
+        repeat: -1,
+      });
+    }
+
+    // 移动动画
+    if (!this.anims.exists('player_move_anim')) {
+      this.anims.create({
+        key: 'player_move_anim',
+        frames: this.anims.generateFrameNumbers('player_move', { start: 0, end: 3 }),
+        frameRate: 10,
+        repeat: -1,
+      });
+    }
+
+    // 攻击动画
+    if (!this.anims.exists('player_attack_anim')) {
+      this.anims.create({
+        key: 'player_attack_anim',
+        frames: this.anims.generateFrameNumbers('player_attack', { start: 0, end: 3 }),
+        frameRate: 12,
+        repeat: 0, // 攻击动画只播放一次
+      });
+    }
+
+    console.log('[BootScene] Player animations created');
   }
 }
