@@ -42,10 +42,18 @@ export class EnhancementSystem {
     // 更新等级
     this.enhancerLevels.set(enhancer.id, currentLevel + 1);
 
-    // 找到要强化的技能
-    const targetSkill = skillId
-      ? this.player.skills.find((s) => s.id === skillId)
-      : this.findBestSkillForEnhancer(enhancer);
+    // 找到要强化的技能（在基础技能和大招中查找）
+    let targetSkill: Skill | undefined;
+    if (skillId) {
+      // 先在基础技能中查找
+      targetSkill = this.player.skills.find((s) => s.id === skillId);
+      // 如果没找到，在大招中查找
+      if (!targetSkill) {
+        targetSkill = this.player.ultimateSkills.find((s) => s.id === skillId);
+      }
+    } else {
+      targetSkill = this.findBestSkillForEnhancer(enhancer);
+    }
 
     if (targetSkill) {
       // 添加强化到技能
@@ -132,7 +140,19 @@ export class EnhancementSystem {
   getApplicableEnhancersForPlayer(): Array<{ enhancer: SkillEnhancer; skillId: string }> {
     const result: Array<{ enhancer: SkillEnhancer; skillId: string }> = [];
 
+    // 遍历基础技能
     for (const skill of this.player.skills) {
+      const applicable = getApplicableEnhancers(skill.categories, skill.elements);
+      for (const enhancer of applicable) {
+        const currentLevel = this.enhancerLevels.get(enhancer.id) || 0;
+        if (currentLevel < enhancer.maxLevel) {
+          result.push({ enhancer, skillId: skill.id });
+        }
+      }
+    }
+
+    // 遍历大招
+    for (const skill of this.player.ultimateSkills) {
       const applicable = getApplicableEnhancers(skill.categories, skill.elements);
       for (const enhancer of applicable) {
         const currentLevel = this.enhancerLevels.get(enhancer.id) || 0;
@@ -166,7 +186,10 @@ export class EnhancementSystem {
    * 找到最适合的技能应用强化
    */
   private findBestSkillForEnhancer(enhancer: SkillEnhancer): Skill | undefined {
-    const applicable = this.player.skills.filter((skill) => {
+    // 合并基础技能和大招
+    const allSkills = [...this.player.skills, ...this.player.ultimateSkills];
+
+    const applicable = allSkills.filter((skill) => {
       // 检查类别限制
       if (enhancer.skillCategories) {
         const hasCategory = skill.categories.some((cat) =>

@@ -9,7 +9,7 @@ import Phaser from 'phaser';
  */
 export class SandstormStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const radius = skill.rangeValue;
     const duration = 4000;
     const tickInterval = 400;
@@ -82,13 +82,7 @@ export class SandstormStrategy implements SkillStrategy {
         const enemies = findEnemiesInRange(player.x, player.y, radius);
         for (const enemy of enemies) {
           applyDamageToEnemy(enemy, damage, skill);
-          enemy.addStatusEffect({
-            type: 'slow',
-            value: 0.5,
-            duration: 500,
-            remainingTime: 500,
-            source: 'quicksand',
-          });
+          applyEffects(enemy, skill.effects);
 
           // 沙尘效果
           const dust = scene.add.circle(enemy.x, enemy.y, 10, 0x997744, 0.6);
