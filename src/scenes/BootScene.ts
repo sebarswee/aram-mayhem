@@ -83,6 +83,27 @@ export class BootScene extends Phaser.Scene {
         frameHeight: 96,
       });
     }
+
+    // 加载 Boss 精灵表素材 (128x128)
+    const bossEnemies = [
+      'boss_flame_lord', 'boss_frost_giant', 'boss_thunder_dragon',
+      'boss_shadow_king', 'boss_nature_guardian', 'boss_golem_lord',
+      'boss_fallen_angel', 'boss_hydra'
+    ];
+    for (const enemyId of bossEnemies) {
+      this.load.spritesheet(`${enemyId}_idle`, `assets/characters/bosses/${enemyId}_idle.png`, {
+        frameWidth: 128,
+        frameHeight: 128,
+      });
+      this.load.spritesheet(`${enemyId}_move`, `assets/characters/bosses/${enemyId}_move.png`, {
+        frameWidth: 128,
+        frameHeight: 128,
+      });
+      this.load.spritesheet(`${enemyId}_attack`, `assets/characters/bosses/${enemyId}_attack.png`, {
+        frameWidth: 128,
+        frameHeight: 128,
+      });
+    }
   }
 
   create(): void {
@@ -193,6 +214,14 @@ export class BootScene extends Phaser.Scene {
           console.log('[BootScene] Enemy assets loaded successfully');
         }
 
+        // 检查 Boss 素材是否已加载
+        const bossesLoaded = this.textures.exists('boss_flame_lord_idle');
+        if (!bossesLoaded) {
+          console.log('[BootScene] Boss assets not loaded, generating fallback textures');
+        } else {
+          console.log('[BootScene] Boss assets loaded successfully');
+        }
+
         const graphicsFactory = new GraphicsFactory(this);
 
         if (!playerLoaded) {
@@ -201,8 +230,9 @@ export class BootScene extends Phaser.Scene {
 
         if (!enemiesLoaded) {
           graphicsFactory.generateEnemySprites();
-        } else {
-          // 生成 Boss 素材（Boss 还没有精灵表）
+        }
+
+        if (!bossesLoaded) {
           graphicsFactory.generateBossSprites();
         }
 
@@ -567,6 +597,45 @@ export class BootScene extends Phaser.Scene {
             key: `${enemyId}_move_anim`,
             frames: this.anims.generateFrameNumbers(`${enemyId}_move`, { start: 0, end: 3 }),
             frameRate: 8,
+            repeat: -1,
+          });
+        }
+        // 攻击动画
+        if (!this.anims.exists(`${enemyId}_attack_anim`)) {
+          this.anims.create({
+            key: `${enemyId}_attack_anim`,
+            frames: this.anims.generateFrameNumbers(`${enemyId}_attack`, { start: 0, end: 3 }),
+            frameRate: 10,
+            repeat: 0,
+          });
+        }
+      }
+    }
+
+    // Boss 敌人动画
+    const bossEnemies = [
+      'boss_flame_lord', 'boss_frost_giant', 'boss_thunder_dragon',
+      'boss_shadow_king', 'boss_nature_guardian', 'boss_golem_lord',
+      'boss_fallen_angel', 'boss_hydra'
+    ];
+
+    for (const enemyId of bossEnemies) {
+      if (this.textures.exists(`${enemyId}_idle`)) {
+        // 待机动画
+        if (!this.anims.exists(`${enemyId}_idle_anim`)) {
+          this.anims.create({
+            key: `${enemyId}_idle_anim`,
+            frames: this.anims.generateFrameNumbers(`${enemyId}_idle`, { start: 0, end: 3 }),
+            frameRate: 5,
+            repeat: -1,
+          });
+        }
+        // 移动动画
+        if (!this.anims.exists(`${enemyId}_move_anim`)) {
+          this.anims.create({
+            key: `${enemyId}_move_anim`,
+            frames: this.anims.generateFrameNumbers(`${enemyId}_move`, { start: 0, end: 3 }),
+            frameRate: 7,
             repeat: -1,
           });
         }
