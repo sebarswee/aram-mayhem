@@ -84,6 +84,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private statusTint: number = 0xffffff;
   private particleEmitters: Map<string, Phaser.GameObjects.Particles.ParticleEmitter> = new Map();
 
+  // 动画状态
+  private currentAnim: 'idle' | 'move' | 'attack' = 'idle';
+  private isAttacking: boolean = false;
+
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, 'player');
 
@@ -133,11 +137,52 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   private createGlowEffect(): void {
-    this.glowSprite = this.scene.add.sprite(this.x, this.y, 'player');
+    // 使用静态纹理或当前帧作为发光效果
+    const textureKey = this.scene.textures.exists('player_idle') ? 'player_idle' : 'player';
+    this.glowSprite = this.scene.add.sprite(this.x, this.y, textureKey, 0);
     this.glowSprite.setAlpha(0.3);
     this.glowSprite.setTint(0x66ccff);
     this.glowSprite.setScale(1.3);
     this.glowSprite.setDepth(49);
+  }
+
+  /**
+   * 播放指定动画
+   */
+  private playAnimation(anim: 'idle' | 'move' | 'attack'): void {
+    if (this.currentAnim === anim) return;
+
+    const animKey = `player_${anim}_anim`;
+
+    // 检查动画是否存在
+    if (!this.scene.anims.exists(animKey)) {
+      // 回退到静态纹理
+      if (this.scene.textures.exists('player')) {
+        this.setTexture('player');
+      }
+      return;
+    }
+
+    this.currentAnim = anim;
+    this.play(animKey);
+
+    // 攻击动画结束后回到待机
+    if (anim === 'attack') {
+      this.isAttacking = true;
+      this.once('animationcomplete', () => {
+        this.isAttacking = false;
+        this.playAnimation('idle');
+      });
+    }
+  }
+
+  /**
+   * 播放攻击动画（由技能系统调用）
+   */
+  public playAttackAnimation(): void {
+    if (!this.isAttacking) {
+      this.playAnimation('attack');
+    }
   }
 
   // ==================== Skill Management ====================
@@ -819,9 +864,24 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       }
     }
 
-    // 更新发光效果位置
+    // 根据移动状态切换动画
+    const isMoving = this.body?.velocity.x !== 0 || this.body?.velocity.y !== 0;
+
+    if (!this.isAttacking) {
+      if (isMoving) {
+        this.playAnimation('move');
+      } else {
+        this.playAnimation('idle');
+      }
+    }
+
+    // 更新发光效果位置和帧
     if (this.glowSprite) {
       this.glowSprite.setPosition(this.x, this.y);
+      // 同步当前动画帧
+      if (this.frame) {
+        this.glowSprite.setFrame(this.frame.name);
+      }
       // 轻微的脉动效果
       this.glowSprite.setAlpha(0.2 + Math.sin(Date.now() / 300) * 0.1);
     }
