@@ -343,12 +343,19 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.currentAnim = anim;
     this.play(animKey);
 
-    // 攻击动画结束后回到待机
+    // 攻击动画结束后根据移动状态选择动画
     if (anim === 'attack') {
       this.isAttacking = true;
       this.once('animationcomplete', () => {
         this.isAttacking = false;
-        this.playAnimation('idle');
+        // 根据当前是否在移动来选择动画
+        const body = this.body as Phaser.Physics.Arcade.Body | null;
+        const isMoving = body && (body.velocity.x !== 0 || body.velocity.y !== 0);
+        if (isMoving && !this.isImmobilized()) {
+          this.playAnimation('move');
+        } else {
+          this.playAnimation('idle');
+        }
       });
     }
   }

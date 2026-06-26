@@ -746,6 +746,9 @@ export class CollisionSystem {
     }
     this.enemyCollisionCooldowns.set(enem.instanceId, now);
 
+    // 触发敌人攻击动画
+    enem.playAttackAnimation();
+
     // Calculate actual distance to ensure real collision
     const distance = Phaser.Math.Distance.Between(ply.x, ply.y, enem.x, enem.y);
     const collisionDistance = 30; // Reasonable collision distance
