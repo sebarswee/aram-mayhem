@@ -631,82 +631,29 @@ export class FrozenDomainVisualStrategy implements VisualEffectStrategy {
 }
 
 /**
- * 绝对零度策略 - 秒杀低血量
- */
-export class AbsoluteZeroStrategy implements SkillStrategy {
-  execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
-    const radius = skill.rangeValue;
-    const executeThreshold = 0.10;
+   * 绝对零度策略 - 秒杀低血量
+   */
+  export class AbsoluteZeroStrategy implements SkillStrategy {
+    execute(skill: Skill, context: SkillExecutionContext): void {
+      const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+      const radius = skill.rangeValue;
+      const executeThreshold = 0.10;
 
-    // 多层绝对零度核心爆发
-    const coreBurst = scene.add.graphics();
-    coreBurst.fillStyle(0xffffff, 1);
-    coreBurst.fillCircle(player.x, player.y, 60);
-    coreBurst.fillStyle(0xccffff, 0.95);
-    coreBurst.fillCircle(player.x, player.y, 45);
-    coreBurst.fillStyle(0x88eeff, 0.9);
-    coreBurst.fillCircle(player.x, player.y, 30);
-    coreBurst.setDepth(95);
+      // 视觉效果由 AbsoluteZeroVisualStrategy 处理，这里只处理伤害逻辑
 
-    scene.tweens.add({
-      targets: coreBurst,
-      scale: 3,
-      alpha: 0,
-      duration: 400,
-      onComplete: () => coreBurst.destroy(),
-    });
-
-    // 多层冰霜冲击波
-    for (let i = 0; i < 5; i++) {
-      const wave = scene.add.circle(player.x, player.y, 40 + i * 20, 0x88eeff, 0.6 - i * 0.1);
-      wave.setDepth(90 + i);
-      scene.tweens.add({
-        targets: wave,
-        scale: radius / 20 * 1.2,
-        alpha: 0,
-        duration: 600 + i * 80,
-        delay: i * 60,
-        onComplete: () => wave.destroy(),
-      });
-    }
-
-    // 冰晶粒子爆发
-    VisualEffectUtils.createParticleBurst(scene, player.x, player.y, {
-      count: 50,
-      color: 0x88eeff,
-      speed: { min: 150, max: 350 },
-      scale: { start: 0.8, end: 0 },
-      lifespan: 500,
-      texture: 'particle_ice_crystal',
-    });
-
-    // 屏幕震动和闪光
-    VisualEffectUtils.screenShake(scene, { intensity: 0.015, duration: 200 });
-    VisualEffectUtils.screenFlash(scene, { color: 0xccffff, intensity: 0.4, duration: 150 });
-
-    const enemies = findEnemiesInRange(player.x, player.y, radius);
-    for (const enemy of enemies) {
-      const hpPercent = enemy.currentHp / enemy.maxHp;
-      if (hpPercent < executeThreshold) {
-        applyDamageToEnemy(enemy, enemy.currentHp + 1, skill);
-      } else {
-        applyDamageToEnemy(enemy, damage, skill);
+      const enemies = findEnemiesInRange(player.x, player.y, radius);
+      for (const enemy of enemies) {
+        const hpPercent = enemy.currentHp / enemy.maxHp;
+        if (hpPercent < executeThreshold) {
+          // 秒杀：造成等同于当前血量的伤害
+          applyDamageToEnemy(enemy, enemy.currentHp, skill);
+        } else {
+          // 正常伤害
+          applyDamageToEnemy(enemy, damage, skill);
+        }
       }
-
-      // 冰冻击中效果
-      const freeze = scene.add.circle(enemy.x, enemy.y, 25, 0xffffff, 0.8);
-      freeze.setDepth(100);
-      scene.tweens.add({
-        targets: freeze,
-        scale: 1.8,
-        alpha: 0,
-        duration: 300,
-        onComplete: () => freeze.destroy(),
-      });
     }
   }
-}
 
 export class AbsoluteZeroVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
@@ -745,6 +692,10 @@ export class AbsoluteZeroVisualStrategy implements VisualEffectStrategy {
       lifespan: 450,
       texture: 'particle_ice_crystal',
     });
+
+    // 屏幕震动和闪光
+    VisualEffectUtils.screenShake(scene, { intensity: 0.015, duration: 200 });
+    VisualEffectUtils.screenFlash(scene, { color: 0xccffff, intensity: 0.4, duration: 150 });
   }
 }
 
