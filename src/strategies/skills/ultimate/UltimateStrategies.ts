@@ -2550,11 +2550,10 @@ export class ForceOfNatureStrategy implements SkillStrategy {
     const attackInterval = 800;
 
     for (let i = 0; i < spiritCount; i++) {
-      const angle = (i / spiritCount) * Math.PI * 2;
-      const spiritX = player.x + Math.cos(angle) * 60;
-      const spiritY = player.y + Math.sin(angle) * 60;
+      const baseAngle = (i / spiritCount) * Math.PI * 2;
+      const orbitRadius = 60;
 
-      const spirit = scene.add.container(spiritX, spiritY);
+      const spirit = scene.add.container(player.x, player.y);
       spirit.setDepth(45);
 
       // 多层精灵身体
@@ -2564,11 +2563,28 @@ export class ForceOfNatureStrategy implements SkillStrategy {
       const bodyCore = scene.add.circle(0, 0, 5, 0xaaffaa, 0.95);
       spirit.add([bodyOuter, bodyMid, bodyInner, bodyCore]);
 
-      // 环绕动画
-      scene.tweens.add({
+      // 存储需要清理的 tweens
+      const activeTweens: Phaser.Tweens.Tween[] = [];
+
+      // 自转动画
+      const spinTween = scene.tweens.add({
         targets: spirit,
         angle: 360,
         duration: 2000,
+        repeat: -1,
+      });
+      activeTweens.push(spinTween);
+
+      // 跟随玩家并环绕的位置更新
+      let currentAngle = baseAngle;
+      const updateEvent = scene.time.addEvent({
+        delay: 16, // ~60fps
+        callback: () => {
+          currentAngle += 0.03; // 环绕速度
+          const spiritX = player.x + Math.cos(currentAngle) * orbitRadius;
+          const spiritY = player.y + Math.sin(currentAngle) * orbitRadius;
+          spirit.setPosition(spiritX, spiritY);
+        },
         repeat: -1,
       });
 
@@ -2579,6 +2595,13 @@ export class ForceOfNatureStrategy implements SkillStrategy {
           attackCount++;
           if (attackCount > 5) {
             attackTimer.destroy();
+            // 停止无限重复的 tweens 和事件
+            activeTweens.forEach(tween => {
+              if (tween && tween.isPlaying()) {
+                tween.stop();
+              }
+            });
+            updateEvent.destroy();
             scene.tweens.add({
               targets: spirit,
               alpha: 0,

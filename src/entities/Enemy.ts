@@ -97,13 +97,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private shadowGraphics: Phaser.GameObjects.Graphics | null = null;
   private lastDotTickTime: Record<string, number> = {};
   private elementTintApplied: boolean = false;
-  private typeVisualEffects?: {
-    aura?: Phaser.GameObjects.Arc;
-    outerAura?: Phaser.GameObjects.Arc;
-    innerAura?: Phaser.GameObjects.Arc;
-    coreAura?: Phaser.GameObjects.Arc;
-    followEvent?: Phaser.Time.TimerEvent;
-  };
 
   constructor(scene: Phaser.Scene, x: number, y: number, config: EnemyConfig) {
     // 检查是否有精灵表动画素材
@@ -166,124 +159,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
   /**
    * 创建精英/Boss特殊视觉效果
+   * 现在精英和Boss都有精灵表图片，不再需要光环效果
    */
   private createTypeVisualEffect(): void {
-    if (this.config.type === 'elite') {
-      // 精英敌人：金色脉动光环
-      this.createEliteAura();
-    } else if (this.config.type === 'boss') {
-      // Boss：大型红色光环 + HP条
-      this.createBossAura();
-    }
-  }
-
-  /**
-   * 创建精英光环效果
-   */
-  private createEliteAura(): void {
-    // 外圈光环（金色，醒目）
-    const aura = this.scene.add.circle(this.x, this.y, 50, 0xffcc00, 0.2);
-    aura.setStrokeStyle(3, 0xffaa00, 0.7);
-    aura.setDepth(28);
-
-    // 脉动动画
-    this.scene.tweens.add({
-      targets: aura,
-      scaleX: 1.2,
-      scaleY: 1.2,
-      alpha: 0.35,
-      duration: 800,
-      yoyo: true,
-      repeat: -1,
-    });
-
-    // 跟随敌人位置
-    const followEvent = this.scene.time.addEvent({
-      delay: 50,
-      callback: () => {
-        if (!this.active) {
-          aura.destroy();
-          followEvent.destroy();
-          return;
-        }
-        aura.setPosition(this.x, this.y);
-      },
-      repeat: -1,
-    });
-
-    // 存储引用以便清理
-    this.typeVisualEffects = { aura, followEvent };
-  }
-
-  /**
-   * 创建Boss光环效果
-   */
-  private createBossAura(): void {
-    // 大型外圈光环（红色+金色，非常醒目）
-    const outerAura = this.scene.add.circle(this.x, this.y, 75, 0xff0000, 0.15);
-    outerAura.setStrokeStyle(4, 0xff3333, 0.6);
-    outerAura.setDepth(27);
-
-    // 内圈光环
-    const innerAura = this.scene.add.circle(this.x, this.y, 60, 0xffcc00, 0.12);
-    innerAura.setStrokeStyle(3, 0xffcc00, 0.5);
-    innerAura.setDepth(28);
-
-    // 核心（带光晕）
-    const coreAura = this.scene.add.circle(this.x, this.y, 45, 0xffffff, 0.08);
-    coreAura.setDepth(28);
-
-    // 脉动动画
-    this.scene.tweens.add({
-      targets: outerAura,
-      scaleX: 1.12,
-      scaleY: 1.12,
-      alpha: 0.2,
-      duration: 1000,
-      yoyo: true,
-      repeat: -1,
-    });
-
-    this.scene.tweens.add({
-      targets: innerAura,
-      scaleX: 1.1,
-      scaleY: 1.1,
-      alpha: 0.18,
-      duration: 600,
-      yoyo: true,
-      repeat: -1,
-    });
-
-    this.scene.tweens.add({
-      targets: coreAura,
-      scaleX: 1.08,
-      scaleY: 1.08,
-      alpha: 0.12,
-      duration: 500,
-      yoyo: true,
-      repeat: -1,
-    });
-
-    // 跟随敌人位置
-    const followEvent = this.scene.time.addEvent({
-      delay: 50,
-      callback: () => {
-        if (!this.active) {
-          outerAura.destroy();
-          innerAura.destroy();
-          coreAura.destroy();
-          followEvent.destroy();
-          return;
-        }
-        outerAura.setPosition(this.x, this.y);
-        innerAura.setPosition(this.x, this.y);
-        coreAura.setPosition(this.x, this.y);
-      },
-      repeat: -1,
-    });
-
-    // 存储引用以便清理
-    this.typeVisualEffects = { outerAura, innerAura, coreAura, followEvent };
+    // 不再创建光环效果，精英和Boss已经有精灵表图片
   }
 
   /**
@@ -335,6 +214,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private playAnimation(anim: 'idle' | 'move' | 'attack'): void {
     if (!this.hasSpriteAnimation || this.currentAnim === anim) return;
 
+    // 检查 scene 和 anims 是否有效
+    if (!this.scene || !this.scene.anims) return;
+
     const animKey = `${this.config.id}_${anim}_anim`;
 
     // 检查动画是否存在
@@ -347,6 +229,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (anim === 'attack') {
       this.isAttacking = true;
       this.once('animationcomplete', () => {
+        // 再次检查是否仍然有效
+        if (!this.active || !this.scene) return;
         this.isAttacking = false;
         // 根据当前是否在移动来选择动画
         const body = this.body as Phaser.Physics.Arcade.Body | null;
@@ -1035,25 +919,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     // 清理阴影
     if (this.shadowGraphics) {
       this.shadowGraphics.destroy();
-    }
-
-    // 清理精英/Boss视觉效果
-    if (this.typeVisualEffects) {
-      if (this.typeVisualEffects.aura) {
-        this.typeVisualEffects.aura.destroy();
-      }
-      if (this.typeVisualEffects.outerAura) {
-        this.typeVisualEffects.outerAura.destroy();
-      }
-      if (this.typeVisualEffects.innerAura) {
-        this.typeVisualEffects.innerAura.destroy();
-      }
-      if (this.typeVisualEffects.coreAura) {
-        this.typeVisualEffects.coreAura.destroy();
-      }
-      if (this.typeVisualEffects.followEvent) {
-        this.typeVisualEffects.followEvent.destroy();
-      }
     }
 
     super.destroy();

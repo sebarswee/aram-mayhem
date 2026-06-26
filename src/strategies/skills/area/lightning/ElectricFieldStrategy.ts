@@ -44,9 +44,12 @@ export class ElectricFieldStrategy implements SkillStrategy {
       pulseRings.push(ring);
     }
 
+    // 存储需要清理的 tweens
+    const activeTweens: Phaser.Tweens.Tween[] = [];
+
     // 持续脉冲动画
     pulseRings.forEach((ring, i) => {
-      scene.tweens.add({
+      const tween = scene.tweens.add({
         targets: ring,
         scale: 1.15,
         alpha: 0.4,
@@ -55,6 +58,7 @@ export class ElectricFieldStrategy implements SkillStrategy {
         repeat: -1,
         delay: i * 80,
       });
+      activeTweens.push(tween);
     });
 
     // 电荷粒子系统
@@ -136,18 +140,25 @@ export class ElectricFieldStrategy implements SkillStrategy {
 
     // 边界闪烁效果
     fieldLayers.forEach((layer, i) => {
-      scene.tweens.add({
+      const tween = scene.tweens.add({
         targets: layer,
         alpha: layer.alpha * 1.5,
         duration: 200 + i * 50,
         yoyo: true,
         repeat: -1,
       });
+      activeTweens.push(tween);
     });
 
     // 电场结束时清理
     scene.time.delayedCall(duration, () => {
       tickTimer.destroy();
+      // 停止所有无限重复的 tweens
+      activeTweens.forEach(tween => {
+        if (tween && tween.isPlaying()) {
+          tween.stop();
+        }
+      });
       chargeParticles.destroy();
 
       scene.tweens.add({

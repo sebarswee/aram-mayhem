@@ -64,9 +64,12 @@ export class PoisonCloudStrategy implements SkillStrategy {
     });
     risingParticles.setDepth(21);
 
+    // 存储需要清理的 tweens
+    const activeTweens: Phaser.Tweens.Tween[] = [];
+
     // 层级脉动动画
     poisonLayers.forEach((layer, i) => {
-      scene.tweens.add({
+      const tween = scene.tweens.add({
         targets: layer,
         scaleX: 1.08,
         scaleY: 1.08,
@@ -75,6 +78,7 @@ export class PoisonCloudStrategy implements SkillStrategy {
         yoyo: true,
         repeat: -1,
       });
+      activeTweens.push(tween);
     });
 
     let tickCount = 0;
@@ -112,6 +116,12 @@ export class PoisonCloudStrategy implements SkillStrategy {
     // 使用 delayedCall 确保清理逻辑一定会执行
     scene.time.delayedCall(duration, () => {
       damageTimer.destroy();
+      // 停止所有无限重复的 tweens
+      activeTweens.forEach(tween => {
+        if (tween && tween.isPlaying()) {
+          tween.stop();
+        }
+      });
       poisonParticles.destroy();
       risingParticles.destroy();
       poisonLayers.forEach(l => l.destroy());

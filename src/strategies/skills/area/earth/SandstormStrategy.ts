@@ -56,14 +56,18 @@ export class SandstormStrategy implements SkillStrategy {
       vortex.add(ring);
     }
 
+    // 存储需要清理的 tweens
+    const activeTweens: Phaser.Tweens.Tween[] = [];
+
     // 不同方向旋转
     vortex.list.forEach((ring, i) => {
-      scene.tweens.add({
+      const tween = scene.tweens.add({
         targets: ring,
         angle: 360 * (i % 2 === 0 ? 1 : -1),
         duration: 1500 + i * 300,
         repeat: -1,
       });
+      activeTweens.push(tween);
     });
 
     let elapsed = 0;
@@ -73,6 +77,12 @@ export class SandstormStrategy implements SkillStrategy {
         elapsed += tickInterval;
         if (elapsed >= duration) {
           trapTimer.destroy();
+          // 停止所有无限重复的 tweens
+          activeTweens.forEach(tween => {
+            if (tween && tween.isPlaying()) {
+              tween.stop();
+            }
+          });
           sandLayers.forEach(l => l.destroy());
           sandParticles.destroy();
           vortex.destroy();

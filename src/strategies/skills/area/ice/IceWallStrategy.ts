@@ -88,8 +88,11 @@ export class IceWallStrategy implements SkillStrategy {
     iceParticles.setRotation(playerAngle);
     iceParticles.setDepth(27);
 
+    // 存储需要清理的 tweens
+    const activeTweens: Phaser.Tweens.Tween[] = [];
+
     // 冰墙脉动
-    scene.tweens.add({
+    const frostTween = scene.tweens.add({
       targets: [frostAura],
       scale: 1.05,
       alpha: 0.2,
@@ -97,6 +100,7 @@ export class IceWallStrategy implements SkillStrategy {
       yoyo: true,
       repeat: -1,
     });
+    activeTweens.push(frostTween);
 
     // 冰墙阻挡逻辑 - 检测接近冰墙的敌人并推开
     const blockCheckTimer = scene.time.addEvent({
@@ -152,6 +156,12 @@ export class IceWallStrategy implements SkillStrategy {
     // 持续时间后消失
     scene.time.delayedCall(duration, () => {
       blockCheckTimer.destroy();
+      // 停止无限重复的 tweens
+      activeTweens.forEach(tween => {
+        if (tween && tween.isPlaying()) {
+          tween.stop();
+        }
+      });
       iceParticles.destroy();
 
       // 消散粒子

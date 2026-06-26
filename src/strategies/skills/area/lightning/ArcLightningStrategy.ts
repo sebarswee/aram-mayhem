@@ -264,39 +264,43 @@ export class ShadowStepStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
     const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
 
-    // 多层分身视觉
+    // 使用玩家精灵表创建分身
     const clone = scene.add.container(player.x, player.y);
     clone.setDepth(40);
 
-    const bodyOuter = scene.add.circle(0, 0, 22, 0x4400aa, 0.35);
-    const bodyMid = scene.add.circle(0, 0, 17, 0x6600cc, 0.5);
-    const bodyInner = scene.add.circle(0, 0, 12, 0x8800ff, 0.7);
-    const bodyCore = scene.add.circle(0, 0, 6, 0xaa44ff, 0.9);
-    clone.add([bodyOuter, bodyMid, bodyInner, bodyCore]);
+    // 尝试使用玩家精灵表图片
+    if (scene.textures.exists('player_idle')) {
+      const sprite = scene.add.sprite(0, 0, 'player_idle', 0);
+      sprite.setTint(0x8800ff); // 暗影紫色
+      sprite.setAlpha(0.7);
+      clone.add(sprite);
 
-    // 暗影漩涡
-    const vortex = scene.add.graphics();
-    for (let i = 0; i < 3; i++) {
-      vortex.lineStyle(2 - i * 0.5, 0x8800ff, 0.5 - i * 0.1);
-      vortex.strokeCircle(player.x, player.y, 25 + i * 8);
+      // 播放待机动画
+      if (scene.anims.exists('player_idle_anim')) {
+        sprite.play('player_idle_anim');
+      }
+    } else {
+      // 回退到程序生成的圆形
+      const bodyOuter = scene.add.circle(0, 0, 22, 0x4400aa, 0.35);
+      const bodyMid = scene.add.circle(0, 0, 17, 0x6600cc, 0.5);
+      const bodyInner = scene.add.circle(0, 0, 12, 0x8800ff, 0.7);
+      const bodyCore = scene.add.circle(0, 0, 6, 0xaa44ff, 0.9);
+      clone.add([bodyOuter, bodyMid, bodyInner, bodyCore]);
     }
-    vortex.setDepth(39);
 
-    scene.tweens.add({
+    // 存储需要清理的 tweens
+    const activeTweens: Phaser.Tweens.Tween[] = [];
+
+    // 脉动效果
+    const pulseTween = scene.tweens.add({
       targets: clone,
-      alpha: 0.6,
-      scale: 1.08,
+      alpha: 0.5,
+      scale: 1.05,
       duration: 300,
       yoyo: true,
       repeat: -1,
     });
-
-    scene.tweens.add({
-      targets: vortex,
-      angle: 360,
-      duration: 1500,
-      repeat: -1,
-    });
+    activeTweens.push(pulseTween);
 
     const cloneDuration = 3000;
     const attractTimer = scene.time.addEvent({
@@ -316,7 +320,12 @@ export class ShadowStepStrategy implements SkillStrategy {
 
     scene.time.delayedCall(cloneDuration, () => {
       attractTimer.destroy();
-      vortex.destroy();
+      // 停止无限重复的 tweens
+      activeTweens.forEach(tween => {
+        if (tween && tween.isPlaying()) {
+          tween.stop();
+        }
+      });
 
       // 消散粒子
       VisualEffectUtils.createParticleBurst(scene, clone.x, clone.y, {

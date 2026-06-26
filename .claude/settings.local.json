@@ -39,7 +39,8 @@
       "Bash(file *)",
       "Bash(bash *)",
       "Bash(curl -s http://localhost:5173)",
-      "Bash(identify public/assets/characters/player/*.png)"
+      "Bash(identify public/assets/characters/player/*.png)",
+      "Bash(identify public/assets/characters/enemies/normal/flame_slime_idle.png)"
     ]
   }
 }

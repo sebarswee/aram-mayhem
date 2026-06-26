@@ -43,8 +43,11 @@ export class RockSpikeStrategy implements SkillStrategy {
       }
       crack.setDepth(17);
 
+      // 存储需要清理的 tweens
+      const activeTweens: Phaser.Tweens.Tween[] = [];
+
       // 多层脉动动画
-      scene.tweens.add({
+      const pulseTween1 = scene.tweens.add({
         targets: [trapOuter, trapMid],
         scale: 1.15,
         alpha: 0.6,
@@ -52,8 +55,9 @@ export class RockSpikeStrategy implements SkillStrategy {
         yoyo: true,
         repeat: -1,
       });
+      activeTweens.push(pulseTween1);
 
-      scene.tweens.add({
+      const pulseTween2 = scene.tweens.add({
         targets: trapInner,
         scale: 1.25,
         alpha: 0.7,
@@ -61,6 +65,7 @@ export class RockSpikeStrategy implements SkillStrategy {
         yoyo: true,
         repeat: -1,
       });
+      activeTweens.push(pulseTween2);
 
       // 检测触发
       let triggered = false;
@@ -73,6 +78,12 @@ export class RockSpikeStrategy implements SkillStrategy {
           if (enemies.length > 0) {
             triggered = true;
             checkTimer.destroy();
+            // 停止无限重复的 tweens
+            activeTweens.forEach(tween => {
+              if (tween && tween.isPlaying()) {
+                tween.stop();
+              }
+            });
             trapOuter.destroy();
             trapMid.destroy();
             trapInner.destroy();
@@ -157,6 +168,12 @@ export class RockSpikeStrategy implements SkillStrategy {
       scene.time.delayedCall(trapDuration, () => {
         if (triggered) return; // 如果已触发，跳过销毁
         checkTimer.destroy();
+        // 停止无限重复的 tweens
+        activeTweens.forEach(tween => {
+          if (tween && tween.isPlaying()) {
+            tween.stop();
+          }
+        });
         trapOuter.destroy();
         trapMid.destroy();
         trapInner.destroy();

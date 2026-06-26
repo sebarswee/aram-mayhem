@@ -24,13 +24,16 @@ export class BlizzardStrategy implements SkillStrategy {
       { radius: radius * 0.85, color: 0xaaeeff, alpha: 0.15 },
     ];
 
+    // 存储所有需要清理的 tweens
+    const activeTweens: Phaser.Tweens.Tween[] = [];
+
     layerConfigs.forEach((config, i) => {
       const layer = scene.add.circle(centerX, centerY, config.radius, config.color, config.alpha);
       layer.setDepth(17 + i);
       frostLayers.push(layer);
 
-      // 脉动动画
-      scene.tweens.add({
+      // 脉动动画 - 存储引用
+      const tween = scene.tweens.add({
         targets: layer,
         scaleX: 1.05,
         scaleY: 1.05,
@@ -39,6 +42,7 @@ export class BlizzardStrategy implements SkillStrategy {
         yoyo: true,
         repeat: -1,
       });
+      activeTweens.push(tween);
     });
 
     // 霜冻粒子系统
@@ -84,12 +88,14 @@ export class BlizzardStrategy implements SkillStrategy {
       ring.strokeCircle(0, 0, radius * (0.4 + i * 0.2));
       vortex.add(ring);
 
-      scene.tweens.add({
+      // 存储旋转动画引用
+      const rotationTween = scene.tweens.add({
         targets: ring,
         angle: 360 * (i % 2 === 0 ? 1 : -1),
         duration: 2000 + i * 500,
         repeat: -1,
       });
+      activeTweens.push(rotationTween);
     }
 
     let tickCount = 0;
@@ -129,6 +135,12 @@ export class BlizzardStrategy implements SkillStrategy {
     // 使用 delayedCall 确保清理逻辑一定会执行
     scene.time.delayedCall(duration, () => {
       damageTimer.destroy();
+      // 停止所有无限重复的 tweens
+      activeTweens.forEach(tween => {
+        if (tween && tween.isPlaying()) {
+          tween.stop();
+        }
+      });
       frostParticles.destroy();
       snowParticles.destroy();
       frostLayers.forEach(l => l.destroy());
