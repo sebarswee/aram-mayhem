@@ -170,19 +170,6 @@ export class CurseAuraVisualStrategy implements VisualEffectStrategy {
       rings.push(ring);
     });
 
-    // 诅咒符文装饰
-    const runeCircle = scene.add.graphics();
-    runeCircle.lineStyle(2, 0xcc66ff, 0.5);
-    runeCircle.strokeCircle(x, y, radius * 0.8);
-    runeCircle.setDepth(21);
-
-    scene.tweens.add({
-      targets: runeCircle,
-      angle: 360,
-      duration: 2000,
-      repeat: 1,
-    });
-
     // 中心光爆
     VisualEffectUtils.createElementGlow(scene, x, y, {
       color: 0x8800ff,
@@ -191,8 +178,9 @@ export class CurseAuraVisualStrategy implements VisualEffectStrategy {
       pulseCount: 1,
     });
 
+    // 所有效果一起消失
     scene.tweens.add({
-      targets: [...rings],
+      targets: rings,
       alpha: 0,
       scale: 1.5,
       duration: 450,
