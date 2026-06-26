@@ -43,9 +43,13 @@ export class DropSystem {
       return; // 升级/选技能期间不生成掉落
     }
 
+    // 检查场景和物理世界是否有效
+    if (!this.scene || !this.scene.scene.isActive() || !this.scene.physics?.world) {
+      return;
+    }
+
     // 确保 expOrbs 组存在
     if (!this.expOrbs || !this.expOrbs.active) {
-      console.warn('[DropSystem] expOrbs group not available');
       return;
     }
 
@@ -63,13 +67,26 @@ export class DropSystem {
    * Try to spawn food based on drop rate
    */
   private trySpawnFood(enemy: Enemy, x: number, y: number): void {
+    // 安全检查
+    if (!this.foods || !this.foods.active) {
+      return;
+    }
+
+    if (!this.scene || !this.scene.scene.isActive() || !this.scene.physics?.world) {
+      return;
+    }
+
     const dropRate = getFoodDropRate(enemy.config.type);
 
     if (Math.random() < dropRate) {
       const foodConfig = getRandomFood();
       if (foodConfig) {
-        const food = new Food(this.scene, x, y, foodConfig, this.player);
-        this.foods.add(food);
+        try {
+          const food = new Food(this.scene, x, y, foodConfig, this.player);
+          this.foods.add(food);
+        } catch (error) {
+          console.warn('[DropSystem] Failed to create food:', error);
+        }
       }
     }
   }
@@ -104,16 +121,31 @@ export class DropSystem {
    * Create a single exp orb at position
    */
   private createExpOrb(x: number, y: number, value: number): ExpOrb | null {
-    // 安全检查
+    // 安全检查 - 检查场景、物理组和物理世界是否有效
     if (!this.expOrbs || !this.expOrbs.active) {
       console.warn('[DropSystem] expOrbs group not available');
       return null;
     }
 
-    const config = createExpOrbConfig(value);
-    const orb = new ExpOrb(this.scene, x, y, config, this.player);
-    this.expOrbs.add(orb);
-    return orb;
+    // 检查场景是否仍然活跃
+    if (!this.scene || !this.scene.scene.isActive()) {
+      return null;
+    }
+
+    // 检查物理世界是否可用
+    if (!this.scene.physics || !this.scene.physics.world) {
+      return null;
+    }
+
+    try {
+      const config = createExpOrbConfig(value);
+      const orb = new ExpOrb(this.scene, x, y, config, this.player);
+      this.expOrbs.add(orb);
+      return orb;
+    } catch (error) {
+      console.warn('[DropSystem] Failed to create exp orb:', error);
+      return null;
+    }
   }
 
   /**
