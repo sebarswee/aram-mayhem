@@ -253,8 +253,8 @@ export class BattleScene extends Phaser.Scene {
     });
 
     // 伤害数值事件
-    this.events.on('enemyDamage', (data: { x: number; y: number; damage: number; isCrit: boolean; isCounter: boolean }) => {
-      this.damageNumberManager.showEnemyDamage(data.x, data.y, data.damage, data.isCrit, data.isCounter);
+    this.events.on('enemyDamage', (data: { x: number; y: number; damage: number; isCrit: boolean; isCounter: boolean; element?: string }) => {
+      this.damageNumberManager.showEnemyDamage(data.x, data.y, data.damage, data.isCrit, data.isCounter, data.element);
     });
 
     this.events.on('playerDamage', (data: { x: number; y: number; damage: number }) => {

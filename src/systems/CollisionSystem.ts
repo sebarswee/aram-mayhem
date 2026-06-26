@@ -120,7 +120,7 @@ export class CollisionSystem {
    * Handle enemy explosion (from explode_on_death ability)
    */
   private handleEnemyExplosion(data: { x: number; y: number; radius: number; damage: number; sourceEnemy: Enemy }): void {
-    // Damage player if in range
+    // Damage player if in range - apply element resistance from source enemy
     const distanceToPlayer = Phaser.Math.Distance.Between(
       this.player.x,
       this.player.y,
@@ -129,7 +129,8 @@ export class CollisionSystem {
     );
 
     if (distanceToPlayer <= data.radius) {
-      this.player.takeDamage(data.damage);
+      // Use source enemy's element for resistance calculation
+      this.player.takeElementalDamage(data.damage, data.sourceEnemy.element);
     }
   }
 
@@ -187,9 +188,14 @@ export class CollisionSystem {
 
     if (!ply.active || !proj.active) return;
 
-    // Deal damage to player
+    // Deal damage to player - apply element resistance
     const damage = proj.getDamage();
-    ply.takeDamage(damage);
+    const element = proj.getElement();
+    if (element) {
+      ply.takeElementalDamage(damage, element);
+    } else {
+      ply.takeDamage(damage);
+    }
 
     // Apply effect if any
     const effect = proj.getEffect();
@@ -246,14 +252,14 @@ export class CollisionSystem {
       }
     }
 
-    // Deal damage
-    const killed = enem.takeDamage(damage);
+    // Get skill element for synergy check and counter bonus
+    const skillElement = proj.config.skill.elements[0] as Element | undefined;
+
+    // Deal damage with element for counter bonus
+    const killed = enem.takeDamage(damage, skillElement);
 
     // Trigger lifesteal
     this.applyLifesteal(damage);
-
-    // Get skill element for synergy check
-    const skillElement = proj.config.skill.elements[0] as Element | undefined;
 
     // Apply skill effects (burn, freeze, stun, poison, etc.)
     const effects = proj.getEffects();
@@ -306,7 +312,8 @@ export class CollisionSystem {
           proj.x,
           proj.y,
           proj.config.explodeRadius || 60,
-          Math.floor(damage * (proj.config.explodeDamage || 0.5))
+          Math.floor(damage * (proj.config.explodeDamage || 0.5)),
+          skillElement
         );
       }
 
@@ -346,7 +353,7 @@ export class CollisionSystem {
   /**
    * Create explosion on projectile hit
    */
-  private createExplosionOnHit(x: number, y: number, radius: number, damage: number): void {
+  private createExplosionOnHit(x: number, y: number, radius: number, damage: number, skillElement?: Element): void {
     // Visual explosion
     const explosion = this.scene.add.circle(x, y, radius * 0.5, 0xff6600, 0.8);
     explosion.setDepth(100);
@@ -389,7 +396,7 @@ export class CollisionSystem {
       if (distance <= radius) {
         // Damage falloff
         const falloff = 1 - (distance / radius) * 0.3;
-        enemy.takeDamage(Math.floor(damage * falloff));
+        enemy.takeDamage(Math.floor(damage * falloff), skillElement);
       }
     }
   }
@@ -577,7 +584,7 @@ export class CollisionSystem {
       if (!nextTarget.active) return;
 
       const chainDamage = Math.floor(currentDamage * chainDecay);
-      const killed = nextTarget.takeDamage(chainDamage);
+      const killed = nextTarget.takeDamage(chainDamage, skillElement);
       this.applyEffects(nextTarget, effects, skillElement);
 
       // Trigger lifesteal
@@ -748,8 +755,8 @@ export class CollisionSystem {
     // Get enemy damage before applying
     const enemyDamage = enem.config.damage;
 
-    // Enemy collision damage
-    ply.takeDamage(enemyDamage);
+    // Enemy collision damage - apply element resistance
+    ply.takeElementalDamage(enemyDamage, enem.element);
 
     // 玩家击退效果 - 将玩家推开（防止重叠）
     if (ply.body) {
@@ -761,8 +768,9 @@ export class CollisionSystem {
       );
 
       // 短暂禁用玩家控制，避免立即返回
+      // 无敌时间与伤害间隔一致（500ms）
       ply.isInvincible = true;
-      this.scene.time.delayedCall(300, () => {
+      this.scene.time.delayedCall(500, () => {
         ply.isInvincible = false;
       });
     }

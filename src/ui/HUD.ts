@@ -13,6 +13,8 @@ interface SkillUI {
   cooldownText: Phaser.GameObjects.Text;
   nameText: Phaser.GameObjects.Text;
   skill: Skill;
+  glowGraphics?: Phaser.GameObjects.Graphics; // 动态光晕
+  isReady: boolean; // 技能是否就绪
 }
 
 export class HUD {
@@ -34,6 +36,9 @@ export class HUD {
 
   // 羁绊通知
   private synergyNotifications: Array<{ text: Phaser.GameObjects.Text; timer: number }> = [];
+
+  // 动画计时器
+  private animationTime: number = 0;
 
   constructor(
     scene: Phaser.Scene,
@@ -149,7 +154,7 @@ export class HUD {
   }
 
   /**
-   * 创建单个技能图标
+   * 创建单个技能图标 - 增强版
    */
   private createSkillIcon(
     skill: Skill,
@@ -164,18 +169,35 @@ export class HUD {
     container.setScrollFactor(0);
     container.setDepth(100);
 
-    // 技能图标背景
-    const bg = this.scene.add.graphics();
-    bg.fillStyle(0x222233, 1);
-    bg.fillRoundedRect(-iconSize / 2, -iconSize / 2, iconSize, iconSize, 6);
+    const skillColor = this.getSkillColor(skill);
 
-    // 大招金色边框
+    // 动态光晕背景（脉动效果）
+    const glowGraphics = this.scene.add.graphics();
+    container.add(glowGraphics);
+
+    // 技能图标背景 - 渐变效果
+    const bg = this.scene.add.graphics();
+
+    // 外层光晕
+    bg.fillStyle(skillColor, 0.15);
+    bg.fillRoundedRect(-iconSize / 2 - 4, -iconSize / 2 - 4, iconSize + 8, iconSize + 8, 10);
+
+    // 主背景
+    bg.fillStyle(0x1a1a2e, 1);
+    bg.fillRoundedRect(-iconSize / 2, -iconSize / 2, iconSize, iconSize, 8);
+
+    // 大招金色边框或普通边框
     if (isUltimate) {
+      // 大招特殊边框 - 多层渐变
       bg.lineStyle(3, 0xffcc00, 1);
+      bg.strokeRoundedRect(-iconSize / 2, -iconSize / 2, iconSize, iconSize, 8);
+      bg.lineStyle(1, 0xffffff, 0.5);
+      bg.strokeRoundedRect(-iconSize / 2 + 2, -iconSize / 2 + 2, iconSize - 4, iconSize - 4, 6);
     } else {
-      bg.lineStyle(2, this.getSkillColor(skill), 0.8);
+      // 普通技能边框
+      bg.lineStyle(2, skillColor, 0.8);
+      bg.strokeRoundedRect(-iconSize / 2, -iconSize / 2, iconSize, iconSize, 8);
     }
-    bg.strokeRoundedRect(-iconSize / 2, -iconSize / 2, iconSize, iconSize, 6);
     container.add(bg);
 
     // 技能图标
@@ -225,28 +247,9 @@ export class HUD {
     nameText.setDepth(101);
     container.add(nameText);
 
-    // 等级徽章（显示在右上角，Lv.2+ 才显示）
+    // 等级徽章（显示在右上角，Lv.2+ 才显示）- 增强版
     if (skill.level > 1) {
-      const badgeBg = this.scene.add.graphics();
-      const badgeSize = 16;
-      badgeBg.fillStyle(this.getLevelColor(skill.level), 1);
-      badgeBg.fillCircle(iconSize / 2 - badgeSize / 2, -iconSize / 2 + badgeSize / 2, badgeSize / 2);
-      badgeBg.setDepth(103);
-      container.add(badgeBg);
-
-      const badgeText = this.scene.add.text(
-        iconSize / 2 - badgeSize / 2,
-        -iconSize / 2 + badgeSize / 2,
-        `${skill.level}`,
-        {
-          fontSize: '10px',
-          color: '#ffffff',
-          fontStyle: 'bold',
-        }
-      );
-      badgeText.setOrigin(0.5, 0.5);
-      badgeText.setDepth(104);
-      container.add(badgeText);
+      this.createLevelBadge(container, iconSize, skill.level);
     }
 
     // 交互区域（悬停放大效果 + 大招点击）
@@ -257,10 +260,19 @@ export class HUD {
 
     // 悬停放大效果
     hitArea.on('pointerover', () => {
-      container.setScale(1.1);
+      this.scene.tweens.add({
+        targets: container,
+        scale: 1.15,
+        duration: 100,
+        ease: 'Back.out',
+      });
     });
     hitArea.on('pointerout', () => {
-      container.setScale(1);
+      this.scene.tweens.add({
+        targets: container,
+        scale: 1,
+        duration: 100,
+      });
     });
 
     // 大招点击释放
@@ -290,6 +302,59 @@ export class HUD {
       cooldownText,
       nameText,
       skill,
+      glowGraphics,
+      isReady: true,
+    });
+  }
+
+  /**
+   * 创建等级徽章 - 增强版
+   */
+  private createLevelBadge(container: Phaser.GameObjects.Container, iconSize: number, level: number): void {
+    const badgeSize = 18;
+    const x = iconSize / 2 - badgeSize / 2 - 2;
+    const y = -iconSize / 2 + badgeSize / 2 + 2;
+
+    // 徽章背景容器
+    const badgeContainer = this.scene.add.container(x, y);
+
+    // 外层光晕
+    const glow = this.scene.add.graphics();
+    const color = this.getLevelColor(level);
+    glow.fillStyle(color, 0.4);
+    glow.fillCircle(0, 0, badgeSize / 2 + 2);
+    badgeContainer.add(glow);
+
+    // 主背景
+    const bg = this.scene.add.graphics();
+    bg.fillStyle(color, 1);
+    bg.fillCircle(0, 0, badgeSize / 2);
+    bg.lineStyle(1, 0xffffff, 0.6);
+    bg.strokeCircle(0, 0, badgeSize / 2 - 1);
+    badgeContainer.add(bg);
+
+    // 等级数字
+    const text = this.scene.add.text(0, 0, `${level}`, {
+      fontSize: '11px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 2,
+    });
+    text.setOrigin(0.5, 0.5);
+    badgeContainer.add(text);
+
+    badgeContainer.setDepth(103);
+    container.add(badgeContainer);
+
+    // 脉动动画
+    this.scene.tweens.add({
+      targets: glow,
+      alpha: { from: 0.4, to: 0.7 },
+      scale: { from: 1, to: 1.2 },
+      duration: 600,
+      yoyo: true,
+      repeat: -1,
     });
   }
 
@@ -327,23 +392,31 @@ export class HUD {
     container.setDepth(200);
     container.setAlpha(0);
 
-    // 背景光晕
+    // 背景光晕效果
     const bgGlow = this.scene.add.graphics();
     const color1 = getElementColor(synergy.elements[0]);
     const color2 = getElementColor(synergy.elements[1]);
-    bgGlow.fillStyle(0x000000, 0.7);
+
+    // 外层大光晕
+    bgGlow.fillStyle(0x000000, 0.8);
+    bgGlow.fillRoundedRect(-160, -60, 320, 120, 20);
+
+    // 渐变边框效果
+    bgGlow.lineStyle(4, 0xffcc00, 0.8);
+    bgGlow.strokeRoundedRect(-160, -60, 320, 120, 20);
+
+    // 内部渐变光晕
+    bgGlow.fillStyle(color1, 0.1);
     bgGlow.fillRoundedRect(-150, -50, 300, 100, 15);
-    bgGlow.lineStyle(3, 0xffcc00, 1);
-    bgGlow.strokeRoundedRect(-150, -50, 300, 100, 15);
     container.add(bgGlow);
 
-    // 元素图标/圆圈
-    const circle1 = this.scene.add.circle(-80, -10, 25, color1, 0.9);
-    circle1.setStrokeStyle(2, 0xffffff, 0.8);
+    // 元素图标/圆圈 - 带脉动效果
+    const circle1 = this.scene.add.circle(-80, -10, 28, color1, 0.9);
+    circle1.setStrokeStyle(3, 0xffffff, 0.9);
     container.add(circle1);
 
-    const circle2 = this.scene.add.circle(80, -10, 25, color2, 0.9);
-    circle2.setStrokeStyle(2, 0xffffff, 0.8);
+    const circle2 = this.scene.add.circle(80, -10, 28, color2, 0.9);
+    circle2.setStrokeStyle(3, 0xffffff, 0.9);
     container.add(circle2);
 
     // 元素符号
@@ -360,23 +433,36 @@ export class HUD {
     const symbol1 = elementSymbols[synergy.elements[0]] || '●';
     const symbol2 = elementSymbols[synergy.elements[1]] || '●';
 
-    const elem1Text = this.scene.add.text(-80, -10, symbol1, { fontSize: '24px' });
+    const elem1Text = this.scene.add.text(-80, -10, symbol1, { fontSize: '28px' });
     elem1Text.setOrigin(0.5, 0.5);
     container.add(elem1Text);
 
-    const elem2Text = this.scene.add.text(80, -10, symbol2, { fontSize: '24px' });
+    const elem2Text = this.scene.add.text(80, -10, symbol2, { fontSize: '28px' });
     elem2Text.setOrigin(0.5, 0.5);
     container.add(elem2Text);
 
-    // 连接线动画效果
+    // 连接线动画效果 - 能量流动
     const connector = this.scene.add.graphics();
-    connector.lineStyle(3, 0xffcc00, 0.8);
-    connector.lineBetween(-55, -10, 55, -10);
+    connector.lineStyle(4, 0xffcc00, 0.9);
+    connector.lineBetween(-52, -10, 52, -10);
     container.add(connector);
+
+    // 能量流动点
+    const energyDot = this.scene.add.circle(-52, -10, 5, 0xffffff, 1);
+    container.add(energyDot);
+
+    this.scene.tweens.add({
+      targets: energyDot,
+      x: 52,
+      duration: 400,
+      yoyo: true,
+      repeat: 2,
+      ease: 'Power2',
+    });
 
     // 羁绊名称（大字体）
     const titleFontSize = Math.min(28, width / 20);
-    const titleText = this.scene.add.text(0, -45, `羁绊触发`, {
+    const titleText = this.scene.add.text(0, -50, `羁绊触发`, {
       fontSize: '14px',
       color: '#aaaaaa',
     });
@@ -388,51 +474,68 @@ export class HUD {
       color: '#ffcc00',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 3,
+      strokeThickness: 4,
     });
     nameText.setOrigin(0.5, 0.5);
+    nameText.setAlpha(0);
     container.add(nameText);
 
     // 效果描述
     const effectDesc = this.getEffectDescription(synergy);
-    const descText = this.scene.add.text(0, 45, effectDesc, {
+    const descText = this.scene.add.text(0, 48, effectDesc, {
       fontSize: '12px',
       color: '#ffffff',
     });
     descText.setOrigin(0.5, 0.5);
+    descText.setAlpha(0);
     container.add(descText);
 
-    // 粒子效果
+    // 增强粒子效果
     const particles = this.scene.add.particles(container.x, container.y, 'particle_glow', {
-      speed: { min: 50, max: 100 },
+      speed: { min: 80, max: 150 },
       angle: { min: 0, max: 360 },
-      scale: { start: 0.4, end: 0 },
-      alpha: { start: 0.8, end: 0 },
-      lifespan: 600,
-      quantity: 20,
-      tint: [color1, color2, 0xffcc00],
+      scale: { start: 0.5, end: 0 },
+      alpha: { start: 0.9, end: 0 },
+      lifespan: 800,
+      quantity: 40,
+      tint: [color1, color2, 0xffcc00, 0xffffff],
       emitting: false,
     });
     particles.setDepth(199);
     particles.explode();
 
-    // 动画：缩放弹入
-    container.setScale(0.5);
+    // 动画：缩放弹入 + 元素旋转
+    container.setScale(0.3);
+
+    // 元素圆圈旋转动画
+    this.scene.tweens.add({
+      targets: [circle1, circle2, elem1Text, elem2Text],
+      rotation: Math.PI * 2,
+      duration: 600,
+      ease: 'Power2',
+    });
 
     this.scene.tweens.add({
       targets: container,
       alpha: 1,
       scale: 1,
-      duration: 200,
+      duration: 300,
       ease: 'Back.easeOut',
       onComplete: () => {
+        // 文字淡入
+        this.scene.tweens.add({
+          targets: [nameText, descText],
+          alpha: 1,
+          duration: 200,
+        });
+
         // 停留 1.5 秒后淡出
         this.scene.time.delayedCall(1500, () => {
           this.scene.tweens.add({
             targets: container,
             alpha: 0,
             scale: 0.8,
-            y: container.y - 30,
+            y: container.y - 40,
             duration: 300,
             onComplete: () => {
               container.destroy();
@@ -443,16 +546,34 @@ export class HUD {
       },
     });
 
-    // 额外：屏幕边缘闪光效果
-    const flash = this.scene.add.rectangle(0, 0, width, height, 0xffcc00, 0.15);
-    flash.setOrigin(0, 0);
-    flash.setScrollFactor(0);
-    flash.setDepth(198);
+    // 屏幕边缘闪光效果
+    this.createScreenFlash(width, height, color1, color2);
+  }
+
+  /**
+   * 创建屏幕边缘闪光效果
+   */
+  private createScreenFlash(width: number, height: number, color1: number, color2: number): void {
+    // 顶部闪光
+    const topFlash = this.scene.add.rectangle(0, 0, width, 30, color1, 0.3);
+    topFlash.setOrigin(0, 0);
+    topFlash.setScrollFactor(0);
+    topFlash.setDepth(198);
+
+    // 底部闪光
+    const bottomFlash = this.scene.add.rectangle(0, height - 30, width, 30, color2, 0.3);
+    bottomFlash.setOrigin(0, 0);
+    bottomFlash.setScrollFactor(0);
+    bottomFlash.setDepth(198);
+
     this.scene.tweens.add({
-      targets: flash,
+      targets: [topFlash, bottomFlash],
       alpha: 0,
-      duration: 400,
-      onComplete: () => flash.destroy(),
+      duration: 500,
+      onComplete: () => {
+        topFlash.destroy();
+        bottomFlash.destroy();
+      },
     });
   }
 
@@ -493,11 +614,14 @@ export class HUD {
   }
 
   update(): void {
+    this.animationTime += 16; // 约 60fps
+
     this.updateHpBar();
     this.updateExpBar();
     this.updateTexts();
     this.updateSkillUIs();
     this.updateSkillCooldowns();
+    this.updateSkillGlows();
   }
 
   /**
@@ -539,7 +663,7 @@ export class HUD {
   }
 
   /**
-   * 更新技能冷却显示
+   * 更新技能冷却显示 - 增强版
    */
   private updateSkillCooldowns(): void {
     const iconSize = Math.min(48, this.scene.scale.width * 0.1);
@@ -548,6 +672,14 @@ export class HUD {
       const cooldown = this.player.skillCooldowns.get(skillUI.skill.id) || 0;
       const maxCooldown = skillUI.skill.cooldown;
       const cooldownPercent = cooldown / maxCooldown;
+      const wasReady = skillUI.isReady;
+      const isNowReady = cooldownPercent <= 0;
+
+      // 检测技能刚就绪
+      if (wasReady === false && isNowReady === true) {
+        this.playSkillReadyEffect(skillUI);
+      }
+      skillUI.isReady = isNowReady;
 
       // 更新冷却遮罩
       skillUI.cooldownOverlay.clear();
@@ -574,6 +706,67 @@ export class HUD {
     });
   }
 
+  /**
+   * 更新技能光晕效果（呼吸动画）
+   */
+  private updateSkillGlows(): void {
+    this.skillUIs.forEach((skillUI) => {
+      if (!skillUI.glowGraphics) return;
+
+      const cooldown = this.player.skillCooldowns.get(skillUI.skill.id) || 0;
+      const isReady = cooldown <= 0;
+
+      skillUI.glowGraphics.clear();
+
+      if (isReady) {
+        // 技能就绪时的呼吸光晕
+        const pulse = Math.sin(this.animationTime * 0.003) * 0.3 + 0.5;
+        const skillColor = this.getSkillColor(skillUI.skill);
+
+        skillUI.glowGraphics.fillStyle(skillColor, pulse * 0.3);
+        skillUI.glowGraphics.fillRoundedRect(
+          -skillUI.container.width / 2 - 3,
+          -skillUI.container.height / 2 - 3,
+          skillUI.container.width + 6,
+          skillUI.container.height + 6,
+          10
+        );
+      }
+    });
+  }
+
+  /**
+   * 播放技能就绪特效
+   */
+  private playSkillReadyEffect(skillUI: SkillUI): void {
+    const skillColor = this.getSkillColor(skillUI.skill);
+
+    // 创建闪光圈
+    const flashRing = this.scene.add.graphics();
+    flashRing.lineStyle(3, skillColor, 1);
+    flashRing.strokeCircle(0, 0, 25);
+    flashRing.setPosition(skillUI.container.x, skillUI.container.y);
+    flashRing.setScrollFactor(0);
+    flashRing.setDepth(99);
+
+    // 扩散消失
+    this.scene.tweens.add({
+      targets: flashRing,
+      scale: 1.5,
+      alpha: 0,
+      duration: 300,
+      onComplete: () => flashRing.destroy(),
+    });
+
+    // 技能图标弹跳
+    this.scene.tweens.add({
+      targets: skillUI.container,
+      scale: 1.2,
+      duration: 100,
+      yoyo: true,
+    });
+  }
+
   private updateHpBar(): void {
     const width = this.scene.scale.width;
     const padding = Math.min(20, width * 0.03);
@@ -587,8 +780,17 @@ export class HUD {
     this.hpBar.fillStyle(0x333333, 1);
     this.hpBar.fillRect(padding, padding, barWidth, barHeight);
 
-    // HP条
-    this.hpBar.fillStyle(0xff0000, 1);
+    // HP条 - 根据血量变色
+    let hpColor = 0x44ff44; // 绿色
+    if (hpPercent < 0.25) {
+      hpColor = 0xff4444; // 红色
+    } else if (hpPercent < 0.5) {
+      hpColor = 0xffaa44; // 橙色
+    } else if (hpPercent < 0.75) {
+      hpColor = 0xffff44; // 黄色
+    }
+
+    this.hpBar.fillStyle(hpColor, 1);
     this.hpBar.fillRect(padding, padding, barWidth * hpPercent, barHeight);
 
     // 边框

@@ -657,7 +657,7 @@ export class GraphicsFactory {
   }
 
   /**
-   * 创建粒子纹理
+   * 创建粒子纹理 - 增强版
    */
   private createParticles(): void {
     // 通用发光粒子
@@ -690,6 +690,382 @@ export class GraphicsFactory {
 
     // 岩石粒子
     this.createElementParticle('particle_earth', 0xaa8844, 'rock');
+
+    // === 新增增强粒子纹理 ===
+    this.createEnhancedParticles();
+  }
+
+  /**
+   * 创建增强版粒子纹理
+   */
+  private createEnhancedParticles(): void {
+    // 火焰核心粒子（更亮）
+    this.createFireCoreParticle();
+
+    // 火花粒子
+    this.createSparkParticle();
+
+    // 冰晶粒子
+    this.createIceCrystalParticle();
+
+    // 闪电弧粒子
+    this.createLightningArcParticle();
+
+    // 光芒粒子
+    this.createLightRayParticle();
+
+    // 漩涡粒子
+    this.createVortexParticle();
+
+    // 能量环粒子
+    this.createEnergyRingParticle();
+
+    // 冲击波粒子
+    this.createShockwaveParticle();
+
+    // 星芒粒子
+    this.createStarBurstParticle();
+
+    // 螺旋粒子
+    this.createSpiralParticle();
+
+    // 元素核心粒子（8种元素）
+    this.createElementCoreParticles();
+
+    // 拖尾粒子
+    this.createTrailParticle();
+  }
+
+  /**
+   * 创建火焰核心粒子
+   */
+  private createFireCoreParticle(): void {
+    const size = 20;
+    const graphics = this.scene.add.graphics();
+
+    // 外焰（红色）
+    graphics.fillStyle(0xff2200, 0.6);
+    graphics.fillCircle(size / 2, size / 2, 9);
+
+    // 中焰（橙色）
+    graphics.fillStyle(0xff6600, 0.8);
+    graphics.fillCircle(size / 2, size / 2, 6);
+
+    // 内焰（黄色）
+    graphics.fillStyle(0xffcc00, 1);
+    graphics.fillCircle(size / 2, size / 2, 4);
+
+    // 核心（白色）
+    graphics.fillStyle(0xffffff, 1);
+    graphics.fillCircle(size / 2, size / 2, 2);
+
+    graphics.generateTexture('particle_fire_core', size, size);
+    graphics.destroy();
+  }
+
+  /**
+   * 创建火花粒子
+   */
+  private createSparkParticle(): void {
+    const size = 16;
+    const graphics = this.scene.add.graphics();
+
+    // 中心亮点
+    graphics.fillStyle(0xffffff, 1);
+    graphics.fillCircle(size / 2, size / 2, 2);
+
+    // 火花射线
+    graphics.lineStyle(1, 0xffff88, 0.8);
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2;
+      graphics.beginPath();
+      graphics.moveTo(size / 2, size / 2);
+      graphics.lineTo(
+        size / 2 + Math.cos(angle) * 6,
+        size / 2 + Math.sin(angle) * 6
+      );
+      graphics.strokePath();
+    }
+
+    graphics.generateTexture('particle_spark', size, size);
+    graphics.destroy();
+  }
+
+  /**
+   * 创建冰晶粒子
+   */
+  private createIceCrystalParticle(): void {
+    const size = 16;
+    const graphics = this.scene.add.graphics();
+
+    // 冰晶形状（六角形）
+    graphics.fillStyle(0x88ddff, 0.9);
+    graphics.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2 - Math.PI / 2;
+      const x = size / 2 + Math.cos(angle) * 6;
+      const y = size / 2 + Math.sin(angle) * 6;
+      if (i === 0) {
+        graphics.moveTo(x, y);
+      } else {
+        graphics.lineTo(x, y);
+      }
+    }
+    graphics.closePath();
+    graphics.fillPath();
+
+    // 中心亮点
+    graphics.fillStyle(0xffffff, 0.9);
+    graphics.fillCircle(size / 2, size / 2, 2);
+
+    graphics.generateTexture('particle_ice_crystal', size, size);
+    graphics.destroy();
+  }
+
+  /**
+   * 创建闪电弧粒子
+   */
+  private createLightningArcParticle(): void {
+    const size = 24;
+    const graphics = this.scene.add.graphics();
+
+    // 锯齿闪电
+    graphics.lineStyle(2, 0xffff00, 1);
+    graphics.beginPath();
+    graphics.moveTo(4, 4);
+    graphics.lineTo(10, 10);
+    graphics.lineTo(6, 12);
+    graphics.lineTo(14, 18);
+    graphics.lineTo(10, 20);
+    graphics.strokePath();
+
+    // 光晕
+    graphics.lineStyle(4, 0xffff88, 0.4);
+    graphics.beginPath();
+    graphics.moveTo(4, 4);
+    graphics.lineTo(10, 10);
+    graphics.lineTo(6, 12);
+    graphics.lineTo(14, 18);
+    graphics.lineTo(10, 20);
+    graphics.strokePath();
+
+    graphics.generateTexture('particle_lightning_arc', size, size);
+    graphics.destroy();
+  }
+
+  /**
+   * 创建光芒粒子
+   */
+  private createLightRayParticle(): void {
+    const size = 20;
+    const graphics = this.scene.add.graphics();
+
+    // 中心
+    graphics.fillStyle(0xffffff, 1);
+    graphics.fillCircle(size / 2, size / 2, 3);
+
+    // 光芒
+    graphics.lineStyle(2, 0xffffcc, 0.7);
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      graphics.beginPath();
+      graphics.moveTo(size / 2, size / 2);
+      graphics.lineTo(
+        size / 2 + Math.cos(angle) * 9,
+        size / 2 + Math.sin(angle) * 9
+      );
+      graphics.strokePath();
+    }
+
+    graphics.generateTexture('particle_light_ray', size, size);
+    graphics.destroy();
+  }
+
+  /**
+   * 创建漩涡粒子
+   */
+  private createVortexParticle(): void {
+    const size = 24;
+    const graphics = this.scene.add.graphics();
+
+    // 漩涡线条
+    graphics.lineStyle(2, 0x4488ff, 0.8);
+    graphics.beginPath();
+    for (let i = 0; i < 30; i++) {
+      const angle = i * 0.4;
+      const radius = 2 + i * 0.3;
+      const x = size / 2 + Math.cos(angle) * radius;
+      const y = size / 2 + Math.sin(angle) * radius;
+      if (i === 0) {
+        graphics.moveTo(x, y);
+      } else {
+        graphics.lineTo(x, y);
+      }
+    }
+    graphics.strokePath();
+
+    // 中心亮点
+    graphics.fillStyle(0xffffff, 1);
+    graphics.fillCircle(size / 2, size / 2, 2);
+
+    graphics.generateTexture('particle_vortex', size, size);
+    graphics.destroy();
+  }
+
+  /**
+   * 创建能量环粒子
+   */
+  private createEnergyRingParticle(): void {
+    const size = 20;
+    const graphics = this.scene.add.graphics();
+
+    // 外环
+    graphics.lineStyle(2, 0x88ff88, 0.8);
+    graphics.strokeCircle(size / 2, size / 2, 8);
+
+    // 内环
+    graphics.lineStyle(1, 0xffffff, 0.9);
+    graphics.strokeCircle(size / 2, size / 2, 5);
+
+    graphics.generateTexture('particle_energy_ring', size, size);
+    graphics.destroy();
+  }
+
+  /**
+   * 创建冲击波粒子
+   */
+  private createShockwaveParticle(): void {
+    const size = 32;
+    const graphics = this.scene.add.graphics();
+
+    // 冲击波环
+    graphics.lineStyle(3, 0xffffff, 0.8);
+    graphics.strokeCircle(size / 2, size / 2, 12);
+
+    // 内环
+    graphics.lineStyle(2, 0xffff88, 0.5);
+    graphics.strokeCircle(size / 2, size / 2, 8);
+
+    graphics.generateTexture('particle_shockwave', size, size);
+    graphics.destroy();
+  }
+
+  /**
+   * 创建星芒粒子
+   */
+  private createStarBurstParticle(): void {
+    const size = 20;
+    const graphics = this.scene.add.graphics();
+
+    // 星芒（4条射线）
+    graphics.fillStyle(0xffff88, 1);
+    for (let i = 0; i < 4; i++) {
+      const angle = (i / 4) * Math.PI * 2;
+      graphics.fillTriangle(
+        size / 2, size / 2,
+        size / 2 + Math.cos(angle - 0.2) * 8, size / 2 + Math.sin(angle - 0.2) * 8,
+        size / 2 + Math.cos(angle + 0.2) * 8, size / 2 + Math.sin(angle + 0.2) * 8
+      );
+    }
+
+    // 中心
+    graphics.fillStyle(0xffffff, 1);
+    graphics.fillCircle(size / 2, size / 2, 2);
+
+    graphics.generateTexture('particle_star_burst', size, size);
+    graphics.destroy();
+  }
+
+  /**
+   * 创建螺旋粒子
+   */
+  private createSpiralParticle(): void {
+    const size = 20;
+    const graphics = this.scene.add.graphics();
+
+    // 螺旋
+    graphics.lineStyle(2, 0xaa88ff, 0.8);
+    graphics.beginPath();
+    for (let i = 0; i < 20; i++) {
+      const angle = i * 0.5;
+      const radius = 1 + i * 0.4;
+      const x = size / 2 + Math.cos(angle) * radius;
+      const y = size / 2 + Math.sin(angle) * radius;
+      if (i === 0) {
+        graphics.moveTo(x, y);
+      } else {
+        graphics.lineTo(x, y);
+      }
+    }
+    graphics.strokePath();
+
+    graphics.generateTexture('particle_spiral', size, size);
+    graphics.destroy();
+  }
+
+  /**
+   * 创建元素核心粒子（8种元素）
+   */
+  private createElementCoreParticles(): void {
+    const elements = [
+      { name: 'fire', color: 0xff4400, glow: 0xff8800 },
+      { name: 'water', color: 0x4488ff, glow: 0x66aaff },
+      { name: 'ice', color: 0x88ddff, glow: 0xaaffff },
+      { name: 'lightning', color: 0xffff00, glow: 0xffff88 },
+      { name: 'holy', color: 0xffcc00, glow: 0xffdd66 },
+      { name: 'shadow', color: 0x8800ff, glow: 0xaa44ff },
+      { name: 'grass', color: 0x44ff44, glow: 0x88ff88 },
+      { name: 'earth', color: 0xaa8844, glow: 0xccaa66 },
+    ];
+
+    for (const elem of elements) {
+      this.createElementCoreParticle(elem.name, elem.color, elem.glow);
+    }
+  }
+
+  /**
+   * 创建单个元素核心粒子
+   */
+  private createElementCoreParticle(name: string, color: number, glow: number): void {
+    const size = 24;
+    const graphics = this.scene.add.graphics();
+
+    // 外层光晕
+    graphics.fillStyle(glow, 0.3);
+    graphics.fillCircle(size / 2, size / 2, 10);
+
+    // 中层
+    graphics.fillStyle(color, 0.7);
+    graphics.fillCircle(size / 2, size / 2, 7);
+
+    // 核心
+    graphics.fillStyle(0xffffff, 0.9);
+    graphics.fillCircle(size / 2, size / 2, 4);
+
+    // 高光
+    graphics.fillStyle(0xffffff, 0.5);
+    graphics.fillCircle(size / 2 - 2, size / 2 - 2, 2);
+
+    graphics.generateTexture(`particle_${name}_core`, size, size);
+    graphics.destroy();
+  }
+
+  /**
+   * 创建拖尾粒子
+   */
+  private createTrailParticle(): void {
+    const size = 16;
+    const graphics = this.scene.add.graphics();
+
+    // 渐变拖尾效果
+    for (let i = 0; i < 4; i++) {
+      const alpha = 0.8 - i * 0.2;
+      graphics.fillStyle(0xffffff, alpha);
+      graphics.fillCircle(size / 2 + i * 2, size / 2, 4 - i);
+    }
+
+    graphics.generateTexture('particle_trail', size, size);
+    graphics.destroy();
   }
 
   /**
@@ -794,14 +1170,9 @@ export class GraphicsFactory {
     this.createSkillIcon('skill_poison_dart', 0x44ff44, '🎯');
 
     // 范围技能
-    this.createSkillIcon('skill_flame_circle', 0xff8800, '🔥');
     this.createSkillIcon('skill_frost_nova', 0x88ddff, '❄️');
-    this.createSkillIcon('skill_whirlwind', 0xcccccc, '🌀');
     this.createSkillIcon('skill_poison_cloud', 0x44ff44, '☠️');
-    this.createSkillIcon('skill_ground_spike', 0x886644, '⛰️');
     this.createSkillIcon('skill_holy_light', 0xffcc00, '✨');
-    this.createSkillIcon('skill_black_hole', 0x8800ff, '🕳️');
-    this.createSkillIcon('skill_time_stop', 0x6644ff, '⏱️');
 
     // 召唤/防御技能
     this.createSkillIcon('skill_summon', 0xffcc00, '👻');

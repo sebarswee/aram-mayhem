@@ -3,8 +3,16 @@ import { Skill } from '@/types';
 import { ELEMENT_COLORS, getElementColor, ELEMENT_NAMES } from '@/data/elements';
 
 /**
- * 开局技能选择界面
+ * 开局技能选择界面 - 增强版
  * 显示4个随机基础技能供玩家选择
+ *
+ * 增强功能：
+ * - 卡片依次飞入动画
+ * - 流光边框效果
+ * - 悬停元素光芒
+ * - 选中全屏闪光+冲击波
+ * - 动态渐变背景
+ * - 粒子漂浮效果
  */
 export class SkillSelectUI {
   private scene: Phaser.Scene;
@@ -41,26 +49,39 @@ export class SkillSelectUI {
     const width = this.scene.scale.width;
     const height = this.scene.scale.height;
 
-    // 半透明背景
-    const bg = this.scene.add.rectangle(0, 0, width, height, 0x000000, 0.8);
-    bg.setOrigin(0, 0);
-    this.container.add(bg);
+    // 动态渐变背景
+    this.createGradientBackground(width, height);
+
+    // 背景粒子效果
+    this.createBackgroundParticles(width, height);
 
     // 标题 - 响应式字体大小
-    const titleFontSize = Math.min(32, width / 20);
-    const title = this.scene.add.text(width / 2, height * 0.08, '选择初始技能', {
+    const titleFontSize = Math.min(36, width / 18);
+    const title = this.scene.add.text(width / 2, height * 0.06, '选择初始技能', {
       fontSize: `${titleFontSize}px`,
       color: '#ffffff',
       fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4,
     });
     title.setOrigin(0.5);
+    title.setAlpha(0);
     this.container.add(title);
+
+    // 标题动画
+    this.scene.tweens.add({
+      targets: title,
+      alpha: 1,
+      y: height * 0.08,
+      duration: 400,
+      ease: 'Power2',
+    });
 
     // 副标题
     const subtitleFontSize = Math.min(16, width / 40);
     const subtitle = this.scene.add.text(
       width / 2,
-      height * 0.13,
+      height * 0.14,
       '选择一个技能开始你的冒险',
       {
         fontSize: `${subtitleFontSize}px`,
@@ -68,7 +89,15 @@ export class SkillSelectUI {
       }
     );
     subtitle.setOrigin(0.5);
+    subtitle.setAlpha(0);
     this.container.add(subtitle);
+
+    this.scene.tweens.add({
+      targets: subtitle,
+      alpha: 1,
+      duration: 400,
+      delay: 100,
+    });
 
     // 技能卡片 - 响应式布局
     // 在小屏幕上使用2行2列，大屏幕使用1行4列
@@ -91,33 +120,115 @@ export class SkillSelectUI {
       const row = Math.floor(index / columns);
       const cardX = startX + col * (cardWidth + gap);
       const cardY = startY + row * (cardHeight + gap);
-      this.createSkillCard(skill, cardX, cardY, cardWidth, cardHeight);
+      this.createSkillCard(skill, cardX, cardY, cardWidth, cardHeight, index);
     });
   }
 
   /**
-   * 创建技能卡片
+   * 创建动态渐变背景
+   */
+  private createGradientBackground(width: number, height: number): void {
+    // 创建网格背景
+    const grid = this.scene.add.graphics();
+
+    // 渐变网格效果
+    const gridSize = 50;
+    for (let x = 0; x < width; x += gridSize) {
+      for (let y = 0; y < height; y += gridSize) {
+        const distFromCenter = Math.sqrt(
+          Math.pow(x - width / 2, 2) + Math.pow(y - height / 2, 2)
+        );
+        const maxDist = Math.sqrt(Math.pow(width / 2, 2) + Math.pow(height / 2, 2));
+        const alpha = 0.05 + (1 - distFromCenter / maxDist) * 0.1;
+
+        grid.fillStyle(0x4a4a6a, alpha);
+        grid.fillRect(x, y, gridSize - 1, gridSize - 1);
+      }
+    }
+
+    grid.setAlpha(0.3);
+    this.container.add(grid);
+
+    // 网格呼吸动画
+    this.scene.tweens.add({
+      targets: grid,
+      alpha: 0.5,
+      duration: 2000,
+      yoyo: true,
+      repeat: -1,
+    });
+  }
+
+  /**
+   * 创建背景粒子效果
+   */
+  private createBackgroundParticles(width: number, height: number): void {
+    // 创建漂浮的光点
+    for (let i = 0; i < 30; i++) {
+      const x = Math.random() * width;
+      const y = Math.random() * height;
+      const size = Math.random() * 3 + 1;
+      const alpha = Math.random() * 0.4 + 0.1;
+
+      const particle = this.scene.add.circle(x, y, size, 0xffffff, alpha);
+      this.container.add(particle);
+
+      // 漂浮动画
+      this.scene.tweens.add({
+        targets: particle,
+        y: particle.y - 80 - Math.random() * 80,
+        alpha: 0,
+        duration: 3000 + Math.random() * 2000,
+        repeat: -1,
+        onRepeat: () => {
+          particle.y = height + 10;
+          particle.x = Math.random() * width;
+          particle.alpha = alpha;
+        },
+      });
+    }
+  }
+
+  /**
+   * 创建技能卡片 - 增强版
    */
   private createSkillCard(
     skill: Skill,
     x: number,
     y: number,
     width: number,
-    height: number
+    height: number,
+    index: number
   ): void {
     // 卡片容器直接设置交互
     const card = this.scene.add.container(x, y);
     card.setScrollFactor(0);
     card.setSize(width, height); // 设置容器大小用于交互
     card.setInteractive({ useHandCursor: true });
+    card.setAlpha(0);
+    card.setY(y - 150); // 初始位置在屏幕上方
 
     // 使用统一的元素颜色
     const color = getElementColor(skill.elements[0]);
 
+    // 流光边框效果 - 创建在卡片前面
+    const glowEffect = this.scene.add.graphics();
+
+    // 外层光晕
+    glowEffect.fillStyle(color, 0.1);
+    glowEffect.fillRoundedRect(-width / 2 - 8, -height / 2 - 8, width + 16, height + 16, 14);
+    card.add(glowEffect);
+
     // 卡片框
-    const bg = this.scene.add.rectangle(0, 0, width, height, 0x222233, 1);
+    const bg = this.scene.add.rectangle(0, 0, width, height, 0x1a1a2e, 1);
     bg.setStrokeStyle(3, color, 1);
     card.add(bg);
+
+    // 内部渐变效果
+    const innerGlow = this.scene.add.graphics();
+    innerGlow.fillStyle(color, 0.05);
+    innerGlow.fillRoundedRect(-width / 2 + 5, -height / 2 + 5, width - 10, height - 10, 8);
+    card.add(innerGlow);
 
     // 响应式字体大小
     const iconFontSize = Math.min(36, width / 4);
@@ -126,7 +237,10 @@ export class SkillSelectUI {
     const descFontSize = Math.min(10, width / 15);
     const elementFontSize = Math.min(10, width / 15);
 
-    // 技能图标区域
+    // 技能图标区域 - 带光晕
+    const iconGlow = this.scene.add.circle(0, -height / 2 + 35, 30, color, 0.25);
+    card.add(iconGlow);
+
     const iconBg = this.scene.add.rectangle(0, -height / 2 + 35, width - 10, 50, color, 0.3);
     card.add(iconBg);
 
@@ -176,22 +290,170 @@ export class SkillSelectUI {
     desc.setOrigin(0.5, 0);
     card.add(desc);
 
+    // 流光动画 - 光线从左到右移动
+    this.createFlowingLight(card, width, height, color);
+
+    // 边框脉动
+    this.scene.tweens.add({
+      targets: bg,
+      strokeAlpha: 0.6,
+      duration: 1000,
+      yoyo: true,
+      repeat: -1,
+    });
+
+    // 入场动画 - 错开飞入
+    this.scene.tweens.add({
+      targets: card,
+      y: y,
+      alpha: 1,
+      duration: 500,
+      delay: index * 120,
+      ease: 'Back.out',
+    });
+
     // 交互事件绑定到容器
     card.on('pointerover', () => {
+      // 光晕扩散
+      this.scene.tweens.add({
+        targets: glowEffect,
+        scaleX: 1.05,
+        scaleY: 1.05,
+        alpha: 1,
+        duration: 200,
+      });
+
+      // 图标光晕增强
+      this.scene.tweens.add({
+        targets: iconGlow,
+        scale: 1.3,
+        alpha: 0.5,
+        duration: 200,
+      });
+
       bg.setStrokeStyle(4, 0xffffff, 1);
-      bg.setFillStyle(0x333344, 1);
+      bg.setFillStyle(0x2a2a4e, 1);
+
+      // 图标放大
+      this.scene.tweens.add({
+        targets: iconText,
+        scale: 1.2,
+        duration: 150,
+      });
     });
 
     card.on('pointerout', () => {
+      this.scene.tweens.add({
+        targets: glowEffect,
+        scaleX: 1,
+        scaleY: 1,
+        alpha: 0.1,
+        duration: 200,
+      });
+
+      this.scene.tweens.add({
+        targets: iconGlow,
+        scale: 1,
+        alpha: 0.25,
+        duration: 200,
+      });
+
       bg.setStrokeStyle(3, color, 1);
-      bg.setFillStyle(0x222233, 1);
+      bg.setFillStyle(0x1a1a2e, 1);
+
+      this.scene.tweens.add({
+        targets: iconText,
+        scale: 1,
+        duration: 150,
+      });
     });
 
     card.on('pointerdown', () => {
-      this.selectSkill(skill);
+      this.selectSkill(skill, card, width, height);
     });
 
     this.container.add(card);
+  }
+
+  /**
+   * 创建流光效果
+   */
+  private createFlowingLight(
+    card: Phaser.GameObjects.Container,
+    width: number,
+    height: number,
+    color: number
+  ): void {
+    // 创建流光线
+    const light = this.scene.add.graphics();
+    light.fillStyle(0xffffff, 0.4);
+    light.fillRect(-width / 2, -height / 2, 3, height);
+    card.addAt(light, 1);
+
+    // 初始位置
+    light.x = -width;
+    light.setAlpha(0);
+
+    // 流动动画
+    this.scene.tweens.add({
+      targets: light,
+      x: width,
+      alpha: { from: 0, to: 0.8 },
+      duration: 1500,
+      delay: Math.random() * 1000,
+      repeat: -1,
+      repeatDelay: 2000,
+    });
+  }
+
+  /**
+   * 选择技能 - 带特效
+   */
+  private selectSkill(skill: Skill, card: Phaser.GameObjects.Container, width: number, height: number): void {
+    this.selectedSkill = skill;
+
+    // 全屏闪光
+    const flash = this.scene.add.rectangle(0, 0, width * 2, height * 2, 0xffffff, 0.5);
+    flash.setOrigin(0.5);
+    flash.setScrollFactor(0);
+    flash.setDepth(999);
+    this.container.add(flash);
+
+    this.scene.tweens.add({
+      targets: flash,
+      alpha: 0,
+      duration: 300,
+      onComplete: () => flash.destroy(),
+    });
+
+    // 冲击波效果
+    const shockwave = this.scene.add.graphics();
+    shockwave.lineStyle(5, getElementColor(skill.elements[0]), 1);
+    shockwave.strokeCircle(0, 0, 20);
+    shockwave.setPosition(card.x, card.y);
+    shockwave.setScrollFactor(0);
+    shockwave.setDepth(999);
+    this.container.add(shockwave);
+
+    this.scene.tweens.add({
+      targets: shockwave,
+      scale: 8,
+      alpha: 0,
+      duration: 500,
+      onComplete: () => shockwave.destroy(),
+    });
+
+    // 选中卡片放大并消失
+    this.scene.tweens.add({
+      targets: card,
+      scale: 1.3,
+      alpha: 0,
+      duration: 300,
+      onComplete: () => {
+        this.hide();
+        this.onSelectCallback(skill);
+      },
+    });
   }
 
   /**
@@ -221,14 +483,9 @@ export class SkillSelectUI {
       boomerang: '🪃',
       homing_missile: '🚀',
       poison_dart: '🎯',
-      flame_circle: '💫',
       frost_nova: '💠',
-      whirlwind: '🌀',
       poison_cloud: '☠️',
-      ground_spike: '⛰️',
       holy_light: '✨',
-      black_hole: '🕳️',
-      time_stop: '⏱️',
       summon: '👻',
       shield: '🛡️',
     };
@@ -244,15 +501,6 @@ export class SkillSelectUI {
     if (skill.categories.includes('summon')) return '召唤';
     if (skill.categories.includes('buff')) return '增益';
     return '基础';
-  }
-
-  /**
-   * 选择技能
-   */
-  private selectSkill(skill: Skill): void {
-    this.selectedSkill = skill;
-    this.hide();
-    this.onSelectCallback(skill);
   }
 
   /**

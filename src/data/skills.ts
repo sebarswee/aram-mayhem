@@ -609,6 +609,24 @@ export const SKILLS: Record<string, Skill> = {
     effects: [{ type: 'damage', value: 45 }, { type: 'stun', value: 0, duration: 1500 }],
   }),
 
+  // 草 - 森林之怒
+  forest_rage: createSkill({
+    id: 'forest_rage',
+    name: '森林之怒',
+    description: '召唤藤蔓从地下爆发，减速并持续伤害敌人，最终眩晕',
+    type: 'ultimate',
+    element: 'grass',
+    category: 'area',
+    cooldown: 26000,
+    damage: 35,
+    rangeValue: 350,
+    effects: [
+      { type: 'damage', value: 35 },
+      { type: 'slow', value: 0.5, duration: 3000 },
+      { type: 'stun', value: 0, duration: 1500 },
+    ],
+  }),
+
   earthquake: createSkill({
     id: 'earthquake',
     name: '大地震击',

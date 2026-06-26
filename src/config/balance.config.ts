@@ -29,9 +29,10 @@ export const ENEMY_SPAWN_CONFIG = {
     return Math.floor(20 + wave * 5);
   },
   // 波次 -> 精英概率
+  // 精英在波次10开始出现（与 getElitePoolForWave 一致）
   getEliteChance: (wave: number): number => {
-    if (wave < 4) return 0;
-    return Math.min(0.05 + (wave - 4) * 0.02, 0.4);
+    if (wave < 10) return 0;
+    return Math.min(0.05 + (wave - 10) * 0.02, 0.4);
   },
   // 刷新间隔(ms)
   spawnInterval: 800,

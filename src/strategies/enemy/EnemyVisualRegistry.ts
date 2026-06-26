@@ -2,7 +2,7 @@
  * 状态效果颜色映射策略
  */
 
-export type StatusEffectType = 'freeze' | 'stun' | 'poison' | 'defense_break' | 'slow' | 'burn';
+export type StatusEffectType = 'freeze' | 'stun' | 'poison' | 'defense_break' | 'slow' | 'burn' | 'root' | 'tick_speed_up';
 
 /**
  * 状态效果颜色注册表
@@ -29,6 +29,8 @@ export class StatusEffectColorRegistry {
     this.colors.set('defense_break', 0xff8888); // 红色
     this.colors.set('slow', 0xaaddff);       // 浅蓝灰色
     this.colors.set('burn', 0xffaa44);       // 橙色
+    this.colors.set('root', 0x88aa88);       // 暗绿色（定身）
+    this.colors.set('tick_speed_up', 0xff88ff); // 粉色（加速）
   }
 
   /**
@@ -67,9 +69,9 @@ export class EnemyTypeScaleRegistry {
   }
 
   private initializeDefaultScales(): void {
-    this.scales.set('normal', 1);
-    this.scales.set('elite', 1.3);
-    this.scales.set('boss', 1.8);
+    this.scales.set('normal', 1.0);
+    this.scales.set('elite', 1.5);   // 精英更大
+    this.scales.set('boss', 2.2);    // Boss更加巨大
   }
 
   /**

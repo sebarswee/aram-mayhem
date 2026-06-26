@@ -110,7 +110,7 @@ export class SkillSystem {
       );
 
       if (synergyResult) {
-        this.applySynergyEffect(enemy, synergyResult, damage);
+        this.applySynergyEffect(enemy, synergyResult, damage, skillElement);
       }
     }
 
@@ -124,7 +124,7 @@ export class SkillSystem {
   /**
    * Apply synergy effect to enemy
    */
-  private applySynergyEffect(enemy: Enemy, synergy: SynergyResult, baseDamage: number): void {
+  private applySynergyEffect(enemy: Enemy, synergy: SynergyResult, baseDamage: number, skillElement?: Element): void {
     // Emit event for UI feedback
     this.synergyEvents.emit('synergy_triggered', {
       synergy,
@@ -139,6 +139,7 @@ export class SkillSystem {
       scene: this.scene,
       player: this.player,
       baseDamage,
+      skillElement,
       findEnemiesInRange: this.findEnemiesInRange.bind(this),
     };
 
@@ -447,10 +448,6 @@ export class SkillSystem {
         count += enhancement.value;
       }
     }
-    // 多重箭技能自带3支箭
-    if (skill.id === 'multi_shot') {
-      count = Math.max(count, 3);
-    }
     return count;
   }
 
@@ -467,20 +464,50 @@ export class SkillSystem {
     return count;
   }
 
+  /**
+   * 创建投射物（供策略使用）
+   */
+  private createProjectile(config: ProjectileConfig): Phaser.GameObjects.Container {
+    const projectile = new Projectile(
+      this.scene,
+      this.player.x,
+      this.player.y,
+      config
+    );
+
+    this.projectiles.add(projectile);
+    // 角度从 config 中获取（策略设置在 data 中）
+    const angle = projectile.getData('angle') || 0;
+    projectile.fire(angle);
+
+    return projectile as unknown as Phaser.GameObjects.Container;
+  }
+
+  /**
+   * 查找范围内最近的敌人（供策略使用）
+   */
+  private findNearestEnemyByPosition(x: number, y: number, range: number): Enemy | null {
+    const enemies = this.findEnemiesInRange(x, y, range);
+    return this.findNearestEnemy(enemies);
+  }
+
   private castArea(skill: Skill): void {
     // 计算最终伤害（含技能加成和暴击）
     const baseDamage = skill.damage + this.player.stats.attack;
-    const { damage } = this.calculateDamage(baseDamage);
+    const { damage, isCrit } = this.calculateDamage(baseDamage);
 
     // 创建执行上下文
     const context: SkillExecutionContext = {
       scene: this.scene,
       player: this.player,
       damage,
+      isCrit,
       findEnemiesInRange: this.findEnemiesInRange.bind(this),
+      findNearestEnemy: this.findNearestEnemyByPosition.bind(this),
       applyDamageToEnemy: this.applyDamageToEnemy.bind(this),
       applyEffects: this.applyEffects.bind(this),
       applyLifesteal: this.applyLifesteal.bind(this),
+      createProjectile: this.createProjectile.bind(this),
     };
 
     // 尝试使用策略模式
@@ -967,7 +994,8 @@ export class SkillSystem {
   private applyLifesteal(damage: number): void {
     const lifestealPercent = this.player.stats.lifesteal || 0;
     if (lifestealPercent > 0) {
-      const healAmount = Math.floor(damage * lifestealPercent);
+      // lifestealPercent 是百分比形式 (如 10 表示 10%)，需要除以100
+      const healAmount = Math.floor(damage * lifestealPercent / 100);
       this.player.heal(healAmount);
     }
   }
@@ -1883,11 +1911,17 @@ export class SkillSystem {
     const duration = 1500;
     const tickInterval = 200;
 
+    // 确定玩家朝向：优先使用最近敌人方向，否则默认朝右
+    const nearestEnemy = this.findNearestEnemy(this.findEnemiesInRange(this.player.x, this.player.y, range + 100));
+    const playerAngle = nearestEnemy
+      ? Phaser.Math.Angle.Between(this.player.x, this.player.y, nearestEnemy.x, nearestEnemy.y)
+      : 0;
+
     const cone = this.scene.add.graphics();
     cone.fillStyle(0xff4400, 0.4);
     cone.beginPath();
     cone.moveTo(this.player.x, this.player.y);
-    cone.arc(this.player.x, this.player.y, range, -coneAngle / 2, coneAngle / 2);
+    cone.arc(this.player.x, this.player.y, range, playerAngle - coneAngle / 2, playerAngle + coneAngle / 2);
     cone.closePath();
     cone.fill();
     cone.setDepth(25);
@@ -1904,8 +1938,9 @@ export class SkillSystem {
         }
         const enemies = this.findEnemiesInRange(this.player.x, this.player.y, range);
         for (const enemy of enemies) {
-          const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, enemy.x, enemy.y);
-          if (Math.abs(angle) < coneAngle / 2) {
+          const enemyAngle = Phaser.Math.Angle.Between(this.player.x, this.player.y, enemy.x, enemy.y);
+          const angleDiff = Math.abs(Phaser.Math.Angle.Wrap(enemyAngle - playerAngle));
+          if (angleDiff < coneAngle / 2) {
             this.applyDamageToEnemy(enemy, Math.floor(damage * 0.25), skill);
           }
         }

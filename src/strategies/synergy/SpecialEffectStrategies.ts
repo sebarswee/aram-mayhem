@@ -15,7 +15,7 @@ export class ExplosionStrategy implements SynergyEffectStrategy {
     for (const target of explosionEnemies) {
       const distance = Phaser.Math.Distance.Between(enemy.x, enemy.y, target.x, target.y);
       const falloff = 1 - (distance / explosionRadius) * 0.5;
-      target.takeDamage(Math.floor(explosionBaseDamage * falloff));
+      target.takeDamage(Math.floor(explosionBaseDamage * falloff), context.skillElement);
     }
 
     // 视觉爆炸效果
@@ -49,7 +49,7 @@ export class ExplosionStrategy implements SynergyEffectStrategy {
 export class ChainBoostStrategy implements SynergyEffectStrategy {
   execute(synergy: SynergyResult, enemy: Enemy, context: SynergyExecutionContext): void {
     const chainBoostDamage = Math.floor(context.baseDamage * (synergy.value || 1.5));
-    enemy.takeDamage(chainBoostDamage);
+    enemy.takeDamage(chainBoostDamage, context.skillElement);
     // 连锁到附近敌人（简化实现）
     this.triggerChainLightning(context, enemy.x, enemy.y, chainBoostDamage * 0.8, 3, 150);
   }
@@ -79,7 +79,7 @@ export class ChainBoostStrategy implements SynergyEffectStrategy {
       // 创建闪电视觉
       this.createChainBolt(context.scene, currentX, currentY, nextTarget.x, nextTarget.y);
 
-      nextTarget.takeDamage(Math.floor(currentDamage));
+      nextTarget.takeDamage(Math.floor(currentDamage), context.skillElement);
       currentDamage *= 0.8;
 
       currentX = nextTarget.x;

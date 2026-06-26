@@ -57,7 +57,7 @@ export class LavaZoneStrategy implements SynergyEffectStrategy {
 
         const enemies = context.findEnemiesInRange(x, y, radius);
         for (const enemy of enemies) {
-          enemy.takeDamage(Math.floor(damagePerTick));
+          enemy.takeDamage(Math.floor(damagePerTick), context.skillElement);
         }
       },
       repeat: Math.floor(duration / tickInterval) - 1,
@@ -97,7 +97,7 @@ export class SpreadDebuffStrategy implements SynergyEffectStrategy {
 export class DispelAndDamageStrategy implements SynergyEffectStrategy {
   execute(_synergy: SynergyResult, enemy: Enemy, context: SynergyExecutionContext): void {
     enemy.statusEffects = [];
-    enemy.takeDamage(Math.floor(context.baseDamage * 0.5));
+    enemy.takeDamage(Math.floor(context.baseDamage * 0.5), context.skillElement);
   }
 }
 
@@ -145,7 +145,7 @@ export class RefractDamageStrategy implements SynergyEffectStrategy {
 
     for (const target of refractTargets) {
       if (target !== enemy && refractedCount < refractMaxTargets) {
-        target.takeDamage(refractDamage);
+        target.takeDamage(refractDamage, context.skillElement);
         // 创建折射光束视觉
         this.createRefractBeam(context.scene, enemy.x, enemy.y, target.x, target.y);
         refractedCount++;
@@ -228,7 +228,7 @@ export class Split3Strategy implements SynergyEffectStrategy {
         onUpdate: () => {
           const enemies = context.findEnemiesInRange(proj.x, proj.y, 20);
           for (const enemy of enemies) {
-            enemy.takeDamage(Math.floor(damage));
+            enemy.takeDamage(Math.floor(damage), context.skillElement);
           }
         },
         onComplete: () => proj.destroy(),
@@ -249,6 +249,6 @@ export class DefenseReduceStrategy implements SynergyEffectStrategy {
       remainingTime: synergy.duration || 5000,
       source: 'synergy_defense_reduce',
     });
-    enemy.takeDamage(context.baseDamage);
+    enemy.takeDamage(context.baseDamage, context.skillElement);
   }
 }

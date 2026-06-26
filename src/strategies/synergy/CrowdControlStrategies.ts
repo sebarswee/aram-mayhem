@@ -90,8 +90,9 @@ export class KnockupStrategy implements SynergyEffectStrategy {
  * 真实伤害+混乱策略
  */
 export class TrueDamageConfuseStrategy implements SynergyEffectStrategy {
-  execute(synergy: SynergyResult, enemy: Enemy, _context: SynergyExecutionContext): void {
-    const confuseDamage = Math.floor(_context.baseDamage * 0.3);
+  execute(synergy: SynergyResult, enemy: Enemy, context: SynergyExecutionContext): void {
+    const confuseDamage = Math.floor(context.baseDamage * 0.3);
+    // 真实伤害绕过防御和克制，不传递元素
     enemy.takeDamage(confuseDamage);
     enemy.addStatusEffect({
       type: 'stun',

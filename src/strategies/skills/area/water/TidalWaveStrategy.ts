@@ -1,6 +1,7 @@
 import { SkillStrategy, VisualEffectStrategy, SkillExecutionContext } from '../../../SkillStrategy';
 import { Skill } from '@/types';
 import { Enemy } from '@/entities/Enemy';
+import { VisualEffectUtils } from '@/graphics/VisualEffectUtils';
 import Phaser from 'phaser';
 
 /**
@@ -14,11 +15,9 @@ export class TidalWaveStrategy implements SkillStrategy {
     const waveSpeed = 300;
     const waveWidth = 60;
 
-    // 找最近敌人作为目标方向
     const enemies = findEnemiesInRange(player.x, player.y, range + 100);
     if (enemies.length === 0) return;
 
-    // 找最近的敌人
     let nearestEnemy: Enemy | null = null;
     let minDist = Infinity;
     for (const enemy of enemies) {
@@ -32,13 +31,48 @@ export class TidalWaveStrategy implements SkillStrategy {
 
     const angle = Phaser.Math.Angle.Between(player.x, player.y, nearestEnemy.x, nearestEnemy.y);
 
-    // 水波视觉
-    const wave = scene.add.graphics();
-    wave.fillStyle(0x4488ff, 0.6);
-    wave.fillRect(-waveWidth / 2, 0, waveWidth, 50);
-    wave.setPosition(player.x, player.y);
-    wave.setRotation(angle);
-    wave.setDepth(25);
+    // 多层水波视觉
+    const waveOuter = scene.add.graphics();
+    waveOuter.fillStyle(0x2266cc, 0.35);
+    waveOuter.fillEllipse(0, 0, waveWidth + 20, 70);
+    waveOuter.setPosition(player.x, player.y);
+    waveOuter.setRotation(angle);
+    waveOuter.setDepth(23);
+
+    const waveMid = scene.add.graphics();
+    waveMid.fillStyle(0x4488ff, 0.55);
+    waveMid.fillEllipse(0, 0, waveWidth, 55);
+    waveMid.setPosition(player.x, player.y);
+    waveMid.setRotation(angle);
+    waveMid.setDepth(24);
+
+    const waveInner = scene.add.graphics();
+    waveInner.fillStyle(0x66aaff, 0.7);
+    waveInner.fillEllipse(0, 0, waveWidth - 15, 40);
+    waveInner.setPosition(player.x, player.y);
+    waveInner.setRotation(angle);
+    waveInner.setDepth(25);
+
+    // 水花粒子
+    const splashParticles = scene.add.particles(player.x, player.y, 'particle_glow', {
+      speed: { min: 50, max: 150 },
+      angle: { min: (angle - 0.5) * 180 / Math.PI, max: (angle + 0.5) * 180 / Math.PI },
+      scale: { start: 0.5, end: 0 },
+      alpha: { start: 0.7, end: 0 },
+      tint: [0x4488ff, 0x66aaff, 0x88ccff],
+      lifespan: 400,
+      frequency: 30,
+      quantity: 3,
+    });
+    splashParticles.setDepth(26);
+
+    // 起始冲击波
+    VisualEffectUtils.createShockwave(scene, player.x, player.y, {
+      color: 0x4488ff,
+      radius: 40,
+      rings: 2,
+      duration: 250,
+    });
 
     let distance = 0;
     const hitEnemies = new Set<string>();
@@ -49,24 +83,51 @@ export class TidalWaveStrategy implements SkillStrategy {
         distance += waveSpeed * 0.05;
         if (distance >= range) {
           waveTimer.destroy();
-          wave.destroy();
+          waveOuter.destroy();
+          waveMid.destroy();
+          waveInner.destroy();
+          splashParticles.destroy();
+
+          // 终点冲击波
+          const endX = player.x + Math.cos(angle) * range;
+          const endY = player.y + Math.sin(angle) * range;
+          VisualEffectUtils.createShockwave(scene, endX, endY, {
+            color: 0x4488ff,
+            radius: 50,
+            rings: 3,
+            duration: 300,
+          });
           return;
         }
 
         const cx = player.x + Math.cos(angle) * distance;
         const cy = player.y + Math.sin(angle) * distance;
-        wave.setPosition(cx, cy);
+        waveOuter.setPosition(cx, cy);
+        waveMid.setPosition(cx, cy);
+        waveInner.setPosition(cx, cy);
+        splashParticles.setPosition(cx, cy);
 
         const enemiesInRange = findEnemiesInRange(cx, cy, waveWidth);
         for (const enemy of enemiesInRange) {
           if (!hitEnemies.has(enemy.instanceId)) {
             hitEnemies.add(enemy.instanceId);
             applyDamageToEnemy(enemy, damage, skill);
-            // 击退
+
             if (enemy.active && enemy.body) {
               enemy.x += Math.cos(angle) * 30;
               enemy.y += Math.sin(angle) * 30;
             }
+
+            // 水花溅射效果
+            const splash = scene.add.circle(enemy.x, enemy.y, 18, 0x4488ff, 0.6);
+            splash.setDepth(100);
+            scene.tweens.add({
+              targets: splash,
+              scale: 1.5,
+              alpha: 0,
+              duration: 200,
+              onComplete: () => splash.destroy(),
+            });
           }
         }
       },
@@ -76,21 +137,44 @@ export class TidalWaveStrategy implements SkillStrategy {
 }
 
 /**
- * 水波推进视觉效果策略
+ * 水波推进视觉效果策略 - 增强版
  */
 export class TidalWaveVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    const wave = scene.add.graphics();
-    wave.fillStyle(0x4488ff, 0.5);
-    wave.fillEllipse(x + radius / 2, y, 60, 40);
-    wave.setDepth(25);
+    // 多层水波
+    const waves: Phaser.GameObjects.Graphics[] = [];
+    const configs = [
+      { width: 80, height: 55, color: 0x2266cc, alpha: 0.3 },
+      { width: 65, height: 45, color: 0x4488ff, alpha: 0.5 },
+      { width: 50, height: 35, color: 0x66aaff, alpha: 0.65 },
+    ];
+
+    configs.forEach((config, i) => {
+      const wave = scene.add.graphics();
+      wave.fillStyle(config.color, config.alpha);
+      wave.fillEllipse(0, 0, config.width, config.height);
+      wave.setPosition(x, y);
+      wave.setDepth(23 + i);
+      waves.push(wave);
+    });
+
+    // 水花粒子
+    VisualEffectUtils.createParticleBurst(scene, x, y, {
+      count: 20,
+      color: 0x4488ff,
+      speed: { min: 80, max: 180 },
+      angle: { min: -30, max: 30 },
+      scale: { start: 0.5, end: 0 },
+      lifespan: 400,
+    });
 
     scene.tweens.add({
-      targets: wave,
+      targets: waves,
       x: radius,
       alpha: 0,
-      duration: 400,
-      onComplete: () => wave.destroy(),
+      scaleX: 1.3,
+      duration: 450,
+      onComplete: () => waves.forEach(w => w.destroy()),
     });
   }
 }

@@ -14,7 +14,7 @@ export const NORMAL_ENEMIES: EnemyConfig[] = [
     speed: 80,
     expValue: 5,
     color: 0xff4400,
-    abilities: [{ type: 'burn_on_contact', trigger: 'passive', params: { damage: 3, duration: 2000 } }],
+    abilities: [{ type: 'burn_on_contact', trigger: 'attack', params: { damage: 3, duration: 2000 } }],
   },
   {
     id: 'water_elemental',
@@ -115,7 +115,7 @@ export const ELITE_ENEMIES: EnemyConfig[] = [
     expValue: 25,
     color: 0xff2200,
     abilities: [
-      { type: 'burn_on_contact', trigger: 'passive', params: { damage: 8, duration: 3000 } },
+      { type: 'burn_on_contact', trigger: 'attack', params: { damage: 8, duration: 3000 } },
       { type: 'hp_boost', trigger: 'passive', params: { multiplier: 1.5 } },
       { type: 'charge', trigger: 'active', cooldown: 5000, params: { speed: 350, duration: 600 } },
     ],
@@ -198,7 +198,7 @@ export const BOSS_ENEMIES: EnemyConfig[] = [
     expValue: 100,
     color: 0xff0000,
     abilities: [
-      { type: 'burn_on_contact', trigger: 'passive', params: { damage: 15, duration: 5000 } },
+      { type: 'burn_on_contact', trigger: 'attack', params: { damage: 15, duration: 5000 } },
       { type: 'charge', trigger: 'active', cooldown: 5000, params: { speed: 400, duration: 800 } },
       { type: 'shoot', trigger: 'active', cooldown: 3000, params: { damage: 20, speed: 250, count: 3, effect: 'burn', effectValue: 8, effectDuration: 3000 } },
     ],
@@ -405,12 +405,47 @@ export const ENEMY_CONFIGS: Record<string, EnemyConfig> = Object.fromEntries(
   getAllEnemies().map(e => [e.id, e])
 );
 
-// 获取波次敌人池（兼容旧系统）
+// 获取波次敌人池（根据波次解锁）
 export function getEnemyPoolForWave(wave: number): string[] {
-  return NORMAL_ENEMIES.map(e => e.id);
+  // 波次解锁机制：
+  // 波次 1-2: 只有前3种元素敌人
+  // 波次 3-4: 解锁中间2种元素敌人
+  // 波次 5+: 解锁所有元素敌人
+
+  const elementOrder = ['fire', 'water', 'ice', 'lightning', 'holy', 'shadow', 'grass', 'earth'];
+
+  let unlockedElements: string[];
+  if (wave <= 2) {
+    unlockedElements = elementOrder.slice(0, 3); // fire, water, ice
+  } else if (wave <= 4) {
+    unlockedElements = elementOrder.slice(0, 5); // + lightning, holy
+  } else {
+    unlockedElements = elementOrder; // 全部
+  }
+
+  return NORMAL_ENEMIES
+    .filter(e => unlockedElements.includes(e.element))
+    .map(e => e.id);
 }
 
-// 获取精英敌人池（兼容旧系统）
+// 获取精英敌人池（根据波次解锁）
 export function getElitePoolForWave(wave: number): string[] {
-  return ELITE_ENEMIES.map(e => e.id);
+  // 波次解锁机制：
+  // 波次 1-9: 无精英
+  // 波次 10+: 开始出现精英
+
+  if (wave < 10) {
+    return [];
+  }
+
+  // 波次 10+: 按元素顺序逐步解锁精英
+  const elementOrder = ['fire', 'water', 'ice', 'lightning', 'holy', 'shadow', 'grass', 'earth'];
+
+  // 根据波次决定解锁几个精英
+  // 每10波解锁一个新精英
+  const unlockedCount = Math.min(Math.floor((wave - 10) / 10) + 1, ELITE_ENEMIES.length);
+
+  return ELITE_ENEMIES
+    .slice(0, unlockedCount)
+    .map(e => e.id);
 }

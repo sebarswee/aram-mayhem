@@ -1,5 +1,6 @@
 import { SkillStrategy, VisualEffectStrategy, SkillExecutionContext } from '../../../SkillStrategy';
 import { Skill } from '@/types';
+import { VisualEffectUtils } from '@/graphics/VisualEffectUtils';
 import Phaser from 'phaser';
 
 /**
@@ -15,6 +16,82 @@ export class BlizzardStrategy implements SkillStrategy {
     const duration = 3000;
     const tickInterval = 500;
 
+    // 多层霜冻区域
+    const frostLayers: Phaser.GameObjects.Arc[] = [];
+    const layerConfigs = [
+      { radius: radius * 1.1, color: 0x66ccff, alpha: 0.12 },
+      { radius: radius, color: 0x88ddff, alpha: 0.18 },
+      { radius: radius * 0.85, color: 0xaaeeff, alpha: 0.15 },
+    ];
+
+    layerConfigs.forEach((config, i) => {
+      const layer = scene.add.circle(centerX, centerY, config.radius, config.color, config.alpha);
+      layer.setDepth(17 + i);
+      frostLayers.push(layer);
+
+      // 脉动动画
+      scene.tweens.add({
+        targets: layer,
+        scaleX: 1.05,
+        scaleY: 1.05,
+        alpha: config.alpha * 0.6,
+        duration: 400,
+        yoyo: true,
+        repeat: -1,
+      });
+    });
+
+    // 霜冻粒子系统
+    const frostParticles = scene.add.particles(centerX, centerY, 'particle_ice_crystal', {
+      speed: { min: 30, max: 80 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 0.5, end: 0 },
+      alpha: { start: 0.7, end: 0 },
+      tint: [0x88ddff, 0xaaeeff, 0xffffff],
+      lifespan: 1200,
+      frequency: 60,
+      quantity: 3,
+      emitZone: {
+        type: 'random' as const,
+        source: new Phaser.Geom.Circle(0, 0, radius * 0.9) as Phaser.Types.GameObjects.Particles.RandomZoneSource,
+      },
+    });
+    frostParticles.setDepth(20);
+
+    // 雪花飘落
+    const snowParticles = scene.add.particles(centerX, centerY, 'particle_glow', {
+      speed: { min: 20, max: 50 },
+      angle: { min: 200, max: 340 },
+      scale: { start: 0.4, end: 0 },
+      alpha: { start: 0.6, end: 0 },
+      tint: [0xffffff, 0xeeffff, 0xddffff],
+      lifespan: 2000,
+      frequency: 80,
+      quantity: 2,
+      emitZone: {
+        type: 'random' as const,
+        source: new Phaser.Geom.Circle(0, 0, radius) as Phaser.Types.GameObjects.Particles.RandomZoneSource,
+      },
+    });
+    snowParticles.setDepth(21);
+
+    // 旋风效果
+    const vortex = scene.add.container(centerX, centerY);
+    vortex.setDepth(19);
+    for (let i = 0; i < 3; i++) {
+      const ring = scene.add.graphics();
+      ring.lineStyle(2 - i * 0.5, 0x88ddff, 0.4 - i * 0.1);
+      ring.strokeCircle(0, 0, radius * (0.4 + i * 0.2));
+      vortex.add(ring);
+
+      scene.tweens.add({
+        targets: ring,
+        angle: 360 * (i % 2 === 0 ? 1 : -1),
+        duration: 2000 + i * 500,
+        repeat: -1,
+      });
+    }
+
     let tickCount = 0;
     const maxTicks = Math.floor(duration / tickInterval);
 
@@ -24,21 +101,34 @@ export class BlizzardStrategy implements SkillStrategy {
         tickCount++;
         if (tickCount > maxTicks) {
           damageTimer.destroy();
+          frostParticles.destroy();
+          snowParticles.destroy();
+          frostLayers.forEach(l => l.destroy());
+          vortex.destroy();
           return;
         }
 
-        // 检测范围内敌人
         const enemies = findEnemiesInRange(centerX, centerY, radius);
         for (const enemy of enemies) {
           const tickDamage = Math.floor(damage * 0.3);
           applyDamageToEnemy(enemy, tickDamage, skill);
-          // 应用冻结效果
           if (applyEffects && skill.effects) {
             applyEffects(enemy, skill.effects);
           }
           if (applyLifesteal) {
             applyLifesteal(tickDamage);
           }
+
+          // 冰霜效果
+          const frost = scene.add.circle(enemy.x, enemy.y, 15, 0x88ddff, 0.6);
+          frost.setDepth(100);
+          scene.tweens.add({
+            targets: frost,
+            scale: 1.3,
+            alpha: 0,
+            duration: 250,
+            onComplete: () => frost.destroy(),
+          });
         }
       },
       repeat: maxTicks - 1,
@@ -47,59 +137,92 @@ export class BlizzardStrategy implements SkillStrategy {
 }
 
 /**
- * 暴风雪视觉效果策略
+ * 暴风雪视觉效果策略 - 增强版
  */
 export class BlizzardVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 霜冻区域
-    const frostZone = scene.add.circle(x, y, radius, 0x88ddff, 0.25);
-    frostZone.setDepth(19);
+    // 多层霜冻区域
+    const frostLayers: Phaser.GameObjects.Arc[] = [];
+    const layerConfigs = [
+      { radius: radius * 1.1, color: 0x66ccff, alpha: 0.1 },
+      { radius: radius, color: 0x88ddff, alpha: 0.15 },
+      { radius: radius * 0.85, color: 0xaaeeff, alpha: 0.12 },
+    ];
 
-    // 雪花效果 - 使用简单图形代替粒子系统
+    layerConfigs.forEach((config, i) => {
+      const layer = scene.add.circle(x, y, config.radius, config.color, config.alpha);
+      layer.setDepth(17 + i);
+      frostLayers.push(layer);
+    });
+
+    // 脉动效果
+    frostLayers.forEach((layer, i) => {
+      scene.tweens.add({
+        targets: layer,
+        scaleX: 1.08,
+        scaleY: 1.08,
+        alpha: layer.alpha * 0.5,
+        duration: 500,
+        yoyo: true,
+        repeat: 5,
+      });
+    });
+
+    // 雪花粒子
     const snowflakes: Phaser.GameObjects.Arc[] = [];
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 25; i++) {
       const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-      const dist = Phaser.Math.FloatBetween(0, radius);
+      const dist = Phaser.Math.FloatBetween(0, radius * 0.9);
       const startX = x + Math.cos(angle) * dist;
       const startY = y + Math.sin(angle) * dist;
+      const size = Phaser.Math.Between(3, 7);
 
-      const snowflake = scene.add.circle(startX, startY, Phaser.Math.Between(3, 6), 0xffffff, 0.8);
-      snowflake.setDepth(20);
+      const snowflake = scene.add.circle(startX, startY, size, 0xffffff, 0.85);
+      snowflake.setDepth(20 + (i % 3));
       snowflakes.push(snowflake);
 
       // 雪花飘动动画
       scene.tweens.add({
         targets: snowflake,
-        y: snowflake.y - Phaser.Math.Between(30, 60),
-        x: snowflake.x + Phaser.Math.Between(-20, 20),
+        y: snowflake.y - Phaser.Math.Between(40, 80),
+        x: snowflake.x + Phaser.Math.Between(-30, 30),
         alpha: 0,
-        duration: Phaser.Math.Between(1000, 1500),
-        repeat: 2,
-        onComplete: () => {
-          snowflake.destroy();
-        },
+        rotation: Phaser.Math.FloatBetween(-1, 1),
+        duration: Phaser.Math.Between(1200, 1800),
+        delay: i * 30,
+        repeat: 1,
+        onComplete: () => snowflake.destroy(),
       });
     }
 
-    // 脉动效果
+    // 旋风效果
+    const vortex = scene.add.container(x, y);
+    vortex.setDepth(19);
+    for (let i = 0; i < 3; i++) {
+      const ring = scene.add.graphics();
+      ring.lineStyle(2 - i * 0.5, 0x88ddff, 0.35 - i * 0.1);
+      ring.strokeCircle(0, 0, radius * (0.3 + i * 0.2));
+      vortex.add(ring);
+    }
+
     scene.tweens.add({
-      targets: frostZone,
-      scaleX: 1.1,
-      scaleY: 1.1,
-      alpha: 0.15,
-      duration: 500,
-      yoyo: true,
+      targets: vortex.list,
+      angle: 360,
+      duration: 2000,
       repeat: 5,
-      onComplete: () => {
-        scene.tweens.add({
-          targets: frostZone,
-          alpha: 0,
-          duration: 500,
-          onComplete: () => {
-            frostZone.destroy();
-          },
-        });
-      },
+    });
+
+    // 定时清理
+    scene.time.delayedCall(3000, () => {
+      scene.tweens.add({
+        targets: [...frostLayers, vortex],
+        alpha: 0,
+        duration: 500,
+        onComplete: () => {
+          frostLayers.forEach(l => l.destroy());
+          vortex.destroy();
+        },
+      });
     });
   }
 }

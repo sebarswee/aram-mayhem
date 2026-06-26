@@ -23,18 +23,12 @@ export class SkillEffects {
 
     const element = skill.elements[0] || 'fire';
 
-    switch (skill.id) {
-      case 'fireball':
-        this.createFireballEffect(container);
-        break;
-      case 'ice_shard':
-        this.createIceShardEffect(container, angle);
-        break;
-      case 'lightning_bolt':
-        this.createLightningBoltEffect(container, angle);
-        break;
-      default:
-        this.createDefaultProjectile(container, element);
+    // 尝试使用策略模式
+    if (skillStrategyRegistry.hasProjectileVisualStrategy(skill.id)) {
+      skillStrategyRegistry.createProjectileVisualEffect(skill.id, container, this.scene, element, angle);
+    } else {
+      // 默认投射物效果
+      this.createDefaultProjectile(container, element);
     }
 
     return container;
@@ -170,26 +164,8 @@ export class SkillEffects {
       return;
     }
 
-    // 旧版分支逻辑（仅处理未重构的技能）
-    switch (skill.id) {
-      case 'flame_circle':
-        this.createFlameCircleEffect(x, y, skill.rangeValue);
-        break;
-      case 'whirlwind':
-        this.createWhirlwindEffect(x, y, skill.rangeValue);
-        break;
-      case 'black_hole':
-        this.createBlackHoleEffect(x, y, skill.rangeValue);
-        break;
-      case 'time_stop':
-        this.createTimeStopEffect(x, y, skill.rangeValue);
-        break;
-      case 'ground_spike':
-        this.createGroundSpikeEffect(x, y, skill.rangeValue);
-        break;
-      default:
-        this.createDefaultAreaEffect(x, y, skill.rangeValue, skill.elements[0]);
-    }
+    // 默认效果
+    this.createDefaultAreaEffect(x, y, skill.rangeValue, skill.elements[0]);
   }
 
   /**
@@ -232,80 +208,12 @@ export class SkillEffects {
     });
   }
 
-  /**
-   * 旋风斩效果 - 旋转剑刃
-   */
-  private createWhirlwindEffect(x: number, y: number, radius: number): void {
-    // 旋转剑刃
-    const blades: Phaser.GameObjects.Graphics[] = [];
-    for (let i = 0; i < 4; i++) {
-      const angle = (i / 4) * Math.PI * 2;
-      const blade = this.scene.add.graphics();
-      blade.fillStyle(0xcccccc, 1);
-
-      // 剑刃形状
-      const bladeX = x + Math.cos(angle) * radius * 0.5;
-      const bladeY = y + Math.sin(angle) * radius * 0.5;
-      blade.fillTriangle(
-        bladeX, bladeY - 20,
-        bladeX - 8, bladeY + 10,
-        bladeX + 8, bladeY + 10
-      );
-      blade.fillStyle(0xffffff, 0.6);
-      blade.fillTriangle(
-        bladeX, bladeY - 16,
-        bladeX - 4, bladeY + 6,
-        bladeX + 4, bladeY + 6
-      );
-      blade.setDepth(21);
-      blades.push(blade);
-    }
-
-    // 旋转动画
-    const rotationContainer = this.scene.add.container(x, y);
-    blades.forEach(b => rotationContainer.add(b));
-    rotationContainer.setDepth(21);
-
-    this.scene.tweens.add({
-      targets: rotationContainer,
-      angle: 360 * 2, // 旋转2圈
-      duration: 500,
-      onComplete: () => {
-        rotationContainer.destroy();
-      },
-    });
-
-    // 冲击波
-    const wave = this.scene.add.graphics();
-    wave.lineStyle(4, 0xffffff, 0.8);
-    wave.strokeCircle(x, y, radius);
-    wave.setDepth(20);
-
-    this.scene.tweens.add({
-      targets: wave,
-      scaleX: 1.3,
-      scaleY: 1.3,
-      alpha: 0,
-      duration: 300,
-      onComplete: () => wave.destroy(),
-    });
-
-    // 中心闪光
-    const flash = this.scene.add.circle(x, y, 30, 0xffffff, 0.5);
-    flash.setDepth(22);
-    this.scene.tweens.add({
-      targets: flash,
-      alpha: 0,
-      scale: 1.5,
-      duration: 200,
-      onComplete: () => flash.destroy(),
-    });
-  }
+  // ==================== 新增技能视觉效果 ====================
 
   /**
-   * 烈焰环效果
+   * 烈焰波效果 - 向前释放火焰波
    */
-  private createFlameCircleEffect(x: number, y: number, radius: number): void {
+  private createFlameWaveEffect(x: number, y: number, radius: number): void {
     // 火焰环
     const ring = this.scene.add.graphics();
     ring.lineStyle(8, 0xff4400, 0.8);
@@ -603,226 +511,7 @@ export class SkillEffects {
     });
   }
 
-  /**
-   * 地刺效果
-   */
-  private createGroundSpikeEffect(x: number, y: number, radius: number): void {
-    const spikes: Phaser.GameObjects.Graphics[] = [];
-
-    // 创建多个尖刺
-    for (let i = 0; i < 8; i++) {
-      const angle = (i / 8) * Math.PI * 2;
-      const dist = radius * 0.7;
-      const spikeX = x + Math.cos(angle) * dist;
-      const spikeY = y + Math.sin(angle) * dist;
-
-      const spike = this.scene.add.graphics();
-      spike.fillStyle(0x886644, 1);
-      spike.fillTriangle(spikeX, spikeY - 25, spikeX - 8, spikeY + 10, spikeX + 8, spikeY + 10);
-      spike.fillStyle(0xaa8866, 0.8);
-      spike.fillTriangle(spikeX, spikeY - 22, spikeX - 5, spikeY + 5, spikeX + 5, spikeY + 5);
-      spike.setDepth(21);
-      spikes.push(spike);
-
-      // 弹出动画
-      this.scene.tweens.add({
-        targets: spike,
-        scaleY: { from: 0, to: 1 },
-        duration: 150,
-        ease: 'Back.easeOut',
-      });
-    }
-
-    // 中心冲击
-    const shock = this.scene.add.circle(x, y, 30, 0xffffff, 0.5);
-    shock.setDepth(20);
-    this.scene.tweens.add({
-      targets: shock,
-      scale: 2,
-      alpha: 0,
-      duration: 300,
-      onComplete: () => {
-        shock.destroy();
-        spikes.forEach(s => s.destroy());
-      },
-    });
-  }
-
-  /**
-   * 神圣之光效果
-   */
-  private createHolyLightEffect(x: number, y: number, radius: number): void {
-    // 光柱
-    const beam = this.scene.add.rectangle(x, y, 60, radius * 2, 0xffcc00, 0.6);
-    beam.setDepth(20);
-
-    // 光芒
-    const rays = this.scene.add.graphics();
-    rays.lineStyle(3, 0xffffff, 0.8);
-    for (let i = 0; i < 8; i++) {
-      const angle = (i / 8) * Math.PI * 2;
-      rays.lineBetween(
-        x, y,
-        x + Math.cos(angle) * radius,
-        y + Math.sin(angle) * radius
-      );
-    }
-    rays.setDepth(21);
-
-    // 治疗光环
-    const healRing = this.scene.add.circle(x, y, 30, 0x66ff66, 0.4);
-    healRing.setDepth(22);
-
-    this.scene.tweens.add({
-      targets: [beam, rays, healRing],
-      alpha: 0,
-      scale: 1.5,
-      duration: 500,
-      onComplete: () => {
-        beam.destroy();
-        rays.destroy();
-        healRing.destroy();
-      },
-    });
-  }
-
-  /**
-   * 黑洞效果
-   */
-  private createBlackHoleEffect(x: number, y: number, radius: number): void {
-    // 黑洞核心
-    const core = this.scene.add.circle(x, y, 30, 0x000000, 1);
-    core.setDepth(21);
-
-    // 吸引环
-    const rings: Phaser.GameObjects.Arc[] = [];
-    for (let i = 0; i < 3; i++) {
-      const ring = this.scene.add.circle(x, y, radius - i * 20, 0x8800ff, 0.2 - i * 0.05);
-      ring.setDepth(20);
-      rings.push(ring);
-    }
-
-    // 粒子吸入效果
-    const particles = this.scene.add.particles(x, y, 'particle_glow', {
-      speed: { min: 50, max: 150 },
-      angle: { min: 0, max: 360 },
-      scale: { start: 0.5, end: 0 },
-      alpha: { start: 0.8, end: 0 },
-      tint: 0x8800ff,
-      lifespan: 1000,
-      frequency: 50,
-      quantity: 3,
-    });
-    particles.setDepth(19);
-
-    // 旋转动画
-    this.scene.tweens.add({
-      targets: rings,
-      angle: 360,
-      duration: 2000,
-      repeat: 0,
-    });
-
-    // 消散
-    this.scene.time.delayedCall(2000, () => {
-      particles.stop();
-      this.scene.tweens.add({
-        targets: [core, ...rings],
-        alpha: 0,
-        scale: 0.5,
-        duration: 300,
-        onComplete: () => {
-          core.destroy();
-          rings.forEach(r => r.destroy());
-          particles.destroy();
-        },
-      });
-    });
-  }
-
-  /**
-   * 时间停止效果
-   */
-  private createTimeStopEffect(x: number, y: number, radius: number): void {
-    // 时钟效果
-    const clock = this.scene.add.graphics();
-    clock.lineStyle(4, 0x6644ff, 0.8);
-    clock.strokeCircle(x, y, radius);
-    clock.fillStyle(0x6644ff, 0.2);
-    clock.fillCircle(x, y, radius);
-    clock.setDepth(20);
-
-    // 时针
-    const hourHand = this.scene.add.graphics();
-    hourHand.lineStyle(3, 0xffffff, 1);
-    hourHand.lineBetween(x, y, x, y - radius * 0.6);
-    hourHand.setDepth(21);
-
-    const minuteHand = this.scene.add.graphics();
-    minuteHand.lineStyle(2, 0xffffff, 0.8);
-    minuteHand.lineBetween(x, y, x + radius * 0.4, y);
-    minuteHand.setDepth(21);
-
-    // 时钟旋转
-    this.scene.tweens.add({
-      targets: [hourHand, minuteHand],
-      angle: 360,
-      duration: 1000,
-      repeat: 1,
-    });
-
-    // 消散
-    this.scene.time.delayedCall(2000, () => {
-      this.scene.tweens.add({
-        targets: [clock, hourHand, minuteHand],
-        alpha: 0,
-        duration: 300,
-        onComplete: () => {
-          clock.destroy();
-          hourHand.destroy();
-          minuteHand.destroy();
-        },
-      });
-    });
-  }
-
   // ==================== 新增技能视觉效果 ====================
-
-  /**
-   * 烈焰波效果 - 向前释放火焰波
-   */
-  private createFlameWaveEffect(x: number, y: number, radius: number): void {
-    // 火焰波纹
-    const wave = this.scene.add.graphics();
-    wave.fillStyle(0xff4400, 0.6);
-    wave.fillCircle(x, y, radius);
-    wave.setDepth(20);
-
-    // 火焰粒子
-    const particles = this.scene.add.particles(x, y, 'particle_fire', {
-      speed: { min: 80, max: 200 },
-      angle: { min: 0, max: 360 },
-      scale: { start: 0.7, end: 0 },
-      alpha: { start: 1, end: 0 },
-      lifespan: 600,
-      quantity: 25,
-      emitting: false,
-    });
-    particles.explode();
-    particles.setDepth(21);
-
-    this.scene.tweens.add({
-      targets: wave,
-      scaleX: 2,
-      scaleY: 2,
-      alpha: 0,
-      duration: 400,
-      onComplete: () => {
-        wave.destroy();
-        particles.destroy();
-      },
-    });
-  }
 
   /**
    * 潮汐效果 - 水流推开

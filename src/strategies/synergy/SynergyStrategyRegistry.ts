@@ -1,5 +1,5 @@
 import { Enemy } from '@/entities/Enemy';
-import { SynergyResult } from '@/types';
+import { SynergyResult, Element } from '@/types';
 import Phaser from 'phaser';
 
 /**
@@ -9,6 +9,7 @@ export interface SynergyExecutionContext {
   scene: Phaser.Scene;
   player: any; // Player type
   baseDamage: number;
+  skillElement?: Element; // 技能元素，用于传递给伤害计算
   findEnemiesInRange: (x: number, y: number, range: number) => Enemy[];
 }
 

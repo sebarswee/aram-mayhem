@@ -1,4 +1,4 @@
-import { SkillStrategy, VisualEffectStrategy, SkillExecutionContext } from './SkillStrategy';
+import { SkillStrategy, VisualEffectStrategy, ProjectileVisualStrategy, BuffStrategy, SkillExecutionContext } from './SkillStrategy';
 import { Skill } from '@/types';
 import Phaser from 'phaser';
 
@@ -10,6 +10,8 @@ export class SkillStrategyRegistry {
   private static instance: SkillStrategyRegistry;
   private strategies: Map<string, SkillStrategy> = new Map();
   private visualStrategies: Map<string, VisualEffectStrategy> = new Map();
+  private projectileVisualStrategies: Map<string, ProjectileVisualStrategy> = new Map();
+  private buffStrategies: Map<string, BuffStrategy> = new Map();
 
   private constructor() {}
 
@@ -38,10 +40,33 @@ export class SkillStrategyRegistry {
   }
 
   /**
+   * 注册投射物视觉策略
+   */
+  registerProjectileVisual(skillId: string, strategy: ProjectileVisualStrategy): void {
+    this.projectileVisualStrategies.set(skillId, strategy);
+  }
+
+  /**
    * 批量注册（同时注册行为和视觉策略）
    */
   registerBoth(skillId: string, strategy: SkillStrategy, visualStrategy: VisualEffectStrategy): void {
     this.strategies.set(skillId, strategy);
+    this.visualStrategies.set(skillId, visualStrategy);
+  }
+
+  /**
+   * 批量注册投射物策略
+   */
+  registerProjectile(skillId: string, strategy: SkillStrategy, visualStrategy: ProjectileVisualStrategy): void {
+    this.strategies.set(skillId, strategy);
+    this.projectileVisualStrategies.set(skillId, visualStrategy);
+  }
+
+  /**
+   * 批量注册增益技能策略
+   */
+  registerBuff(skillId: string, strategy: BuffStrategy, visualStrategy: VisualEffectStrategy): void {
+    this.buffStrategies.set(skillId, strategy);
     this.visualStrategies.set(skillId, visualStrategy);
   }
 
@@ -57,6 +82,20 @@ export class SkillStrategyRegistry {
    */
   getVisual(skillId: string): VisualEffectStrategy | undefined {
     return this.visualStrategies.get(skillId);
+  }
+
+  /**
+   * 获取投射物视觉策略
+   */
+  getProjectileVisual(skillId: string): ProjectileVisualStrategy | undefined {
+    return this.projectileVisualStrategies.get(skillId);
+  }
+
+  /**
+   * 获取增益技能策略
+   */
+  getBuff(skillId: string): BuffStrategy | undefined {
+    return this.buffStrategies.get(skillId);
   }
 
   /**
@@ -84,6 +123,18 @@ export class SkillStrategyRegistry {
   }
 
   /**
+   * 创建投射物视觉效果
+   */
+  createProjectileVisualEffect(skillId: string, container: Phaser.GameObjects.Container, scene: Phaser.Scene, element: string, angle: number): boolean {
+    const strategy = this.projectileVisualStrategies.get(skillId);
+    if (strategy) {
+      strategy.createProjectileEffect(container, scene, element, angle);
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * 检查是否已注册技能策略
    */
   hasStrategy(skillId: string): boolean {
@@ -95,6 +146,20 @@ export class SkillStrategyRegistry {
    */
   hasVisualStrategy(skillId: string): boolean {
     return this.visualStrategies.has(skillId);
+  }
+
+  /**
+   * 检查是否已注册投射物视觉策略
+   */
+  hasProjectileVisualStrategy(skillId: string): boolean {
+    return this.projectileVisualStrategies.has(skillId);
+  }
+
+  /**
+   * 检查是否已注册增益技能策略
+   */
+  hasBuffStrategy(skillId: string): boolean {
+    return this.buffStrategies.has(skillId);
   }
 
   /**
@@ -110,6 +175,8 @@ export class SkillStrategyRegistry {
   clear(): void {
     this.strategies.clear();
     this.visualStrategies.clear();
+    this.projectileVisualStrategies.clear();
+    this.buffStrategies.clear();
   }
 }
 

@@ -57,28 +57,54 @@ export const enhancementStrategyRegistry = EnhancementStrategyRegistry.getInstan
 
 /**
  * 范围强化策略
+ * 注意：每次应用都从 baseValues 重新计算，所有强化效果叠加
  */
 export class RangeEnhancementStrategy implements EnhancementStrategy {
-  apply(skill: Skill, enhancement: SkillEnhancement): void {
-    skill.rangeValue = Math.floor(skill.baseValues.range * (1 + enhancement.value));
+  apply(skill: Skill, _enhancement: SkillEnhancement): void {
+    // 计算所有范围强化的总加成
+    let totalBonus = 0;
+    for (const enhancement of skill.enhancements) {
+      if (enhancement.type === 'range') {
+        totalBonus += enhancement.value;
+      }
+    }
+    skill.rangeValue = Math.floor(skill.baseValues.range * (1 + totalBonus));
   }
 }
 
 /**
  * 伤害强化策略
+ * 注意：每次应用都从 baseValues 重新计算，所有强化效果叠加
  */
 export class DamageEnhancementStrategy implements EnhancementStrategy {
-  apply(skill: Skill, enhancement: SkillEnhancement): void {
-    skill.damage = Math.floor(skill.baseValues.damage * (1 + enhancement.value));
+  apply(skill: Skill, _enhancement: SkillEnhancement): void {
+    // 计算所有伤害强化的总加成
+    let totalBonus = 0;
+    for (const enhancement of skill.enhancements) {
+      if (enhancement.type === 'damage') {
+        totalBonus += enhancement.value;
+      }
+    }
+    skill.damage = Math.floor(skill.baseValues.damage * (1 + totalBonus));
   }
 }
 
 /**
  * 冷却强化策略
+ * 注意：每次应用都从 baseValues 重新计算，所有强化效果叠加
  */
 export class CooldownEnhancementStrategy implements EnhancementStrategy {
-  apply(skill: Skill, enhancement: SkillEnhancement): void {
-    skill.cooldown = Math.floor(skill.baseValues.cooldown * (1 - enhancement.value));
+  apply(skill: Skill, _enhancement: SkillEnhancement): void {
+    // 计算所有冷却强化的总减少
+    let totalReduction = 0;
+    for (const enhancement of skill.enhancements) {
+      if (enhancement.type === 'cooldown') {
+        totalReduction += enhancement.value;
+      }
+    }
+    // 限制最大减少量，避免冷却时间为负
+    totalReduction = Math.min(totalReduction, 0.8);
+    skill.cooldown = Math.floor(skill.baseValues.cooldown * (1 - totalReduction));
   }
 }
 
@@ -111,10 +137,12 @@ export class MulticastEnhancementStrategy implements EnhancementStrategy {
 
 /**
  * 投射物数量强化策略
+ * 注意：不直接修改 baseValues，由 getProjectileCount 方法从 enhancements 数组计算
  */
 export class ProjectileCountEnhancementStrategy implements EnhancementStrategy {
-  apply(skill: Skill, enhancement: SkillEnhancement): void {
-    skill.baseValues.projectileCount += enhancement.value;
+  apply(_skill: Skill, _enhancement: SkillEnhancement): void {
+    // 投射物数量由 getProjectileCount 方法从 enhancements 数组计算
+    // 不在这里直接修改 baseValues，避免双重叠加
   }
 }
 

@@ -4,10 +4,12 @@ import { Enemy } from '@/entities/Enemy';
 
 /**
  * 真实伤害策略 - 基于百分比的额外伤害
+ * 注意：真实伤害通常不触发元素效果，直接造成伤害
  */
 export class TrueDamageStrategy implements SynergyEffectStrategy {
   execute(synergy: SynergyResult, enemy: Enemy, context: SynergyExecutionContext): void {
     const trueDamage = Math.floor(context.baseDamage * (synergy.value || 0.2));
+    // 真实伤害绕过防御和克制，不传递元素
     enemy.takeDamage(trueDamage);
   }
 }
@@ -17,7 +19,8 @@ export class TrueDamageStrategy implements SynergyEffectStrategy {
  */
 export class DoubleDamageStrategy implements SynergyEffectStrategy {
   execute(_synergy: SynergyResult, enemy: Enemy, context: SynergyExecutionContext): void {
-    enemy.takeDamage(context.baseDamage);
+    // 传递元素信息以触发克制加成
+    enemy.takeDamage(context.baseDamage, context.skillElement);
   }
 }
 
@@ -27,7 +30,8 @@ export class DoubleDamageStrategy implements SynergyEffectStrategy {
 export class GuaranteedCritStrategy implements SynergyEffectStrategy {
   execute(synergy: SynergyResult, enemy: Enemy, context: SynergyExecutionContext): void {
     const critBonus = Math.floor(context.baseDamage * (synergy.value || 0.5));
-    enemy.takeDamage(critBonus);
+    // 传递元素信息以触发克制加成
+    enemy.takeDamage(critBonus, context.skillElement);
   }
 }
 
@@ -43,7 +47,8 @@ export class DamageIncreaseStrategy implements SynergyEffectStrategy {
       value: damageBuffValue,
       duration: damageBuffDuration,
     });
-    enemy.takeDamage(context.baseDamage);
+    // 传递元素信息以触发克制加成
+    enemy.takeDamage(context.baseDamage, context.skillElement);
   }
 }
 
@@ -53,6 +58,7 @@ export class DamageIncreaseStrategy implements SynergyEffectStrategy {
 export class DamageBoostNoHealStrategy implements SynergyEffectStrategy {
   execute(synergy: SynergyResult, enemy: Enemy, context: SynergyExecutionContext): void {
     const boostedDamage = Math.floor(context.baseDamage * (1 + (synergy.value || 0.5)));
-    enemy.takeDamage(boostedDamage);
+    // 传递元素信息以触发克制加成
+    enemy.takeDamage(boostedDamage, context.skillElement);
   }
 }

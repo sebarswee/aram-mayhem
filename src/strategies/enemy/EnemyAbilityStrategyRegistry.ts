@@ -92,6 +92,7 @@ export class ChargeAbilityStrategy implements EnemyAbilityStrategy {
 
   checkConditions(context: EnemyAbilityContext): boolean {
     const { player, enemy } = context;
+    if (!player.active) return false;
     const distanceToPlayer = Phaser.Math.Distance.Between(
       enemy.x, enemy.y, player.x, player.y
     );
@@ -113,6 +114,8 @@ export class ChargeAbilityStrategy implements EnemyAbilityStrategy {
 
   execute(context: EnemyAbilityContext, params: Record<string, any>): void {
     const { scene, player, enemy } = context;
+    if (!player.active || !enemy.active) return;
+
     const speed = params.speed || 400;
     const duration = params.duration || 800;
 
@@ -120,8 +123,11 @@ export class ChargeAbilityStrategy implements EnemyAbilityStrategy {
       enemy.x, enemy.y, player.x, player.y
     );
 
-    const originalSpeed = enemy.config.speed;
-    enemy.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+    // Check if enemy has a valid physics body
+    const body = enemy.body as Phaser.Physics.Arcade.Body | null;
+    if (!body) return;
+
+    body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
 
     // 冲锋轨迹
     const trailTimer = scene.time.addEvent({
@@ -145,9 +151,11 @@ export class ChargeAbilityStrategy implements EnemyAbilityStrategy {
     });
 
     scene.time.delayedCall(duration, () => {
-      if (enemy.active) {
-        enemy.setVelocity(0, 0);
-        enemy.setTarget(player);
+      if (enemy.active && enemy.body) {
+        (enemy.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+        if (player.active) {
+          enemy.setTarget(player);
+        }
       }
     });
   }
@@ -163,6 +171,7 @@ export class ShootAbilityStrategy implements EnemyAbilityStrategy {
 
   checkConditions(context: EnemyAbilityContext): boolean {
     const { player, enemy } = context;
+    if (!player.active) return false;
     const distanceToPlayer = Phaser.Math.Distance.Between(
       enemy.x, enemy.y, player.x, player.y
     );

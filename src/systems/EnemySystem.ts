@@ -182,17 +182,34 @@ export class EnemySystem {
     // Get enemy pool and elite chance
     const pool = getEnemyPoolForWave(this.wave);
     const eliteChance = ENEMY_SPAWN_CONFIG.getEliteChance(this.wave);
+    const elitePool = getElitePoolForWave(this.wave);
 
     // Decide whether to spawn elite
-    let enemyId: string;
-    if (Math.random() < eliteChance) {
-      const elitePool = getElitePoolForWave(this.wave);
+    let enemyId: string | undefined;
+
+    // Only spawn elite if pool is not empty
+    if (elitePool.length > 0 && Math.random() < eliteChance) {
       enemyId = elitePool[Math.floor(Math.random() * elitePool.length)];
-    } else {
+    }
+
+    // Fall back to normal enemy pool
+    if (!enemyId && pool.length > 0) {
       enemyId = pool[Math.floor(Math.random() * pool.length)];
     }
 
-    const config = this.applyScaling(ENEMY_CONFIGS[enemyId]);
+    // Safety check
+    if (!enemyId) {
+      console.warn('[EnemySystem] No enemy available for spawn');
+      return;
+    }
+
+    const enemyConfig = ENEMY_CONFIGS[enemyId];
+    if (!enemyConfig) {
+      console.error(`[EnemySystem] Enemy config not found for id: ${enemyId}`);
+      return;
+    }
+
+    const config = this.applyScaling(enemyConfig);
     const spawnPos = this.getSpawnPosition();
 
     const enemy = new EnemyEntity(this.scene, spawnPos.x, spawnPos.y, config);
