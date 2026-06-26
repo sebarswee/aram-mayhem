@@ -43,6 +43,46 @@ export class BootScene extends Phaser.Scene {
       frameWidth: 64,
       frameHeight: 64,
     });
+
+    // 加载普通敌人精灵表素材 (64x64)
+    const normalEnemies = [
+      'flame_slime', 'water_elemental', 'frost_ghost', 'thunder_spirit',
+      'holy_sprite', 'shadow_demon', 'vine_monster', 'rock_golem'
+    ];
+    for (const enemyId of normalEnemies) {
+      this.load.spritesheet(`${enemyId}_idle`, `assets/characters/enemies/normal/${enemyId}_idle.png`, {
+        frameWidth: 64,
+        frameHeight: 64,
+      });
+      this.load.spritesheet(`${enemyId}_move`, `assets/characters/enemies/normal/${enemyId}_move.png`, {
+        frameWidth: 64,
+        frameHeight: 64,
+      });
+      this.load.spritesheet(`${enemyId}_attack`, `assets/characters/enemies/normal/${enemyId}_attack.png`, {
+        frameWidth: 64,
+        frameHeight: 64,
+      });
+    }
+
+    // 加载精英敌人精灵表素材 (96x96)
+    const eliteEnemies = [
+      'elite_flame_lord', 'elite_water_elemental', 'elite_frost_titan',
+      'elite_storm_drake', 'elite_shadow_lord'
+    ];
+    for (const enemyId of eliteEnemies) {
+      this.load.spritesheet(`${enemyId}_idle`, `assets/characters/enemies/elite/${enemyId}_idle.png`, {
+        frameWidth: 96,
+        frameHeight: 96,
+      });
+      this.load.spritesheet(`${enemyId}_move`, `assets/characters/enemies/elite/${enemyId}_move.png`, {
+        frameWidth: 96,
+        frameHeight: 96,
+      });
+      this.load.spritesheet(`${enemyId}_attack`, `assets/characters/enemies/elite/${enemyId}_attack.png`, {
+        frameWidth: 96,
+        frameHeight: 96,
+      });
+    }
   }
 
   create(): void {
@@ -136,25 +176,48 @@ export class BootScene extends Phaser.Scene {
       // 在进度50%时生成纹理（如果不存在）
       if (i === 5) {
         this.loadingText.setText('正在生成像素素材...');
-        // 检查玩家素材是否已加载，如果没有则生成程序化纹理
-        if (!this.textures.exists('player_idle')) {
+        // 检查玩家素材是否已加载
+        const playerLoaded = this.textures.exists('player_idle');
+        // 检查敌人素材是否已加载（检查一个普通敌人作为标志）
+        const enemiesLoaded = this.textures.exists('flame_slime_idle');
+
+        if (!playerLoaded) {
           console.log('[BootScene] Player assets not loaded, generating fallback textures');
-          const graphicsFactory = new GraphicsFactory(this);
-          graphicsFactory.generateAll();
         } else {
-          console.log('[BootScene] Player assets loaded successfully, skipping generated textures');
-          // 仍然需要生成其他素材（敌人、投射物等）
-          const graphicsFactory = new GraphicsFactory(this);
-          graphicsFactory.generateEnemySprites();
-          graphicsFactory.generateProjectileSprites();
-          graphicsFactory.generateEffectSprites();
-          graphicsFactory.generateParticles();
-          graphicsFactory.generateSkillIcons();
-          graphicsFactory.generateFoodSprites();
-          graphicsFactory.generateExpOrbSprites();
+          console.log('[BootScene] Player assets loaded successfully');
         }
+
+        if (!enemiesLoaded) {
+          console.log('[BootScene] Enemy assets not loaded, generating fallback textures');
+        } else {
+          console.log('[BootScene] Enemy assets loaded successfully');
+        }
+
+        const graphicsFactory = new GraphicsFactory(this);
+
+        if (!playerLoaded) {
+          graphicsFactory.generatePlayerSprite();
+        }
+
+        if (!enemiesLoaded) {
+          graphicsFactory.generateEnemySprites();
+        } else {
+          // 生成 Boss 素材（Boss 还没有精灵表）
+          graphicsFactory.generateBossSprites();
+        }
+
+        // 其他素材始终需要生成
+        graphicsFactory.generateProjectileSprites();
+        graphicsFactory.generateEffectSprites();
+        graphicsFactory.generateParticles();
+        graphicsFactory.generateSkillIcons();
+        graphicsFactory.generateFoodSprites();
+        graphicsFactory.generateExpOrbSprites();
+
         // 创建玩家动画
         this.createPlayerAnimations();
+        // 创建敌人动画
+        this.createEnemyAnimations();
       }
 
       // 在进度80%时初始化状态
@@ -437,5 +500,88 @@ export class BootScene extends Phaser.Scene {
     }
 
     console.log('[BootScene] Player animations created');
+  }
+
+  /**
+   * 创建敌人动画
+   */
+  private createEnemyAnimations(): void {
+    // 普通敌人动画
+    const normalEnemies = [
+      'flame_slime', 'water_elemental', 'frost_ghost', 'thunder_spirit',
+      'holy_sprite', 'shadow_demon', 'vine_monster', 'rock_golem'
+    ];
+
+    for (const enemyId of normalEnemies) {
+      if (this.textures.exists(`${enemyId}_idle`)) {
+        // 待机动画
+        if (!this.anims.exists(`${enemyId}_idle_anim`)) {
+          this.anims.create({
+            key: `${enemyId}_idle_anim`,
+            frames: this.anims.generateFrameNumbers(`${enemyId}_idle`, { start: 0, end: 3 }),
+            frameRate: 6,
+            repeat: -1,
+          });
+        }
+        // 移动动画
+        if (!this.anims.exists(`${enemyId}_move_anim`)) {
+          this.anims.create({
+            key: `${enemyId}_move_anim`,
+            frames: this.anims.generateFrameNumbers(`${enemyId}_move`, { start: 0, end: 3 }),
+            frameRate: 8,
+            repeat: -1,
+          });
+        }
+        // 攻击动画
+        if (!this.anims.exists(`${enemyId}_attack_anim`)) {
+          this.anims.create({
+            key: `${enemyId}_attack_anim`,
+            frames: this.anims.generateFrameNumbers(`${enemyId}_attack`, { start: 0, end: 3 }),
+            frameRate: 10,
+            repeat: 0,
+          });
+        }
+      }
+    }
+
+    // 精英敌人动画
+    const eliteEnemies = [
+      'elite_flame_lord', 'elite_water_elemental', 'elite_frost_titan',
+      'elite_storm_drake', 'elite_shadow_lord'
+    ];
+
+    for (const enemyId of eliteEnemies) {
+      if (this.textures.exists(`${enemyId}_idle`)) {
+        // 待机动画
+        if (!this.anims.exists(`${enemyId}_idle_anim`)) {
+          this.anims.create({
+            key: `${enemyId}_idle_anim`,
+            frames: this.anims.generateFrameNumbers(`${enemyId}_idle`, { start: 0, end: 3 }),
+            frameRate: 6,
+            repeat: -1,
+          });
+        }
+        // 移动动画
+        if (!this.anims.exists(`${enemyId}_move_anim`)) {
+          this.anims.create({
+            key: `${enemyId}_move_anim`,
+            frames: this.anims.generateFrameNumbers(`${enemyId}_move`, { start: 0, end: 3 }),
+            frameRate: 8,
+            repeat: -1,
+          });
+        }
+        // 攻击动画
+        if (!this.anims.exists(`${enemyId}_attack_anim`)) {
+          this.anims.create({
+            key: `${enemyId}_attack_anim`,
+            frames: this.anims.generateFrameNumbers(`${enemyId}_attack`, { start: 0, end: 3 }),
+            frameRate: 10,
+            repeat: 0,
+          });
+        }
+      }
+    }
+
+    console.log('[BootScene] Enemy animations created');
   }
 }

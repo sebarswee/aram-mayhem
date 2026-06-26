@@ -75,6 +75,20 @@ export class GraphicsFactory {
   }
 
   /**
+   * 只生成玩家精灵
+   */
+  generatePlayerSprite(): void {
+    this.createPlayerSprite();
+  }
+
+  /**
+   * 只生成 Boss 精灵
+   */
+  generateBossSprites(): void {
+    this.createBossSprites();
+  }
+
+  /**
    * 创建玩家精灵 - 像素风格角色（增强版）
    */
   private createPlayerSprite(): void {
@@ -120,7 +134,7 @@ export class GraphicsFactory {
   }
 
   /**
-   * 创建敌人精灵
+   * 创建敌人精灵（普通和精英）
    */
   private createEnemySprites(): void {
     // === 普通敌人 (8种元素) ===
@@ -148,7 +162,7 @@ export class GraphicsFactory {
     // 岩石巨人
     this.createGolemSprite('rock_golem', 0xaa8844);
 
-    // === 精英敌人 (4种) ===
+    // === 精英敌人 (5种) ===
     // 炎魔精英 - 火焰恶魔形状
     this.createEliteFlameLordSprite('elite_flame_lord', 0xff2200);
 
@@ -163,7 +177,12 @@ export class GraphicsFactory {
 
     // 水元素精英 - 水元素形状
     this.createEliteWaterElementalSprite('elite_water_elemental', 0x2288ff);
+  }
 
+  /**
+   * 创建 Boss 精灵
+   */
+  private createBossSprites(): void {
     // === Boss敌人 (8种) ===
     // 炎魔 - 大型火焰恶魔
     this.createBossFlameLordSprite('boss_flame_lord', 0xff0000);

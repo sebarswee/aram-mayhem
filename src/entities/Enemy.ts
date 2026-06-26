@@ -88,6 +88,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   // Element marks for synergy tracking
   private elementMarks: Map<Element, ElementMark> = new Map();
 
+  // Animation state
+  private currentAnim: 'idle' | 'move' | 'attack' = 'idle';
+  private isAttacking: boolean = false;
+  private hasSpriteAnimation: boolean = false;
+
   private target: Phaser.GameObjects.Sprite | null = null;
   private shadowGraphics: Phaser.GameObjects.Graphics | null = null;
   private lastDotTickTime: Record<string, number> = {};
@@ -101,8 +106,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   };
 
   constructor(scene: Phaser.Scene, x: number, y: number, config: EnemyConfig) {
-    // 根据敌人配置选择纹理
-    const textureKey = ENEMY_TEXTURE_MAP[config.id] || 'enemy_slime';
+    // 检查是否有精灵表动画素材
+    const idleTextureKey = `${config.id}_idle`;
+    const hasAnimation = scene.textures.exists(idleTextureKey);
+    const textureKey = hasAnimation ? idleTextureKey : (ENEMY_TEXTURE_MAP[config.id] || 'enemy_slime');
     super(scene, x, y, textureKey);
 
     this.config = config;
@@ -110,6 +117,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.maxHp = config.hp;  // 用于计算血量百分比
     this.instanceId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     this.element = config.element;
+    this.hasSpriteAnimation = hasAnimation;
 
     // 初始化 Boss 阶段（如果有）
     if (config.phases) {
@@ -144,8 +152,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     // 创建精英/Boss特殊视觉效果
     this.createTypeVisualEffect();
 
-    // Apply element color tint
-    this.applyElementTint();
+    // 播放待机动画（如果可用）
+    if (hasAnimation && scene.anims.exists(`${config.id}_idle_anim`)) {
+      this.play(`${config.id}_idle_anim`);
+    } else {
+      // Apply element color tint (only for static sprites)
+      this.applyElementTint();
+    }
 
     // Apply passive abilities
     this.applyPassiveAbilities();
@@ -316,6 +329,39 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.target = target;
   }
 
+  /**
+   * 播放指定动画
+   */
+  private playAnimation(anim: 'idle' | 'move' | 'attack'): void {
+    if (!this.hasSpriteAnimation || this.currentAnim === anim) return;
+
+    const animKey = `${this.config.id}_${anim}_anim`;
+
+    // 检查动画是否存在
+    if (!this.scene.anims.exists(animKey)) return;
+
+    this.currentAnim = anim;
+    this.play(animKey);
+
+    // 攻击动画结束后回到待机
+    if (anim === 'attack') {
+      this.isAttacking = true;
+      this.once('animationcomplete', () => {
+        this.isAttacking = false;
+        this.playAnimation('idle');
+      });
+    }
+  }
+
+  /**
+   * 播放攻击动画（由外部触发）
+   */
+  public playAttackAnimation(): void {
+    if (!this.isAttacking && this.hasSpriteAnimation) {
+      this.playAnimation('attack');
+    }
+  }
+
   update(time: number, _delta: number): void {
     // Safety check: ensure enemy is active and has a valid body
     if (!this.target || !this.active) return;
@@ -344,15 +390,25 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
       body.setVelocity(Math.cos(angle) * actualSpeed, Math.sin(angle) * actualSpeed);
 
-      // 根据移动方向轻微翻转
+      // 根据移动方向翻转
       if (body.velocity.x < 0) {
         this.setFlipX(true);
       } else if (body.velocity.x > 0) {
         this.setFlipX(false);
       }
+
+      // 切换移动动画（如果有精灵表）
+      if (!this.isAttacking && this.hasSpriteAnimation) {
+        this.playAnimation('move');
+      }
     } else {
       // Stop movement when immobilized
       body.setVelocity(0, 0);
+
+      // 切换待机动画（如果有精灵表）
+      if (!this.isAttacking && this.hasSpriteAnimation) {
+        this.playAnimation('idle');
+      }
     }
 
     // 更新阴影位置
