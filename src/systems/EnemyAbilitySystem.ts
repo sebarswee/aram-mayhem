@@ -101,6 +101,12 @@ export class EnemyAbilitySystem {
     const strategy = enemyAbilityStrategyRegistry.get(ability.type);
     const warningDelay = strategy?.getWarningDelay() || 200;
 
+    // 攻击性技能触发攻击动画
+    const attackAbilities = ['shoot', 'charge', 'summon'];
+    if (attackAbilities.includes(ability.type)) {
+      enemy.playAttackAnimation();
+    }
+
     // Show warning before execution
     this.showAbilityWarning(enemy, ability.type);
 
