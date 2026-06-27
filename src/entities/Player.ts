@@ -3,6 +3,8 @@ import { PlayerStats, Skill, Element } from '@/types';
 import { INITIAL_PLAYER_STATS } from '@/config/balance.config';
 import { WORLD_WIDTH, WORLD_HEIGHT } from '@/config/game.config';
 import { passiveEffectStrategyRegistry, PassiveEffectData, getThornsStrategy } from '@/strategies';
+import { IBuffable } from '@/modifiers/interfaces/IBuffable';
+import { ModifierStack } from '@/modifiers/core/ModifierStack';
 
 /**
  * Status effect types that can be applied to the player
@@ -48,7 +50,7 @@ export interface CounterFreezeEffect {
  */
 const DEBUFF_TYPES = ['burn', 'poison', 'slow', 'root'];
 
-export class Player extends Phaser.Physics.Arcade.Sprite {
+export class Player extends Phaser.Physics.Arcade.Sprite implements IBuffable {
   public stats: PlayerStats;
   public skills: Skill[] = [];
   public ultimateSkills: Skill[] = []; // Separate slot for ultimate skills
@@ -58,6 +60,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   // Skill slot limits
   public readonly MAX_BASIC_SKILLS = 4;
   public readonly MAX_ULTIMATE_SKILLS = 2;
+
+  // 新增：修饰符栈
+  public readonly modifierStack: ModifierStack;
+
+  // 新增：实例 ID（用于 IBuffable.id）
+  public readonly id: string;
 
   private lastDamageTime: number = 0;
   public isInvincible: boolean = false;
@@ -87,6 +95,22 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private currentAnim: 'idle' | 'move' | 'attack' = 'idle';
   private isAttacking: boolean = false;
 
+  // IBuffable 要求的属性：基础属性（只读）
+  public get baseAttributes(): Readonly<Record<string, number>> {
+    return {
+      maxHp: this.stats.maxHp,
+      attack: this.stats.attack,
+      defense: this.stats.defense,
+      speed: this.stats.speed,
+      lifesteal: this.stats.lifesteal,
+    };
+  }
+
+  // IBuffable 要求的属性：isActive
+  public get isActive(): boolean {
+    return this.active;
+  }
+
   constructor(scene: Phaser.Scene, x: number, y: number) {
     // 优先使用新的精灵表纹理，否则回退到程序化生成的纹理
     const textureKey = scene.textures.exists('player_idle') ? 'player_idle' : 'player';
@@ -108,6 +132,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     // 设置深度
     this.setDepth(50);
+
+    // 初始化实例 ID
+    this.id = `player_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // 初始化修饰符栈
+    this.modifierStack = new ModifierStack(this);
 
     // 初始化元素抗性
     this.initializeElementResistance();
@@ -820,6 +850,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.particleEmitters.clear();
   }
 
+  // IBuffable 要求的方法：更新修饰符栈
+  updateModifiers(delta: number): void {
+    this.modifierStack.update(delta);
+  }
+
   update(delta: number): void {
     // 更新技能冷却
     this.skillCooldowns.forEach((cooldown, skillId) => {
@@ -828,8 +863,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       }
     });
 
-    // 更新状态效果
-    this.updateStatusEffects(delta);
+    // 更新修饰符栈（替代旧的 updateStatusEffects）
+    this.updateModifiers(delta);
 
     // HP 回复（被动技能）
     const hpRegen = (this.stats as any).hpRegen || 0;
