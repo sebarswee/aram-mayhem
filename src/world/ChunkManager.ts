@@ -1,18 +1,3 @@
-## Task 2: 创建 ChunkManager 类
-
-**Files:**
-- Create: `src/world/ChunkManager.ts`
-- Test: 手动验证区块管理器工作正常
-
-**Interfaces:**
-- Consumes: `Chunk` 类
-- Produces: `ChunkManager` 类，管理所有区块的加载和卸载
-
-- [ ] **Step 1: 创建 ChunkManager 类**
-
-创建文件 `src/world/ChunkManager.ts`:
-
-```typescript
 import Phaser from 'phaser';
 import { Chunk, ChunkConfig } from './Chunk';
 
@@ -188,24 +173,3 @@ export class ChunkManager {
     return this.seed;
   }
 }
-```
-
-- [ ] **Step 2: 验证 ChunkManager 类创建成功**
-
-运行 TypeScript 编译检查：
-
-```bash
-npm run build
-```
-
-Expected: 编译成功，无类型错误
-
-- [ ] **Step 3: 提交代码**
-
-```bash
-git add src/world/ChunkManager.ts
-git commit -m "feat(world): implement ChunkManager with dynamic loading/unloading"
-```
-
----
-

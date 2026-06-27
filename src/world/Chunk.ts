@@ -1,17 +1,3 @@
-## Task 1: 创建 Chunk 类
-
-**Files:**
-- Create: `src/world/Chunk.ts`
-- Test: 手动验证区块加载和卸载
-
-**Interfaces:**
-- Produces: `Chunk` 类，包含 `load()` 和 `unload()` 方法
-
-- [ ] **Step 1: 创建 Chunk 接口和基础结构**
-
-创建文件 `src/world/Chunk.ts`:
-
-```typescript
 import Phaser from 'phaser';
 
 export interface ChunkConfig {
@@ -92,6 +78,8 @@ export class Chunk {
     const worldX = this.x * this.size + this.size / 2;
     const worldY = this.y * this.size + this.size / 2;
 
+    console.log(`[Chunk] Creating background for chunk (${this.x}, ${this.y}) at world position (${worldX}, ${worldY})`);
+
     // 创建 TileSprite（使用可平铺纹理）
     this.tileSprite = this.scene.add.tileSprite(
       worldX,
@@ -162,24 +150,3 @@ export class Chunk {
     );
   }
 }
-```
-
-- [ ] **Step 2: 验证 Chunk 类创建成功**
-
-运行 TypeScript 编译检查：
-
-```bash
-npm run build
-```
-
-Expected: 编译成功，无类型错误
-
-- [ ] **Step 3: 提交代码**
-
-```bash
-git add src/world/Chunk.ts
-git commit -m "feat(world): implement Chunk class with load/unload functionality"
-```
-
----
-

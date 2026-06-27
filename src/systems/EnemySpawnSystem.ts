@@ -1,17 +1,3 @@
-## Task 5: 实现基于时间的敌人生成系统
-
-**Files:**
-- Create: `src/systems/EnemySpawnSystem.ts`
-- Modify: `src/scenes/BattleScene.ts`
-
-**Interfaces:**
-- Produces: 基于游戏时间的敌人生成系统
-
-- [ ] **Step 1: 创建 EnemySpawnSystem 类**
-
-创建文件 `src/systems/EnemySpawnSystem.ts`:
-
-```typescript
 import Phaser from 'phaser';
 import { Player } from '@/entities/Player';
 import { EnemySystem } from '@/systems/EnemySystem';
@@ -28,6 +14,7 @@ export class EnemySpawnSystem {
   private config: EnemySpawnConfig;
   private lastSpawnTime: number = 0;
   private totalEnemiesSpawned: number = 0;
+  private lastWaveTriggerTime: number = -Infinity; // 防止巨浪重复触发
 
   constructor(
     private scene: Phaser.Scene,
@@ -56,9 +43,14 @@ export class EnemySpawnSystem {
     const spawnRate = this.config.baseSpawnRate + minutesElapsed * this.config.difficultyScale;
 
     // 检查是否是巨浪时间（每分钟一次大波）
-    const timeSinceLastWave = time % this.config.waveInterval;
-    if (timeSinceLastWave < 1000 && time > this.config.waveInterval) {
+    // 使用标志位防止在同一时间窗口内重复触发
+    const timeSinceLastTrigger = time - this.lastWaveTriggerTime;
+    const shouldTriggerWave = time >= this.config.waveInterval &&
+                              timeSinceLastTrigger >= this.config.waveInterval;
+
+    if (shouldTriggerWave) {
       // 巨浪生成（3倍数量）
+      this.lastWaveTriggerTime = time;
       this.spawnWave(spawnRate * 3, time);
     } else {
       // 常规生成
@@ -143,123 +135,3 @@ export class EnemySpawnSystem {
     };
   }
 }
-```
-
-- [ ] **Step 2: 在 EnemySystem 中添加 spawnEnemyAt 方法**
-
-修改 `src/systems/EnemySystem.ts`，添加方法：
-
-```typescript
-/**
- * 在指定位置生成敌人（供 EnemySpawnSystem 使用）
- */
-spawnEnemyAt(x: number, y: number, type: string): void {
-  const enemyConfig = this.getEnemyConfig(type);
-  if (enemyConfig) {
-    const enemy = new Enemy(this.scene, x, y, enemyConfig);
-    this.enemies.add(enemy);
-  }
-}
-
-/**
- * 获取敌人配置
- */
-private getEnemyConfig(type: string): EnemyConfig | null {
-  // 返回对应的敌人配置
-  // 这里需要根据你的 EnemyConfig 结构实现
-  // 示例：
-  const configs: Record<string, EnemyConfig> = {
-    basic: {
-      type: 'basic',
-      hp: 30,
-      damage: 10,
-      speed: 100,
-      expValue: 1,
-    },
-    fast: {
-      type: 'fast',
-      hp: 20,
-      damage: 8,
-      speed: 150,
-      expValue: 1,
-    },
-    tank: {
-      type: 'tank',
-      hp: 80,
-      damage: 15,
-      speed: 60,
-      expValue: 3,
-    },
-  };
-
-  return configs[type] || null;
-}
-```
-
-- [ ] **Step 3: 在 BattleScene 中集成 EnemySpawnSystem**
-
-修改 `src/scenes/BattleScene.ts`:
-
-```typescript
-import { EnemySpawnSystem } from '@/systems/EnemySpawnSystem';
-
-export class BattleScene extends Phaser.Scene {
-  // ... 其他属性 ...
-  private enemySpawnSystem!: EnemySpawnSystem;
-
-  create(): void {
-    // ... 其他初始化代码 ...
-
-    // 初始化敌人生成系统
-    this.enemySpawnSystem = new EnemySpawnSystem(
-      this,
-      this.player,
-      this.enemySystem,
-      {
-        baseSpawnRate: 10,
-        minSpawnDistance: 500,
-        maxSpawnDistance: 700,
-        waveInterval: 60000,
-        difficultyScale: 1.5
-      }
-    );
-
-    // ... 其他代码 ...
-  }
-
-  update(_time: number, delta: number): void {
-    if (this.gameState.isDead || this.gameState.isUpgrading || this.gameState.isSelectingSkill) return;
-
-    // 更新区块管理器
-    this.chunkManager.update(this.player.x, this.player.y);
-
-    // 更新敌人生成系统
-    this.enemySpawnSystem.update(_time);
-
-    // ... 其他更新代码 ...
-  }
-}
-```
-
-- [ ] **Step 4: 验证敌人生成**
-
-运行游戏，检查：
-
-```bash
-npm run dev
-```
-
-Expected:
-- 敌人开始自动生成
-- 随时间推移，敌人生成率增加
-- 每分钟触发一次巨浪（大量敌人同时生成）
-
-- [ ] **Step 5: 提交代码**
-
-```bash
-git add src/systems/EnemySpawnSystem.ts src/systems/EnemySystem.ts src/scenes/BattleScene.ts
-git commit -m "feat(enemy): implement time-based enemy spawn system with waves"
-```
-
----
-

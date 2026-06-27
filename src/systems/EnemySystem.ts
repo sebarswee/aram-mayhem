@@ -30,10 +30,12 @@ export class EnemySystem {
   private spawnTimer: Phaser.Time.TimerEvent | null = null;
   private bossActive: boolean = false;
   private lastBossWave: number = 0;
+  private autoSpawnEnabled: boolean = true;
 
-  constructor(scene: Phaser.Scene, player: Phaser.GameObjects.Sprite) {
+  constructor(scene: Phaser.Scene, player: Phaser.GameObjects.Sprite, autoSpawn: boolean = true) {
     this.scene = scene;
     this.player = player;
+    this.autoSpawnEnabled = autoSpawn;
 
     // Create enemy group
     this.enemies = scene.physics.add.group({
@@ -44,8 +46,10 @@ export class EnemySystem {
     // Listen for summon events
     this.scene.events.on('enemySummon', this.handleSummonEvent, this);
 
-    // Start continuous spawning
-    this.startContinuousSpawning();
+    // Start continuous spawning only if auto-spawn is enabled
+    if (this.autoSpawnEnabled) {
+      this.startContinuousSpawning();
+    }
   }
 
   /**
@@ -362,6 +366,70 @@ export class EnemySystem {
    */
   getActiveEnemyCount(): number {
     return this.enemies.countActive(true);
+  }
+
+  /**
+   * 在指定位置生成敌人（供 EnemySpawnSystem 使用）
+   */
+  spawnEnemyAt(x: number, y: number, type: string): void {
+    const enemyConfig = this.getEnemyConfig(type);
+    if (enemyConfig) {
+      const enemy = new EnemyEntity(this.scene, x, y, enemyConfig);
+      enemy.setTarget(this.player);
+      this.enemies.add(enemy);
+
+      // Enemy death event
+      enemy.on('death', () => {
+        this.scene.events.emit('enemyKilled', enemy);
+      });
+    }
+  }
+
+  /**
+   * 获取敌人配置（Vampire Survivors 风格的基础敌人类型）
+   */
+  private getEnemyConfig(type: string): EnemyConfig | null {
+    // 基础敌人配置（使用现有元素敌人）
+    const configs: Record<string, EnemyConfig> = {
+      basic: {
+        id: 'flame_slime',
+        name: 'Flame Slime',
+        type: 'normal',
+        element: 'fire',
+        hp: 30,
+        damage: 10,
+        speed: 100,
+        expValue: 1,
+        color: 0xff4400,
+        abilities: [],
+      },
+      fast: {
+        id: 'thunder_spirit',
+        name: 'Thunder Spirit',
+        type: 'normal',
+        element: 'lightning',
+        hp: 20,
+        damage: 8,
+        speed: 150,
+        expValue: 1,
+        color: 0xffff00,
+        abilities: [],
+      },
+      tank: {
+        id: 'rock_golem',
+        name: 'Rock Golem',
+        type: 'normal',
+        element: 'earth',
+        hp: 80,
+        damage: 15,
+        speed: 60,
+        expValue: 3,
+        color: 0xaa8844,
+        abilities: [],
+      },
+    };
+
+    return configs[type] || null;
   }
 
   /**

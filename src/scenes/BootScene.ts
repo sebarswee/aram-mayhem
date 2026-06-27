@@ -30,6 +30,9 @@ export class BootScene extends Phaser.Scene {
     const height = this.scale.height;
     updateGameSize(width, height);
 
+    // 加载地面平铺纹理
+    this.load.image('ground_tile', 'assets/backgrounds/ground_tile.png');
+
     // 加载玩家精灵表素材
     this.load.spritesheet('player_idle', 'assets/characters/player/player_idle.png', {
       frameWidth: 64,
