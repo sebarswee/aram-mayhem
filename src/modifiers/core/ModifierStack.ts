@@ -173,4 +173,85 @@ export class ModifierStack {
 
     return count;
   }
+
+  /**
+   * 计算最终属性值
+   * 分阶段计算：先加法，再乘法，最后覆盖
+   */
+  getAttributeValue(attributeName: string, baseValue: number): number {
+    const modifiers = this.attributeModifiers.get(attributeName) || [];
+
+    if (modifiers.length === 0) {
+      return baseValue;
+    }
+
+    // 按优先级排序
+    const sorted = [...modifiers].sort((a, b) => a.priority - b.priority);
+
+    let value = baseValue;
+
+    // Phase 1: 加法操作
+    for (const mod of sorted) {
+      if (mod.operation === ModifierOp.ADD) {
+        value += mod.value;
+      } else if (mod.operation === ModifierOp.PERCENT_ADD) {
+        value += baseValue * (mod.value / 100);
+      }
+    }
+
+    // Phase 2: 乘法操作
+    for (const mod of sorted) {
+      if (mod.operation === ModifierOp.MULTIPLY) {
+        value *= mod.value;
+      }
+    }
+
+    // Phase 3: 覆盖操作
+    for (const mod of sorted) {
+      if (mod.operation === ModifierOp.OVERRIDE) {
+        value = mod.value;
+        break;  // 覆盖操作只取最后一个
+      }
+    }
+
+    return Math.floor(value);
+  }
+
+  /**
+   * 检查是否有特定标签的修饰符
+   */
+  hasTag(tag: string): boolean {
+    return this.tagIndex.has(tag) && this.tagIndex.get(tag)!.size > 0;
+  }
+
+  /**
+   * 检查是否有特定类型的状态效果
+   */
+  hasStatusEffect(effectType: StatusEffectType): boolean {
+    for (const effect of this.statusEffects.values()) {
+      if (effect.effectType === effectType) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * 获取状态效果值
+   */
+  getStatusEffectValue(effectType: StatusEffectType): number {
+    for (const effect of this.statusEffects.values()) {
+      if (effect.effectType === effectType) {
+        return effect.effectValue;
+      }
+    }
+    return 0;
+  }
+
+  /**
+   * 获取所有触发器
+   */
+  getTriggers(triggerType: TriggerType): TriggerModifier[] {
+    return this.triggerModifiers.filter(mod => mod.triggerType === triggerType);
+  }
 }
