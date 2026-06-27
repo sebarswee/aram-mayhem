@@ -857,15 +857,7 @@ export class ThunderApocalypseStrategy implements SkillStrategy {
 
 export class ThunderApocalypseVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层雷云
-    const cloudLayers: Phaser.GameObjects.Arc[] = [];
-    for (let i = 0; i < 3; i++) {
-      const cloud = scene.add.circle(x, y - 60, radius * (0.5 + i * 0.12), 0x333355, 0.2 - i * 0.04);
-      cloud.setDepth(15 + i);
-      cloudLayers.push(cloud);
-    }
-
-    // 多次雷击
+    // 云层已由 ThunderApocalypseStrategy 创建和管理，这里只创建雷击效果
     for (let i = 0; i < 10; i++) {
       const angle = Math.random() * Math.PI * 2;
       const dist = Math.random() * radius * 0.7;
@@ -894,8 +886,6 @@ export class ThunderApocalypseVisualStrategy implements VisualEffectStrategy {
         },
       });
     }
-
-    scene.time.delayedCall(1200, () => cloudLayers.forEach(c => c.destroy()));
   }
 }
 
