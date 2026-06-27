@@ -2,6 +2,15 @@ import { SynergyEffectStrategy, SynergyExecutionContext } from './SynergyStrateg
 import { SynergyResult } from '@/types';
 import { Enemy } from '@/entities/Enemy';
 import Phaser from 'phaser';
+import {
+  createBurnVisualModifier,
+  createPoisonVisualModifier,
+  createSlowVisualModifier,
+  createRootVisualModifier,
+  createDefenseBreakVisualModifier,
+  createTickSpeedUpVisualModifier,
+} from '@/modifiers/visual/VisualModifiers';
+import { StatusEffectType } from '@/modifiers/modifiers/StatusEffectModifier';
 
 /**
  * 燃烧传播策略
@@ -11,13 +20,9 @@ export class BurnSpreadStrategy implements SynergyEffectStrategy {
     const nearbyEnemies = context.findEnemiesInRange(enemy.x, enemy.y, 100);
     for (const nearby of nearbyEnemies) {
       if (nearby !== enemy) {
-        nearby.addStatusEffect({
-          type: 'burn',
-          value: 5,
-          duration: 3000,
-          remainingTime: 3000,
-          source: 'synergy_burn_spread',
-        });
+        nearby.modifierStack.addModifier(
+          createBurnVisualModifier(5, 3000, 'fire')
+        );
       }
     }
   }
@@ -70,22 +75,25 @@ export class LavaZoneStrategy implements SynergyEffectStrategy {
  */
 export class SpreadDebuffStrategy implements SynergyEffectStrategy {
   execute(_synergy: SynergyResult, enemy: Enemy, context: SynergyExecutionContext): void {
-    const debuffTypes = ['burn', 'poison', 'slow', 'root'];
-    const debuffs = enemy.statusEffects.filter(e => debuffTypes.includes(e.type));
-
-    if (debuffs.length === 0) return;
+    // 使用新修饰符系统检查和传播效果
+    const debuffChecks = [
+      { type: StatusEffectType.BURN, tag: 'burn', factory: createBurnVisualModifier },
+      { type: StatusEffectType.POISON, tag: 'poison', factory: createPoisonVisualModifier },
+      { type: StatusEffectType.SLOW, tag: 'slow', factory: createSlowVisualModifier },
+      { type: StatusEffectType.ROOT, tag: 'root', factory: createRootVisualModifier },
+    ];
 
     const nearbyEnemies = context.findEnemiesInRange(enemy.x, enemy.y, 100);
-    for (const nearby of nearbyEnemies) {
-      if (nearby === enemy) continue;
-      for (const debuff of debuffs) {
-        nearby.addStatusEffect({
-          type: debuff.type,
-          value: debuff.value,
-          duration: debuff.duration,
-          remainingTime: debuff.duration,
-          source: 'synergy_spread',
-        });
+
+    for (const check of debuffChecks) {
+      if (enemy.modifierStack.hasTag(check.tag)) {
+        const value = enemy.modifierStack.getStatusEffectValue(check.type);
+        for (const nearby of nearbyEnemies) {
+          if (nearby === enemy) continue;
+          nearby.modifierStack.addModifier(
+            check.factory(value, 3000)
+          );
+        }
       }
     }
   }
@@ -96,7 +104,9 @@ export class SpreadDebuffStrategy implements SynergyEffectStrategy {
  */
 export class DispelAndDamageStrategy implements SynergyEffectStrategy {
   execute(_synergy: SynergyResult, enemy: Enemy, context: SynergyExecutionContext): void {
-    enemy.statusEffects = [];
+    // 清除所有状态效果 - 使用新的修饰符系统
+    const allEffectTags = ['burn', 'poison', 'slow', 'root', 'freeze', 'stun', 'defense_break'];
+    enemy.modifierStack.removeByTags(allEffectTags);
     enemy.takeDamage(Math.floor(context.baseDamage * 0.5), context.skillElement);
   }
 }
@@ -173,13 +183,9 @@ export class RefractDamageStrategy implements SynergyEffectStrategy {
  */
 export class TickSpeedDoubleStrategy implements SynergyEffectStrategy {
   execute(synergy: SynergyResult, enemy: Enemy, context: SynergyExecutionContext): void {
-    enemy.addStatusEffect({
-      type: 'tick_speed_up',
-      value: 2.0,
-      duration: synergy.duration || 5000,
-      remainingTime: synergy.duration || 5000,
-      source: 'synergy_tick_speed_double',
-    });
+    enemy.modifierStack.addModifier(
+      createTickSpeedUpVisualModifier(2.0, synergy.duration || 5000)
+    );
 
     // 视觉反馈
     const cyanFlash = context.scene.add.circle(enemy.x, enemy.y, 20, 0x00ffff, 0.6);
@@ -242,13 +248,9 @@ export class Split3Strategy implements SynergyEffectStrategy {
  */
 export class DefenseReduceStrategy implements SynergyEffectStrategy {
   execute(synergy: SynergyResult, enemy: Enemy, context: SynergyExecutionContext): void {
-    enemy.addStatusEffect({
-      type: 'defense_break',
-      value: synergy.value || 0.5,
-      duration: synergy.duration || 5000,
-      remainingTime: synergy.duration || 5000,
-      source: 'synergy_defense_reduce',
-    });
+    enemy.modifierStack.addModifier(
+      createDefenseBreakVisualModifier(synergy.value || 50, synergy.duration || 5000)
+    );
     enemy.takeDamage(context.baseDamage, context.skillElement);
   }
 }

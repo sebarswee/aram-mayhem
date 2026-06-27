@@ -3,13 +3,15 @@ import { Skill } from '@/types';
 import { Enemy } from '@/entities/Enemy';
 import { VisualEffectUtils } from '@/graphics/VisualEffectUtils';
 import Phaser from 'phaser';
+import { createBurnVisualModifier } from '@/modifiers/visual/VisualModifiers';
+import { StatusEffectType } from '@/modifiers/modifiers/StatusEffectModifier';
 
 /**
  * 炎龙吐息策略 - 扇形持续火焰
  */
 export class DragonBreathStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, findNearestEnemy } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, findNearestEnemy, applyEffects } = context;
     const duration = 2000;
     const tickInterval = 200;
     const range = skill.rangeValue;
@@ -90,6 +92,14 @@ export class DragonBreathStrategy implements SkillStrategy {
           if (angleDiff < angleSpread / 2) {
             applyDamageToEnemy(enemy, Math.floor(damage * 0.3), skill);
 
+            // 应用燃烧效果
+            if (applyEffects && skill.effects) {
+              const burnEffect = skill.effects.find(e => e.type === 'burn');
+              if (burnEffect) {
+                applyEffects(enemy, [burnEffect]);
+              }
+            }
+
             // 火焰击中效果
             const hit = scene.add.circle(enemy.x, enemy.y, 15, 0xff6600, 0.7);
             hit.setDepth(100);
@@ -110,30 +120,8 @@ export class DragonBreathStrategy implements SkillStrategy {
 
 export class DragonBreathVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    const angleSpread = Math.PI / 3;
-
-    // 多层火焰锥形
-    const breathLayers: Phaser.GameObjects.Graphics[] = [];
-    const layerConfigs = [
-      { radius: radius * 1.1, color: 0xff2200, alpha: 0.15 },
-      { radius: radius, color: 0xff4400, alpha: 0.3 },
-      { radius: radius * 0.8, color: 0xff6600, alpha: 0.45 },
-      { radius: radius * 0.5, color: 0xffaa00, alpha: 0.6 },
-    ];
-
-    layerConfigs.forEach((config, i) => {
-      const breath = scene.add.graphics();
-      breath.fillStyle(config.color, config.alpha);
-      breath.beginPath();
-      breath.moveTo(x, y);
-      breath.arc(x, y, config.radius, -angleSpread / 2, angleSpread / 2);
-      breath.closePath();
-      breath.fill();
-      breath.setDepth(38 + i);
-      breathLayers.push(breath);
-    });
-
-    // 火焰粒子爆发
+    // 火焰锥形由 DragonBreathStrategy 创建和管理
+    // 这里只创建瞬发的火焰粒子爆发效果
     VisualEffectUtils.createParticleBurst(scene, x, y, {
       count: 40,
       color: 0xff6600,
@@ -142,15 +130,6 @@ export class DragonBreathVisualStrategy implements VisualEffectStrategy {
       scale: { start: 0.9, end: 0 },
       lifespan: 600,
       texture: 'particle_fire_core',
-    });
-
-    scene.tweens.add({
-      targets: breathLayers,
-      alpha: 0,
-      scaleX: 1.3,
-      scaleY: 1.3,
-      duration: 700,
-      onComplete: () => breathLayers.forEach(b => b.destroy()),
     });
   }
 }
@@ -224,21 +203,15 @@ export class InfernoStrategy implements SkillStrategy {
     const deathHandler = (enemy: Enemy) => {
       if (!this.activeInfernos.has(instanceId)) return;
 
-      const hasInfernoBurn = enemy.statusEffects.some(
-        (effect) => effect.type === 'burn' && effect.source === 'inferno'
-      );
+      const hasInfernoBurn = enemy.modifierStack.hasStatusEffect(StatusEffectType.BURN);
 
       if (hasInfernoBurn) {
         const nearbyEnemies = findEnemiesInRange(enemy.x, enemy.y, this.burnSpreadRadius);
 
         for (const nearbyEnemy of nearbyEnemies) {
-          nearbyEnemy.addStatusEffect({
-            type: 'burn',
-            value: burnValue,
-            duration: burnDuration,
-            remainingTime: burnDuration,
-            source: 'inferno',
-          });
+          nearbyEnemy.modifierStack.addModifier(
+            createBurnVisualModifier(burnValue, burnDuration, 'fire')
+          );
         }
 
         // 多层燃烧扩散视觉效果
@@ -288,13 +261,9 @@ export class InfernoStrategy implements SkillStrategy {
         const enemies = findEnemiesInRange(player.x, player.y, radius);
         for (const enemy of enemies) {
           applyDamageToEnemy(enemy, Math.floor(damage * 0.15), skill);
-          enemy.addStatusEffect({
-            type: 'burn',
-            value: burnValue,
-            duration: burnDuration,
-            remainingTime: burnDuration,
-            source: 'inferno',
-          });
+          enemy.modifierStack.addModifier(
+            createBurnVisualModifier(burnValue, burnDuration, 'fire')
+          );
         }
       },
       repeat: Math.floor(duration / tickInterval) - 1,
@@ -304,59 +273,8 @@ export class InfernoStrategy implements SkillStrategy {
 
 export class InfernoVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层烈焰区域
-    const infernoLayers: Phaser.GameObjects.Arc[] = [];
-    const layerConfigs = [
-      { radius: radius * 1.1, color: 0xff2200, alpha: 0.12 },
-      { radius: radius, color: 0xff4400, alpha: 0.2 },
-      { radius: radius * 0.8, color: 0xff6600, alpha: 0.18 },
-      { radius: radius * 0.5, color: 0xffaa00, alpha: 0.12 },
-    ];
-
-    layerConfigs.forEach((config, i) => {
-      const layer = scene.add.circle(x, y, config.radius, config.color, config.alpha);
-      layer.setDepth(17 + i);
-      infernoLayers.push(layer);
-
-      scene.tweens.add({
-        targets: layer,
-        scaleX: 1.08,
-        scaleY: 1.08,
-        alpha: config.alpha * 0.5,
-        duration: 500,
-        yoyo: true,
-        repeat: 9,
-      });
-    });
-
-    // 火焰粒子
-    const fireParticles = scene.add.particles(x, y, 'particle_fire_core', {
-      speed: { min: 20, max: 60 },
-      angle: { min: 0, max: 360 },
-      scale: { start: 0.5, end: 0 },
-      alpha: { start: 0.6, end: 0 },
-      tint: [0xff4400, 0xff6600, 0xffaa00],
-      lifespan: 1500,
-      frequency: 80,
-      quantity: 3,
-      emitZone: {
-        type: 'random' as const,
-        source: new Phaser.Geom.Circle(0, 0, radius * 0.9) as Phaser.Types.GameObjects.Particles.RandomZoneSource,
-      },
-    });
-    fireParticles.setDepth(22);
-
-    scene.time.delayedCall(5000, () => {
-      scene.tweens.add({
-        targets: [...infernoLayers, fireParticles],
-        alpha: 0,
-        duration: 500,
-        onComplete: () => {
-          infernoLayers.forEach(l => l.destroy());
-          fireParticles.destroy();
-        },
-      });
-    });
+    // 燃烧区域和火焰粒子由 InfernoStrategy 创建和管理
+    // 这里不创建任何重复的持续视觉效果
   }
 }
 
@@ -365,12 +283,15 @@ export class InfernoVisualStrategy implements VisualEffectStrategy {
  */
 export class AbyssVortexStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const centerX = player.x;
     const centerY = player.y;
     const radius = skill.rangeValue;
     const duration = 3000;
     const tickInterval = 200;
+
+    // 存储需要清理的 tweens
+    const activeTweens: Phaser.Tweens.Tween[] = [];
 
     // 多层漩涡视觉效果
     const vortex = scene.add.container(centerX, centerY);
@@ -382,12 +303,13 @@ export class AbyssVortexStrategy implements SkillStrategy {
       ring.strokeCircle(0, 0, radius * (0.3 + i * 0.18));
       vortex.add(ring);
 
-      scene.tweens.add({
+      const tween = scene.tweens.add({
         targets: ring,
         angle: 360 * (i % 2 === 0 ? 1 : -1),
         duration: 800 + i * 200,
         repeat: -1,
       });
+      activeTweens.push(tween);
     }
 
     // 中心深渊
@@ -418,6 +340,12 @@ export class AbyssVortexStrategy implements SkillStrategy {
         elapsed += tickInterval;
         if (elapsed >= duration) {
           vortexTimer.destroy();
+          // 停止所有无限循环的 tweens
+          activeTweens.forEach(tween => {
+            if (tween && tween.isPlaying()) {
+              tween.stop();
+            }
+          });
           vortex.destroy();
           abyssOuter.destroy();
           abyssMid.destroy();
@@ -434,6 +362,14 @@ export class AbyssVortexStrategy implements SkillStrategy {
             enemy.y += Math.sin(angle) * 30;
           }
           applyDamageToEnemy(enemy, Math.floor(damage * 0.2), skill);
+
+          // 应用减速效果
+          if (applyEffects && skill.effects) {
+            const slowEffect = skill.effects.find(e => e.type === 'slow');
+            if (slowEffect) {
+              applyEffects(enemy, [slowEffect]);
+            }
+          }
         }
       },
       repeat: Math.floor(duration / tickInterval) - 1,
@@ -443,48 +379,8 @@ export class AbyssVortexStrategy implements SkillStrategy {
 
 export class AbyssVortexVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层漩涡环
-    const vortex = scene.add.container(x, y);
-    vortex.setDepth(18);
-
-    for (let i = 0; i < 5; i++) {
-      const ring = scene.add.graphics();
-      ring.lineStyle(4 - i * 0.5, 0x4488ff, 0.45 - i * 0.06);
-      ring.strokeCircle(0, 0, radius * (0.3 + i * 0.18));
-      vortex.add(ring);
-    }
-
-    vortex.list.forEach((ring, i) => {
-      scene.tweens.add({
-        targets: ring,
-        angle: 360 * (i % 2 === 0 ? 1 : -1),
-        duration: 800 + i * 200,
-        repeat: 3,
-      });
-    });
-
-    // 中心深渊
-    const abyssOuter = scene.add.circle(x, y, 40, 0x2244aa, 0.5);
-    const abyssMid = scene.add.circle(x, y, 28, 0x3366cc, 0.65);
-    const abyssInner = scene.add.circle(x, y, 16, 0x4488ff, 0.8);
-    abyssOuter.setDepth(19);
-    abyssMid.setDepth(20);
-    abyssInner.setDepth(21);
-
-    scene.time.delayedCall(3000, () => {
-      scene.tweens.add({
-        targets: [vortex, abyssOuter, abyssMid, abyssInner],
-        alpha: 0,
-        scale: 0.5,
-        duration: 350,
-        onComplete: () => {
-          vortex.destroy();
-          abyssOuter.destroy();
-          abyssMid.destroy();
-          abyssInner.destroy();
-        },
-      });
-    });
+    // 漩涡容器、深渊圆和粒子由 AbyssVortexStrategy 创建和管理
+    // 这里不创建任何重复的持续视觉效果
   }
 }
 
@@ -493,10 +389,13 @@ export class AbyssVortexVisualStrategy implements VisualEffectStrategy {
  */
 export class FrozenDomainStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const radius = skill.rangeValue;
     const duration = 4000;
     const tickInterval = 500;
+
+    // 存储需要清理的 tweens
+    const activeTweens: Phaser.Tweens.Tween[] = [];
 
     // 多层冰封领域
     const domainLayers: Phaser.GameObjects.Arc[] = [];
@@ -512,7 +411,7 @@ export class FrozenDomainStrategy implements SkillStrategy {
       layer.setDepth(17 + i);
       domainLayers.push(layer);
 
-      scene.tweens.add({
+      const tween = scene.tweens.add({
         targets: layer,
         scaleX: 1.06,
         scaleY: 1.06,
@@ -521,6 +420,7 @@ export class FrozenDomainStrategy implements SkillStrategy {
         yoyo: true,
         repeat: -1,
       });
+      activeTweens.push(tween);
     });
 
     // 霜冻粒子
@@ -549,12 +449,18 @@ export class FrozenDomainStrategy implements SkillStrategy {
       ring.strokeCircle(0, 0, radius * (0.4 + i * 0.25));
       iceRings.add(ring);
 
-      scene.tweens.add({
+      // 存储无限旋转 tween 以便清理
+      const ringTween = scene.tweens.add({
         targets: ring,
         angle: 360 * (i % 2 === 0 ? 1 : -1),
         duration: 1500 + i * 300,
         repeat: -1,
       });
+      // 在容器上存储 tween 引用以便清理
+      if (!(iceRings as any).activeTweens) {
+        (iceRings as any).activeTweens = [];
+      }
+      (iceRings as any).activeTweens.push(ringTween);
     }
 
     let elapsed = 0;
@@ -564,6 +470,20 @@ export class FrozenDomainStrategy implements SkillStrategy {
         elapsed += tickInterval;
         if (elapsed >= duration) {
           domainTimer.destroy();
+          // 停止所有无限循环的 tweens
+          activeTweens.forEach(tween => {
+            if (tween && tween.isPlaying()) {
+              tween.stop();
+            }
+          });
+          // 停止旋转冰环的 tweens
+          if ((iceRings as any).activeTweens) {
+            (iceRings as any).activeTweens.forEach((t: Phaser.Tweens.Tween) => {
+              if (t && t.isPlaying()) {
+                t.stop();
+              }
+            });
+          }
           domainLayers.forEach(l => l.destroy());
           frostParticles.destroy();
           iceRings.destroy();
@@ -573,6 +493,14 @@ export class FrozenDomainStrategy implements SkillStrategy {
         const enemies = findEnemiesInRange(player.x, player.y, radius);
         for (const enemy of enemies) {
           applyDamageToEnemy(enemy, Math.floor(damage * 0.2), skill);
+
+          // 应用冻结效果
+          if (applyEffects && skill.effects) {
+            const freezeEffect = skill.effects.find(e => e.type === 'freeze');
+            if (freezeEffect) {
+              applyEffects(enemy, [freezeEffect]);
+            }
+          }
 
           // 冰霜击中效果
           const frost = scene.add.circle(enemy.x, enemy.y, 12, 0x88ddff, 0.6);
@@ -593,50 +521,8 @@ export class FrozenDomainStrategy implements SkillStrategy {
 
 export class FrozenDomainVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层冰封领域
-    const domainLayers: Phaser.GameObjects.Arc[] = [];
-    const layerConfigs = [
-      { radius: radius * 1.1, color: 0x66ccff, alpha: 0.1 },
-      { radius: radius, color: 0x88ddff, alpha: 0.15 },
-      { radius: radius * 0.8, color: 0xaaeeff, alpha: 0.12 },
-    ];
-
-    layerConfigs.forEach((config, i) => {
-      const layer = scene.add.circle(x, y, config.radius, config.color, config.alpha);
-      layer.setDepth(17 + i);
-      domainLayers.push(layer);
-    });
-
-    // 旋转冰环
-    const iceRings = scene.add.container(x, y);
-    iceRings.setDepth(18);
-    for (let i = 0; i < 3; i++) {
-      const ring = scene.add.graphics();
-      ring.lineStyle(2, 0xaaeeff, 0.4);
-      ring.strokeCircle(0, 0, radius * (0.4 + i * 0.25));
-      iceRings.add(ring);
-    }
-
-    iceRings.list.forEach((ring, i) => {
-      scene.tweens.add({
-        targets: ring,
-        angle: 360 * (i % 2 === 0 ? 1 : -1),
-        duration: 1500 + i * 300,
-        repeat: 7,
-      });
-    });
-
-    scene.time.delayedCall(4000, () => {
-      scene.tweens.add({
-        targets: [...domainLayers, iceRings],
-        alpha: 0,
-        duration: 500,
-        onComplete: () => {
-          domainLayers.forEach(l => l.destroy());
-          iceRings.destroy();
-        },
-      });
-    });
+    // 冰封区域和冰环由 FrozenDomainStrategy 创建和管理
+    // 这里不创建任何重复的持续视觉效果
   }
 }
 
@@ -645,7 +531,7 @@ export class FrozenDomainVisualStrategy implements VisualEffectStrategy {
    */
   export class AbsoluteZeroStrategy implements SkillStrategy {
     execute(skill: Skill, context: SkillExecutionContext): void {
-      const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+      const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
       const radius = skill.rangeValue;
       const executeThreshold = 0.10;
 
@@ -660,6 +546,14 @@ export class FrozenDomainVisualStrategy implements VisualEffectStrategy {
         } else {
           // 正常伤害
           applyDamageToEnemy(enemy, damage, skill);
+        }
+
+        // 应用冻结效果
+        if (applyEffects && skill.effects) {
+          const freezeEffect = skill.effects.find(e => e.type === 'freeze');
+          if (freezeEffect) {
+            applyEffects(enemy, [freezeEffect]);
+          }
         }
       }
     }
@@ -714,7 +608,7 @@ export class AbsoluteZeroVisualStrategy implements VisualEffectStrategy {
  */
 export class ThunderApocalypseStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const strikeCount = 12;
     const strikeInterval = 200;
     let currentStrike = 0;
@@ -736,7 +630,15 @@ export class ThunderApocalypseStrategy implements SkillStrategy {
         currentStrike++;
         if (currentStrike > strikeCount) {
           strikeTimer.destroy();
-          cloudLayers.forEach(c => c.destroy());
+          // 云层淡出动画
+          scene.tweens.add({
+            targets: cloudLayers,
+            alpha: 0,
+            duration: 300,
+            onComplete: () => {
+              cloudLayers.forEach(c => c.destroy());
+            },
+          });
           return;
         }
 
@@ -780,6 +682,14 @@ export class ThunderApocalypseStrategy implements SkillStrategy {
         const enemies = findEnemiesInRange(strikeX, strikeY, 60);
         for (const enemy of enemies) {
           applyDamageToEnemy(enemy, damage, skill);
+
+          // 应用眩晕效果
+          if (applyEffects && skill.effects) {
+            const stunEffect = skill.effects.find(e => e.type === 'stun');
+            if (stunEffect) {
+              applyEffects(enemy, [stunEffect]);
+            }
+          }
         }
 
         // 消失动画
@@ -803,15 +713,7 @@ export class ThunderApocalypseStrategy implements SkillStrategy {
 
 export class ThunderApocalypseVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层雷云
-    const cloudLayers: Phaser.GameObjects.Arc[] = [];
-    for (let i = 0; i < 3; i++) {
-      const cloud = scene.add.circle(x, y - 60, radius * (0.5 + i * 0.12), 0x333355, 0.2 - i * 0.04);
-      cloud.setDepth(15 + i);
-      cloudLayers.push(cloud);
-    }
-
-    // 多次雷击
+    // 云层已由 ThunderApocalypseStrategy 创建和管理，这里只创建雷击效果
     for (let i = 0; i < 10; i++) {
       const angle = Math.random() * Math.PI * 2;
       const dist = Math.random() * radius * 0.7;
@@ -840,8 +742,6 @@ export class ThunderApocalypseVisualStrategy implements VisualEffectStrategy {
         },
       });
     }
-
-    scene.time.delayedCall(1200, () => cloudLayers.forEach(c => c.destroy()));
   }
 }
 
@@ -850,7 +750,7 @@ export class ThunderApocalypseVisualStrategy implements VisualEffectStrategy {
  */
 export class JudgmentLightStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const radius = skill.rangeValue;
     const healAmount = skill.effects.find(e => e.type === 'heal')?.value || 30;
 
@@ -914,6 +814,14 @@ export class JudgmentLightStrategy implements SkillStrategy {
     for (const enemy of enemies) {
       applyDamageToEnemy(enemy, damage, skill);
 
+      // 应用效果（如果有其他效果如伤害加深等）
+      if (applyEffects && skill.effects) {
+        const damageEffects = skill.effects.filter(e => e.type !== 'heal');
+        if (damageEffects.length > 0) {
+          applyEffects(enemy, damageEffects);
+        }
+      }
+
       // 光之击中效果
       const hit = scene.add.circle(enemy.x, enemy.y, 22, 0xffffff, 0.8);
       hit.setDepth(100);
@@ -961,46 +869,13 @@ export class JudgmentLightStrategy implements SkillStrategy {
 
 export class JudgmentLightVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层光柱
-    const beamOuter = scene.add.rectangle(x, y, 90, radius * 2, 0xffcc00, 0.2);
-    const beamMid = scene.add.rectangle(x, y, 60, radius * 2, 0xffdd44, 0.35);
-    const beamInner = scene.add.rectangle(x, y, 30, radius * 2, 0xffffff, 0.55);
-    beamOuter.setDepth(18);
-    beamMid.setDepth(19);
-    beamInner.setDepth(20);
-
-    // 光芒射线
-    const rays: Phaser.GameObjects.Graphics[] = [];
-    for (let i = 0; i < 12; i++) {
-      const angle = (i / 12) * Math.PI * 2;
-      const ray = scene.add.graphics();
-      ray.fillStyle(0xffffff, 0.65);
-      ray.fillTriangle(0, 0, -4, radius, 4, radius);
-      ray.setPosition(x, y);
-      ray.setRotation(angle);
-      ray.setDepth(21);
-      rays.push(ray);
-    }
-
-    // 核心光爆
+    // 光柱和射线由 JudgmentLightStrategy 创建和管理
+    // 这里只创建瞬发的核心光爆效果
     VisualEffectUtils.createElementGlow(scene, x, y, {
       color: 0xffcc00,
       radius: 40,
       duration: 500,
       pulseCount: 2,
-    });
-
-    scene.tweens.add({
-      targets: [beamOuter, beamMid, beamInner, ...rays],
-      alpha: 0,
-      scale: 1.3,
-      duration: 650,
-      onComplete: () => {
-        beamOuter.destroy();
-        beamMid.destroy();
-        beamInner.destroy();
-        rays.forEach(r => r.destroy());
-      },
     });
   }
 }
@@ -1010,10 +885,13 @@ export class JudgmentLightVisualStrategy implements VisualEffectStrategy {
  */
 export class ShadowDescentStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const radius = skill.rangeValue;
     const duration = 4000;
     const tickInterval = 500;
+
+    // 存储需要清理的 tweens
+    const activeTweens: Phaser.Tweens.Tween[] = [];
 
     // 多层暗影区域
     const shadowLayers: Phaser.GameObjects.Arc[] = [];
@@ -1029,7 +907,7 @@ export class ShadowDescentStrategy implements SkillStrategy {
       layer.setDepth(17 + i);
       shadowLayers.push(layer);
 
-      scene.tweens.add({
+      const tween = scene.tweens.add({
         targets: layer,
         scaleX: 1.08,
         scaleY: 1.08,
@@ -1038,6 +916,7 @@ export class ShadowDescentStrategy implements SkillStrategy {
         yoyo: true,
         repeat: -1,
       });
+      activeTweens.push(tween);
     });
 
     // 暗影粒子
@@ -1066,12 +945,13 @@ export class ShadowDescentStrategy implements SkillStrategy {
       ring.strokeCircle(0, 0, radius * (0.4 + i * 0.25));
       vortex.add(ring);
 
-      scene.tweens.add({
+      const tween = scene.tweens.add({
         targets: ring,
         angle: 360 * (i % 2 === 0 ? 1 : -1),
         duration: 1500 + i * 300,
         repeat: -1,
       });
+      activeTweens.push(tween);
     }
 
     let elapsed = 0;
@@ -1081,6 +961,12 @@ export class ShadowDescentStrategy implements SkillStrategy {
         elapsed += tickInterval;
         if (elapsed >= duration) {
           shadowTimer.destroy();
+          // 停止所有无限循环的 tweens
+          activeTweens.forEach(tween => {
+            if (tween && tween.isPlaying()) {
+              tween.stop();
+            }
+          });
           shadowLayers.forEach(l => l.destroy());
           shadowParticles.destroy();
           vortex.destroy();
@@ -1090,6 +976,14 @@ export class ShadowDescentStrategy implements SkillStrategy {
         const enemies = findEnemiesInRange(player.x, player.y, radius);
         for (const enemy of enemies) {
           applyDamageToEnemy(enemy, Math.floor(damage * 0.15), skill);
+
+          // 应用防御破坏效果
+          if (applyEffects && skill.effects) {
+            const defenseBreakEffect = skill.effects.find(e => e.type === 'defense_break');
+            if (defenseBreakEffect) {
+              applyEffects(enemy, [defenseBreakEffect]);
+            }
+          }
 
           // 暗影击中效果
           const shadow = scene.add.circle(enemy.x, enemy.y, 14, 0x8800ff, 0.6);
@@ -1116,50 +1010,8 @@ export class ShadowDescentStrategy implements SkillStrategy {
 
 export class ShadowDescentVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层暗影区域
-    const shadowLayers: Phaser.GameObjects.Arc[] = [];
-    const layerConfigs = [
-      { radius: radius * 1.1, color: 0x220044, alpha: 0.15 },
-      { radius: radius, color: 0x440066, alpha: 0.25 },
-      { radius: radius * 0.8, color: 0x660088, alpha: 0.2 },
-    ];
-
-    layerConfigs.forEach((config, i) => {
-      const layer = scene.add.circle(x, y, config.radius, config.color, config.alpha);
-      layer.setDepth(17 + i);
-      shadowLayers.push(layer);
-    });
-
-    // 暗影漩涡
-    const vortex = scene.add.container(x, y);
-    vortex.setDepth(18);
-    for (let i = 0; i < 3; i++) {
-      const ring = scene.add.graphics();
-      ring.lineStyle(2, 0x8800ff, 0.35);
-      ring.strokeCircle(0, 0, radius * (0.4 + i * 0.25));
-      vortex.add(ring);
-    }
-
-    vortex.list.forEach((ring, i) => {
-      scene.tweens.add({
-        targets: ring,
-        angle: 360 * (i % 2 === 0 ? 1 : -1),
-        duration: 1500 + i * 300,
-        repeat: 7,
-      });
-    });
-
-    scene.time.delayedCall(4000, () => {
-      scene.tweens.add({
-        targets: [...shadowLayers, vortex],
-        alpha: 0,
-        duration: 500,
-        onComplete: () => {
-          shadowLayers.forEach(l => l.destroy());
-          vortex.destroy();
-        },
-      });
-    });
+    // 暗影区域和漩涡由 ShadowDescentStrategy 创建和管理
+    // 这里不创建任何重复的持续视觉效果
   }
 }
 
@@ -1168,11 +1020,14 @@ export class ShadowDescentVisualStrategy implements VisualEffectStrategy {
  */
 export class DeathDecayStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const radius = skill.rangeValue;
     const duration = 5000;
     const tickInterval = 400;
     const lifestealPercent = 0.3;
+
+    // 存储需要清理的 tweens
+    const activeTweens: Phaser.Tweens.Tween[] = [];
 
     // 多层死亡凋零区域
     const decayLayers: Phaser.GameObjects.Arc[] = [];
@@ -1188,7 +1043,7 @@ export class DeathDecayStrategy implements SkillStrategy {
       layer.setDepth(17 + i);
       decayLayers.push(layer);
 
-      scene.tweens.add({
+      const tween = scene.tweens.add({
         targets: layer,
         scaleX: 1.06,
         scaleY: 1.06,
@@ -1197,6 +1052,7 @@ export class DeathDecayStrategy implements SkillStrategy {
         yoyo: true,
         repeat: -1,
       });
+      activeTweens.push(tween);
     });
 
     // 死亡粒子
@@ -1223,6 +1079,12 @@ export class DeathDecayStrategy implements SkillStrategy {
         elapsed += tickInterval;
         if (elapsed >= duration) {
           decayTimer.destroy();
+          // 停止所有无限循环的 tweens
+          activeTweens.forEach(tween => {
+            if (tween && tween.isPlaying()) {
+              tween.stop();
+            }
+          });
           decayLayers.forEach(l => l.destroy());
           deathParticles.destroy();
           return;
@@ -1234,6 +1096,14 @@ export class DeathDecayStrategy implements SkillStrategy {
           const tickDamage = Math.floor(damage * 0.12);
           applyDamageToEnemy(enemy, tickDamage, skill);
           totalDamage += tickDamage;
+
+          // 应用中毒效果
+          if (applyEffects && skill.effects) {
+            const poisonEffect = skill.effects.find(e => e.type === 'poison');
+            if (poisonEffect) {
+              applyEffects(enemy, [poisonEffect]);
+            }
+          }
 
           // 死亡吸取效果
           const drain = scene.add.circle(enemy.x, enemy.y, 12, 0x880088, 0.6);
@@ -1271,28 +1141,8 @@ export class DeathDecayStrategy implements SkillStrategy {
 
 export class DeathDecayVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层死亡凋零区域
-    const decayLayers: Phaser.GameObjects.Arc[] = [];
-    const layerConfigs = [
-      { radius: radius * 1.1, color: 0x220022, alpha: 0.15 },
-      { radius: radius, color: 0x440044, alpha: 0.25 },
-      { radius: radius * 0.8, color: 0x660066, alpha: 0.2 },
-    ];
-
-    layerConfigs.forEach((config, i) => {
-      const layer = scene.add.circle(x, y, config.radius, config.color, config.alpha);
-      layer.setDepth(17 + i);
-      decayLayers.push(layer);
-    });
-
-    scene.time.delayedCall(5000, () => {
-      scene.tweens.add({
-        targets: decayLayers,
-        alpha: 0,
-        duration: 500,
-        onComplete: () => decayLayers.forEach(l => l.destroy()),
-      });
-    });
+    // 凋零区域圆由 DeathDecayStrategy 创建和管理
+    // 这里不创建任何重复的持续视觉效果
   }
 }
 
@@ -1301,7 +1151,7 @@ export class DeathDecayVisualStrategy implements VisualEffectStrategy {
  */
 export class MountainCollapseStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const radius = skill.rangeValue;
     const knockbackDist = 150;
 
@@ -1351,6 +1201,19 @@ export class MountainCollapseStrategy implements SkillStrategy {
     const enemies = findEnemiesInRange(player.x, player.y, radius);
     for (const enemy of enemies) {
       applyDamageToEnemy(enemy, damage, skill);
+
+      // 应用击退和眩晕效果
+      if (applyEffects && skill.effects) {
+        const knockbackEffect = skill.effects.find(e => e.type === 'knockback');
+        const stunEffect = skill.effects.find(e => e.type === 'stun');
+        if (knockbackEffect) {
+          applyEffects(enemy, [knockbackEffect]);
+        }
+        if (stunEffect) {
+          applyEffects(enemy, [stunEffect]);
+        }
+      }
+
       if (enemy.active && enemy.body) {
         const angle = Phaser.Math.Angle.Between(player.x, player.y, enemy.x, enemy.y);
         enemy.x += Math.cos(angle) * knockbackDist;
@@ -1370,30 +1233,13 @@ export class MountainCollapseStrategy implements SkillStrategy {
 
 export class MountainCollapseVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层地裂
-    const crackLayers: Phaser.GameObjects.Graphics[] = [];
-    for (let i = 0; i < 4; i++) {
-      const crack = scene.add.graphics();
-      crack.fillStyle(0x553311, 0.5 - i * 0.1);
-      crack.fillCircle(x, y, radius * (1 - i * 0.15));
-      crack.setDepth(20 + i);
-      crackLayers.push(crack);
-    }
-
-    // 冲击波
+    // 地裂效果由 MountainCollapseStrategy 创建和管理
+    // 这里只创建瞬发的冲击波效果
     VisualEffectUtils.createShockwave(scene, x, y, {
       color: 0x886644,
       radius: radius,
       rings: 4,
       duration: 450,
-    });
-
-    scene.tweens.add({
-      targets: crackLayers,
-      alpha: 0,
-      scale: 1.4,
-      duration: 600,
-      onComplete: () => crackLayers.forEach(c => c.destroy()),
     });
   }
 }
@@ -1403,7 +1249,7 @@ export class MountainCollapseVisualStrategy implements VisualEffectStrategy {
  */
 export class MeteorStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const radius = skill.rangeValue;
 
     // 多层预警区域
@@ -1462,6 +1308,14 @@ export class MeteorStrategy implements SkillStrategy {
       const enemies = findEnemiesInRange(player.x, player.y, radius);
       for (const enemy of enemies) {
         applyDamageToEnemy(enemy, damage, skill);
+
+        // 应用燃烧效果
+        if (applyEffects && skill.effects) {
+          const burnEffect = skill.effects.find(e => e.type === 'burn');
+          if (burnEffect) {
+            applyEffects(enemy, [burnEffect]);
+          }
+        }
       }
 
       scene.tweens.add({
@@ -1482,56 +1336,8 @@ export class MeteorStrategy implements SkillStrategy {
 
 export class MeteorVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层预警
-    const warningLayers: Phaser.GameObjects.Arc[] = [];
-    for (let i = 0; i < 3; i++) {
-      const warning = scene.add.circle(x, y, radius * (0.6 + i * 0.2), 0xff4400, 0.12 + i * 0.06);
-      warning.setDepth(18 + i);
-      warningLayers.push(warning);
-    }
-
-    scene.tweens.add({
-      targets: warningLayers,
-      scale: 1.1,
-      alpha: 0.45,
-      duration: 200,
-      yoyo: true,
-      repeat: 2,
-      onComplete: () => {
-        warningLayers.forEach(w => w.destroy());
-
-        // 多层爆炸
-        const explosionOuter = scene.add.circle(x, y, radius * 1.1, 0xff2200, 0.4);
-        const explosionMid = scene.add.circle(x, y, radius, 0xff6600, 0.6);
-        const explosionInner = scene.add.circle(x, y, radius * 0.7, 0xffaa00, 0.75);
-        const explosionCore = scene.add.circle(x, y, radius * 0.4, 0xffffff, 0.9);
-        explosionOuter.setDepth(95);
-        explosionMid.setDepth(96);
-        explosionInner.setDepth(97);
-        explosionCore.setDepth(98);
-
-        // 冲击波
-        VisualEffectUtils.createShockwave(scene, x, y, {
-          color: 0xff6600,
-          radius: radius * 1.1,
-          rings: 4,
-          duration: 400,
-        });
-
-        scene.tweens.add({
-          targets: [explosionOuter, explosionMid, explosionInner, explosionCore],
-          alpha: 0,
-          scale: 1.25,
-          duration: 500,
-          onComplete: () => {
-            explosionOuter.destroy();
-            explosionMid.destroy();
-            explosionInner.destroy();
-            explosionCore.destroy();
-          },
-        });
-      },
-    });
+    // 预警区域和爆炸序列由 MeteorStrategy 创建和管理
+    // 这里不创建任何重复的视觉效果
   }
 }
 
@@ -1540,7 +1346,7 @@ export class MeteorVisualStrategy implements VisualEffectStrategy {
  */
 export class TsunamiStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const radius = skill.rangeValue;
     const knockbackDist = 200;
 
@@ -1594,6 +1400,15 @@ export class TsunamiStrategy implements SkillStrategy {
     const enemies = findEnemiesInRange(player.x, player.y, radius);
     for (const enemy of enemies) {
       applyDamageToEnemy(enemy, damage, skill);
+
+      // 应用击退效果
+      if (applyEffects && skill.effects) {
+        const knockbackEffect = skill.effects.find(e => e.type === 'knockback');
+        if (knockbackEffect) {
+          applyEffects(enemy, [knockbackEffect]);
+        }
+      }
+
       if (enemy.active && enemy.body) {
         const angle = Phaser.Math.Angle.Between(player.x, player.y, enemy.x, enemy.y);
         enemy.x += Math.cos(angle) * knockbackDist;
@@ -1605,22 +1420,8 @@ export class TsunamiStrategy implements SkillStrategy {
 
 export class TsunamiVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层海啸波
-    const waveLayers: Phaser.GameObjects.Arc[] = [];
-    for (let i = 0; i < 5; i++) {
-      const wave = scene.add.circle(x, y, 25 + i * 20, 0x4488ff, 0.45 - i * 0.06);
-      wave.setStrokeStyle(3 - i * 0.5, 0x66aaff, 0.6 - i * 0.08);
-      wave.setDepth(20 + i);
-      waveLayers.push(wave);
-    }
-
-    scene.tweens.add({
-      targets: waveLayers,
-      radius: radius,
-      alpha: 0,
-      duration: 850,
-      onComplete: () => waveLayers.forEach(w => w.destroy()),
-    });
+    // 海啸波浪由 TsunamiStrategy 创建和管理
+    // 这里不创建任何重复的持续视觉效果
   }
 }
 
@@ -1629,7 +1430,7 @@ export class TsunamiVisualStrategy implements VisualEffectStrategy {
  */
 export class EarthquakeStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const radius = skill.rangeValue;
 
     // 多层地震波
@@ -1696,6 +1497,14 @@ export class EarthquakeStrategy implements SkillStrategy {
     const enemies = findEnemiesInRange(player.x, player.y, radius);
     for (const enemy of enemies) {
       applyDamageToEnemy(enemy, damage, skill);
+
+      // 应用眩晕效果
+      if (applyEffects && skill.effects) {
+        const stunEffect = skill.effects.find(e => e.type === 'stun');
+        if (stunEffect) {
+          applyEffects(enemy, [stunEffect]);
+        }
+      }
     }
   }
 }
@@ -1725,7 +1534,7 @@ export class EarthquakeVisualStrategy implements VisualEffectStrategy {
  */
 export class OvergrowthStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const radius = skill.rangeValue;
 
     // 多层藤蔓区域
@@ -1788,6 +1597,14 @@ export class OvergrowthStrategy implements SkillStrategy {
     const enemies = findEnemiesInRange(player.x, player.y, radius);
     for (const enemy of enemies) {
       applyDamageToEnemy(enemy, damage, skill);
+
+      // 应用眩晕效果
+      if (applyEffects && skill.effects) {
+        const stunEffect = skill.effects.find(e => e.type === 'stun');
+        if (stunEffect) {
+          applyEffects(enemy, [stunEffect]);
+        }
+      }
     }
 
     scene.tweens.add({
@@ -1805,26 +1622,8 @@ export class OvergrowthStrategy implements SkillStrategy {
 
 export class OvergrowthVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层藤蔓区域
-    const vineLayers: Phaser.GameObjects.Arc[] = [];
-    const layerConfigs = [
-      { radius: radius * 1.1, color: 0x226622, alpha: 0.15 },
-      { radius: radius, color: 0x44aa44, alpha: 0.22 },
-      { radius: radius * 0.8, color: 0x66cc66, alpha: 0.18 },
-    ];
-
-    layerConfigs.forEach((config, i) => {
-      const layer = scene.add.circle(x, y, config.radius, config.color, config.alpha);
-      layer.setDepth(17 + i);
-      vineLayers.push(layer);
-    });
-
-    scene.tweens.add({
-      targets: vineLayers,
-      alpha: 0,
-      duration: 1000,
-      onComplete: () => vineLayers.forEach(v => v.destroy()),
-    });
+    // 藤蔓区域由 OvergrowthStrategy 创建和管理
+    // 这里不创建任何重复的持续视觉效果
   }
 }
 
@@ -1952,7 +1751,8 @@ export class ForestRageStrategy implements SkillStrategy {
 
 export class ForestRageVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层地面裂痕
+    // 中心叶片效果由 ForestRageStrategy 创建和管理
+    // 这里只创建瞬发的地面裂痕效果
     const groundCrack = scene.add.graphics();
     groundCrack.lineStyle(3, 0x2d6b2d, 0.55);
     for (let i = 0; i < 10; i++) {
@@ -1966,26 +1766,13 @@ export class ForestRageVisualStrategy implements VisualEffectStrategy {
     }
     groundCrack.setDepth(25);
 
-    // 多层绿色光环
-    const auraOuter = scene.add.circle(x, y, radius, 0x44ff44, 0.22);
-    const auraMid = scene.add.circle(x, y, radius * 0.7, 0x66ff66, 0.3);
-    const auraInner = scene.add.circle(x, y, radius * 0.4, 0x88ff88, 0.35);
-    auraOuter.setDepth(26);
-    auraMid.setDepth(27);
-    auraInner.setDepth(28);
-
     scene.tweens.add({
-      targets: [auraOuter, auraMid, auraInner, groundCrack],
+      targets: groundCrack,
       alpha: 0,
       scaleX: 1.4,
       scaleY: 1.4,
       duration: 550,
-      onComplete: () => {
-        auraOuter.destroy();
-        auraMid.destroy();
-        auraInner.destroy();
-        groundCrack.destroy();
-      },
+      onComplete: () => groundCrack.destroy(),
     });
   }
 }
@@ -1995,12 +1782,15 @@ export class ForestRageVisualStrategy implements VisualEffectStrategy {
  */
 export class VoidRiftStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const centerX = player.x;
     const centerY = player.y;
     const radius = skill.rangeValue;
     const duration = 3000;
     const tickInterval = 300;
+
+    // 存储需要清理的 tweens
+    const activeTweens: Phaser.Tweens.Tween[] = [];
 
     // 多层虚空裂隙核心
     const riftOuter = scene.add.circle(centerX, centerY, 50, 0x4400aa, 0.5);
@@ -2019,12 +1809,13 @@ export class VoidRiftStrategy implements SkillStrategy {
       ring.strokeCircle(0, 0, radius * (0.25 + i * 0.2));
       voidRings.add(ring);
 
-      scene.tweens.add({
+      const tween = scene.tweens.add({
         targets: ring,
         angle: 360 * (i % 2 === 0 ? 1 : -1),
         duration: 700 + i * 150,
         repeat: -1,
       });
+      activeTweens.push(tween);
     }
 
     // 吸入粒子
@@ -2047,6 +1838,12 @@ export class VoidRiftStrategy implements SkillStrategy {
         elapsed += tickInterval;
         if (elapsed >= duration) {
           riftTimer.destroy();
+          // 停止所有无限循环的 tweens
+          activeTweens.forEach(tween => {
+            if (tween && tween.isPlaying()) {
+              tween.stop();
+            }
+          });
           riftOuter.destroy();
           riftMid.destroy();
           riftInner.destroy();
@@ -2063,6 +1860,14 @@ export class VoidRiftStrategy implements SkillStrategy {
             enemy.y += Math.sin(angle) * 25;
           }
           applyDamageToEnemy(enemy, Math.floor(damage * 0.25), skill);
+
+          // 应用中毒效果
+          if (applyEffects && skill.effects) {
+            const poisonEffect = skill.effects.find(e => e.type === 'poison');
+            if (poisonEffect) {
+              applyEffects(enemy, [poisonEffect]);
+            }
+          }
         }
       },
       repeat: Math.floor(duration / tickInterval) - 1,
@@ -2072,47 +1877,8 @@ export class VoidRiftStrategy implements SkillStrategy {
 
 export class VoidRiftVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层虚空裂隙核心
-    const riftOuter = scene.add.circle(x, y, 50, 0x4400aa, 0.4);
-    const riftMid = scene.add.circle(x, y, 35, 0x6600cc, 0.6);
-    const riftInner = scene.add.circle(x, y, 20, 0x8800ff, 0.8);
-    riftOuter.setDepth(20);
-    riftMid.setDepth(21);
-    riftInner.setDepth(22);
-
-    // 多层虚空环
-    const voidRings = scene.add.container(x, y);
-    voidRings.setDepth(18);
-    for (let i = 0; i < 5; i++) {
-      const ring = scene.add.graphics();
-      ring.lineStyle(4 - i * 0.5, 0x8800ff, 0.4 - i * 0.05);
-      ring.strokeCircle(0, 0, radius * (0.25 + i * 0.2));
-      voidRings.add(ring);
-    }
-
-    voidRings.list.forEach((ring, i) => {
-      scene.tweens.add({
-        targets: ring,
-        angle: 360 * (i % 2 === 0 ? 1 : -1),
-        duration: 700 + i * 150,
-        repeat: 3,
-      });
-    });
-
-    scene.time.delayedCall(3000, () => {
-      scene.tweens.add({
-        targets: [riftOuter, riftMid, riftInner, voidRings],
-        alpha: 0,
-        scale: 0.5,
-        duration: 350,
-        onComplete: () => {
-          riftOuter.destroy();
-          riftMid.destroy();
-          riftInner.destroy();
-          voidRings.destroy();
-        },
-      });
-    });
+    // 虚空裂隙核心和虚空环由 VoidRiftStrategy 创建和管理
+    // 这里不创建任何重复的持续视觉效果
   }
 }
 
@@ -2128,6 +1894,9 @@ export class BlackHoleStrategy implements SkillStrategy {
     const duration = 2000;
     const tickInterval = 300;
     let elapsed = 0;
+
+    // 存储需要清理的 tweens
+    const activeTweens: Phaser.Tweens.Tween[] = [];
 
     // 多层黑洞核心
     const blackHoleOuter = scene.add.circle(centerX, centerY, 55, 0x220066, 0.6);
@@ -2146,12 +1915,13 @@ export class BlackHoleStrategy implements SkillStrategy {
       ring.strokeCircle(0, 0, radius * (0.2 + i * 0.15));
       gravityRings.add(ring);
 
-      scene.tweens.add({
+      const tween = scene.tweens.add({
         targets: ring,
         angle: 360 * (i % 2 === 0 ? 1 : -1),
         duration: 600 + i * 100,
         repeat: -1,
       });
+      activeTweens.push(tween);
     }
 
     // 吸入粒子
@@ -2173,6 +1943,12 @@ export class BlackHoleStrategy implements SkillStrategy {
         elapsed += tickInterval;
         if (elapsed >= duration) {
           damageTimer.destroy();
+          // 停止所有无限循环的 tweens
+          activeTweens.forEach(tween => {
+            if (tween && tween.isPlaying()) {
+              tween.stop();
+            }
+          });
           blackHoleOuter.destroy();
           blackHoleMid.destroy();
           blackHoleInner.destroy();
@@ -2348,22 +2124,8 @@ export class ThunderStrikeStrategy implements SkillStrategy {
 
 export class ThunderStrikeVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层雷云
-    const cloudLayers: Phaser.GameObjects.Arc[] = [];
-    for (let i = 0; i < 3; i++) {
-      const cloud = scene.add.circle(x, y - 50, radius * (0.4 + i * 0.1), 0x333355, 0.55 - i * 0.08);
-      cloud.setDepth(40 + i);
-      cloudLayers.push(cloud);
-    }
-
-    scene.tweens.add({
-      targets: cloudLayers,
-      alpha: 0.25,
-      duration: 300,
-      yoyo: true,
-      repeat: 4,
-      onComplete: () => cloudLayers.forEach(c => c.destroy()),
-    });
+    // 雷云由 ThunderStrikeStrategy 创建和管理
+    // 这里不创建任何重复的持续视觉效果
   }
 }
 
@@ -2442,6 +2204,9 @@ export class SanctuaryStrategy implements SkillStrategy {
     const duration = 5000;
     const tickInterval = 500;
 
+    // 存储需要清理的 tweens
+    const activeTweens: Phaser.Tweens.Tween[] = [];
+
     // 多层圣域区域
     const sanctuaryLayers: Phaser.GameObjects.Arc[] = [];
     const layerConfigs = [
@@ -2484,12 +2249,13 @@ export class SanctuaryStrategy implements SkillStrategy {
       ring.strokeCircle(0, 0, radius * (0.4 + i * 0.25));
       sanctuaryRings.add(ring);
 
-      scene.tweens.add({
+      const tween = scene.tweens.add({
         targets: ring,
         angle: 360,
         duration: 2000 + i * 400,
         repeat: -1,
       });
+      activeTweens.push(tween);
     }
 
     let elapsed = 0;
@@ -2499,6 +2265,12 @@ export class SanctuaryStrategy implements SkillStrategy {
         elapsed += tickInterval;
         if (elapsed >= duration) {
           healTimer.destroy();
+          // 停止所有无限循环的 tweens
+          activeTweens.forEach(tween => {
+            if (tween && tween.isPlaying()) {
+              tween.stop();
+            }
+          });
           sanctuaryLayers.forEach(l => l.destroy());
           holyParticles.destroy();
           sanctuaryRings.destroy();
@@ -2519,33 +2291,8 @@ export class SanctuaryStrategy implements SkillStrategy {
 
 export class SanctuaryVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层圣域光环
-    const sanctuaryLayers: Phaser.GameObjects.Arc[] = [];
-    const layerConfigs = [
-      { radius: radius * 1.1, color: 0xffcc00, alpha: 0.1 },
-      { radius: radius, color: 0xffdd44, alpha: 0.18 },
-      { radius: radius * 0.8, color: 0xffee88, alpha: 0.15 },
-    ];
-
-    layerConfigs.forEach((config, i) => {
-      const layer = scene.add.circle(x, y, config.radius, config.color, config.alpha);
-      layer.setStrokeStyle(2, 0xffcc00, 0.45);
-      layer.setDepth(17 + i);
-      sanctuaryLayers.push(layer);
-    });
-
-    // 脉动效果
-    sanctuaryLayers.forEach(layer => {
-      scene.tweens.add({
-        targets: layer,
-        scaleX: 1.08,
-        scaleY: 1.08,
-        alpha: layer.alpha * 1.5,
-        duration: 500,
-        yoyo: true,
-        repeat: -1,
-      });
-    });
+    // 圣域区域和旋转光环由 SanctuaryStrategy 创建和管理
+    // 这里不创建任何重复的持续视觉效果
   }
 }
 
@@ -2710,6 +2457,7 @@ export class EarthGuardianStrategy implements SkillStrategy {
 
     // 岩石碎片环绕
     const rocks: Phaser.GameObjects.Graphics[] = [];
+    const rockTweens: Phaser.Tweens.Tween[] = [];
     for (let i = 0; i < 8; i++) {
       const rock = scene.add.graphics();
       rock.fillStyle(0x665544, 0.9);
@@ -2721,7 +2469,7 @@ export class EarthGuardianStrategy implements SkillStrategy {
       rocks.push(rock);
 
       const orbitAngle = (i / 8) * Math.PI * 2;
-      scene.tweens.add({
+      const orbitTween = scene.tweens.add({
         targets: rock,
         x: player.x + Math.cos(orbitAngle) * 50,
         y: player.y + Math.sin(orbitAngle) * 50,
@@ -2729,10 +2477,17 @@ export class EarthGuardianStrategy implements SkillStrategy {
         duration: 3000,
         repeat: -1,
       });
+      rockTweens.push(orbitTween);
     }
 
     scene.time.delayedCall(duration, () => {
       (player.stats as any).defense = originalDefense;
+      // 停止所有无限循环的轨道 tweens
+      rockTweens.forEach(t => {
+        if (t && t.isPlaying()) {
+          t.stop();
+        }
+      });
       scene.tweens.add({
         targets: [shieldOuter, shieldMid, shieldInner, ...rocks],
         alpha: 0,

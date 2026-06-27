@@ -1,119 +1,116 @@
-# Task 5: Player实体 - 玩家角色
+## Task 5: 迁移技能使用新修饰符系统
 
-## File to Create
-`src/entities/Player.ts`
+**Files:**
+- Modify: 所有技能策略文件（约 19 个文件）
+- List of files:
+  - `src/strategies/skills/area/fire/*.ts`
+  - `src/strategies/skills/area/water/*.ts`
+  - `src/strategies/skills/area/ice/*.ts`
+  - `src/strategies/skills/area/lightning/*.ts`
+  - `src/strategies/skills/area/holy/*.ts`
+  - `src/strategies/skills/area/shadow/*.ts`
+  - `src/strategies/skills/area/grass/*.ts`
+  - `src/strategies/skills/area/earth/*.ts`
+  - `src/strategies/skills/ultimate/UltimateStrategies.ts`
 
-## Code
+**Interfaces:**
+- Consumes: Visual modifier factories from Task 3
+- Produces: All skills using new modifier system instead of `addStatusEffect()`
+
+由于技能文件较多，这个任务将拆分为多个子步骤，每个元素类型的技能一个步骤。
+
+- [ ] **Step 1: 添加导入语句到所有技能文件**
+
+在每个技能文件顶部添加：
+
 ```typescript
-import Phaser from 'phaser';
-import { PlayerStats, Skill } from '@/types';
-import { INITIAL_PLAYER_STATS } from '@/config/balance.config';
-
-export class Player extends Phaser.Physics.Arcade.Sprite {
-  public stats: PlayerStats;
-  public skills: Skill[] = [];
-  public skillCooldowns: Map<string, number> = new Map();
-  private lastDamageTime: number = 0;
-
-  constructor(scene: Phaser.Scene, x: number, y: number) {
-    super(scene, x, y, '__DEFAULT'); // 使用默认纹理
-
-    scene.add.existing(this);
-    scene.physics.add.existing(this);
-
-    // 初始化属性
-    this.stats = { ...INITIAL_PLAYER_STATS };
-
-    // 设置物理体
-    this.setCollideWorldBounds(true);
-    this.setDrag(500);
-    this.setBounce(0);
-
-    // 设置碰撞体大小
-    this.body?.setSize(32, 32);
-
-    // 绘制占位符图形(绿色方块)
-    this.drawPlaceholder();
-  }
-
-  private drawPlaceholder(): void {
-    const graphics = this.scene.add.graphics();
-    graphics.fillStyle(0x00ff00, 1);
-    graphics.fillRect(-16, -16, 32, 32);
-    graphics.generateTexture('player', 32, 32);
-    graphics.destroy();
-    this.setTexture('player');
-  }
-
-  move(velocityX: number, velocityY: number): void {
-    this.setVelocity(velocityX, velocityY);
-  }
-
-  takeDamage(amount: number): boolean {
-    const now = Date.now();
-
-    // 碰撞伤害间隔限制
-    if (now - this.lastDamageTime < 500) {
-      return false;
-    }
-
-    // 计算实际伤害(考虑防御)
-    const actualDamage = Math.max(1, amount - this.stats.defense * 0.5);
-    this.stats.currentHp = Math.max(0, this.stats.currentHp - actualDamage);
-    this.lastDamageTime = now;
-
-    // 受伤闪烁效果
-    this.scene.tweens.add({
-      targets: this,
-      alpha: 0.5,
-      duration: 100,
-      yoyo: true,
-      repeat: 2,
-    });
-
-    // 检查死亡
-    if (this.stats.currentHp <= 0) {
-      this.die();
-      return true;
-    }
-
-    return false;
-  }
-
-  heal(amount: number): void {
-    this.stats.currentHp = Math.min(
-      this.stats.maxHp,
-      this.stats.currentHp + amount
-    );
-  }
-
-  private die(): void {
-    this.emit('death');
-    this.setActive(false);
-    this.setVisible(false);
-  }
-
-  reset(x: number, y: number): void {
-    this.stats = { ...INITIAL_PLAYER_STATS };
-    this.setPosition(x, y);
-    this.setActive(true);
-    this.setVisible(true);
-    this.skillCooldowns.clear();
-  }
-
-  update(delta: number): void {
-    // 更新技能冷却
-    this.skillCooldowns.forEach((cooldown, skillId) => {
-      if (cooldown > 0) {
-        this.skillCooldowns.set(skillId, Math.max(0, cooldown - delta));
-      }
-    });
-  }
-}
+import {
+  createBurnVisualModifier,
+  createPoisonVisualModifier,
+  createFreezeVisualModifier,
+  createStunVisualModifier,
+  createRootVisualModifier,
+  createSlowVisualModifier,
+  createAttackBoostVisualModifier,
+  createSpeedBoostVisualModifier,
+  createDefenseBreakVisualModifier,
+  createShieldVisualModifier,
+} from '@/modifiers/visual/VisualModifiers';
 ```
 
-## Commit
-Message: "feat: add Player entity with movement and damage\n\nCo-Authored-By: Claude <noreply@anthropic.com>"
+- [ ] **Step 2: 迁移 Fire 元素技能**
 
-## Report
-Write to `.superpowers/sdd/task-5-report.md`
+找到所有调用 `enemy.addStatusEffect()` 或 `player.addStatusEffect()` 的地方，替换为新修饰符。
+
+示例（FlameWaveStrategy）：
+```typescript
+// 旧代码
+enemy.addStatusEffect({
+  type: 'burn',
+  value: damage * 0.1,
+  duration: 3000,
+  element: 'fire',
+});
+
+// 新代码
+enemy.modifierStack.addModifier(
+  createBurnVisualModifier(damage * 0.1, 3000, 'fire')
+);
+```
+
+- [ ] **Step 3: 迁移 Ice 元素技能**
+
+示例（FrozenOrbStrategy）：
+```typescript
+// 旧代码
+enemy.addStatusEffect({
+  type: 'freeze',
+  value: 0,
+  duration: 1500,
+});
+
+// 新代码
+enemy.modifierStack.addModifier(
+  createFreezeVisualModifier(1500)
+);
+```
+
+- [ ] **Step 4: 迁移 Lightning 元素技能**
+
+- [ ] **Step 5: 迁移 Water 元素技能**
+
+- [ ] **Step 6: 迁移 Holy 元素技能**
+
+- [ ] **Step 7: 迁移 Shadow 元素技能**
+
+- [ ] **Step 8: 迁移 Grass 元素技能**
+
+- [ ] **Step 9: 迁移 Earth 元素技能**
+
+- [ ] **Step 10: 迁移 Ultimate 技能**
+
+- [ ] **Step 11: 搜索所有遗留的 addStatusEffect 调用**
+
+```bash
+grep -r "addStatusEffect" src/strategies/skills/
+```
+
+Expected: 无结果或仅在保留的便捷方法中
+
+- [ ] **Step 12: 运行所有技能测试**
+
+```bash
+npm test src/strategies/skills/
+```
+
+Expected: 所有测试通过
+
+- [ ] **Step 13: 提交代码**
+
+```bash
+git add src/strategies/skills/
+git commit -m "refactor(skills): 迁移所有技能使用新的修饰符系统"
+```
+
+---
+

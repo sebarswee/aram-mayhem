@@ -1,6 +1,14 @@
 import { StatusEffectStrategy, StatusEffectExecutionContext } from './StatusEffectStrategyRegistry';
 import { SkillEffect } from '@/types';
 import Phaser from 'phaser';
+import {
+  createBurnVisualModifier,
+  createFreezeVisualModifier,
+  createStunVisualModifier,
+  createPoisonVisualModifier,
+  createSlowVisualModifier,
+  createDefenseBreakVisualModifier,
+} from '@/modifiers/visual/VisualModifiers';
 
 /**
  * 燃烧效果策略
@@ -8,13 +16,9 @@ import Phaser from 'phaser';
 export class BurnEffectStrategy implements StatusEffectStrategy {
   execute(effect: SkillEffect, context: StatusEffectExecutionContext): void {
     if (context.enemy) {
-      context.enemy.addStatusEffect({
-        type: 'burn',
-        value: effect.value,
-        duration: effect.duration || 3000,
-        remainingTime: effect.duration || 3000,
-        source: 'skill',
-      });
+      context.enemy.modifierStack.addModifier(
+        createBurnVisualModifier(effect.value, effect.duration || 3000)
+      );
     }
   }
 }
@@ -25,13 +29,9 @@ export class BurnEffectStrategy implements StatusEffectStrategy {
 export class FreezeEffectStrategy implements StatusEffectStrategy {
   execute(effect: SkillEffect, context: StatusEffectExecutionContext): void {
     if (context.enemy) {
-      context.enemy.addStatusEffect({
-        type: 'freeze',
-        value: 0,
-        duration: effect.duration || 1000,
-        remainingTime: effect.duration || 1000,
-        source: 'skill',
-      });
+      context.enemy.modifierStack.addModifier(
+        createFreezeVisualModifier(effect.duration || 1000)
+      );
     }
   }
 }
@@ -42,13 +42,9 @@ export class FreezeEffectStrategy implements StatusEffectStrategy {
 export class StunEffectStrategy implements StatusEffectStrategy {
   execute(effect: SkillEffect, context: StatusEffectExecutionContext): void {
     if (context.enemy) {
-      context.enemy.addStatusEffect({
-        type: 'stun',
-        value: 0,
-        duration: effect.duration || 1000,
-        remainingTime: effect.duration || 1000,
-        source: 'skill',
-      });
+      context.enemy.modifierStack.addModifier(
+        createStunVisualModifier(effect.duration || 1000)
+      );
     }
   }
 }
@@ -59,13 +55,9 @@ export class StunEffectStrategy implements StatusEffectStrategy {
 export class PoisonEffectStrategy implements StatusEffectStrategy {
   execute(effect: SkillEffect, context: StatusEffectExecutionContext): void {
     if (context.enemy) {
-      context.enemy.addStatusEffect({
-        type: 'poison',
-        value: effect.value,
-        duration: effect.duration || 3000,
-        remainingTime: effect.duration || 3000,
-        source: 'skill',
-      });
+      context.enemy.modifierStack.addModifier(
+        createPoisonVisualModifier(effect.value, effect.duration || 3000)
+      );
     }
   }
 }
@@ -76,13 +68,9 @@ export class PoisonEffectStrategy implements StatusEffectStrategy {
 export class SlowEffectStrategy implements StatusEffectStrategy {
   execute(effect: SkillEffect, context: StatusEffectExecutionContext): void {
     if (context.enemy) {
-      context.enemy.addStatusEffect({
-        type: 'slow',
-        value: effect.value,
-        duration: effect.duration || 2000,
-        remainingTime: effect.duration || 2000,
-        source: 'skill',
-      });
+      context.enemy.modifierStack.addModifier(
+        createSlowVisualModifier(effect.value, effect.duration || 2000)
+      );
     }
   }
 }
@@ -130,13 +118,9 @@ export class ShieldEffectStrategy implements StatusEffectStrategy {
 export class DefenseBreakEffectStrategy implements StatusEffectStrategy {
   execute(effect: SkillEffect, context: StatusEffectExecutionContext): void {
     if (context.enemy) {
-      context.enemy.addStatusEffect({
-        type: 'defense_break',
-        value: effect.value || 0.3,
-        duration: effect.duration || 5000,
-        remainingTime: effect.duration || 5000,
-        source: 'skill',
-      });
+      context.enemy.modifierStack.addModifier(
+        createDefenseBreakVisualModifier(effect.value || 0.3, effect.duration || 5000)
+      );
     }
   }
 }

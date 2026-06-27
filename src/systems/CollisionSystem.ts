@@ -14,6 +14,11 @@ import { specialBehaviorRegistry } from '@/systems/SpecialBehaviorRegistry';
 import { SkillEffects } from '@/graphics/SkillEffects';
 import { Element, Skill } from '@/types';
 import { statusEffectStrategyRegistry, StatusEffectExecutionContext, enemyAttackAbilityRegistry } from '@/strategies';
+import {
+  createSlowVisualModifier,
+  createFreezeVisualModifier,
+} from '@/modifiers/visual/VisualModifiers';
+import { StatusEffectType } from '@/modifiers/modifiers/StatusEffectModifier';
 
 export class CollisionSystem {
   private scene: Phaser.Scene;
@@ -197,14 +202,16 @@ export class CollisionSystem {
       ply.takeDamage(damage);
     }
 
-    // Apply effect if any
+    // Apply effect if any - 使用策略模式
     const effect = proj.getEffect();
     if (effect) {
-      ply.addStatusEffect({
-        type: effect.type as any,
-        value: effect.value,
-        duration: effect.duration,
-      });
+      // 使用新修饰符系统
+      if (effect.type === 'slow') {
+        ply.modifierStack.addModifier(
+          createSlowVisualModifier(effect.value || 30, effect.duration || 2000)
+        );
+      }
+      // 其他效果类型可以通过 statusEffectStrategyRegistry 处理
     }
 
     // Destroy projectile
@@ -244,7 +251,7 @@ export class CollisionSystem {
     // Check for shatter effect (extra damage to frozen enemies)
     let damage = proj.getDamage();
     if (proj.config.shatterMultiplier && proj.config.shatterMultiplier > 1) {
-      const hasFreeze = enem.statusEffects.some(e => e.type === 'freeze');
+      const hasFreeze = enem.modifierStack.hasStatusEffect(StatusEffectType.FREEZE);
       if (hasFreeze) {
         damage = Math.floor(damage * proj.config.shatterMultiplier);
         // Create shatter visual effect
@@ -469,13 +476,9 @@ export class CollisionSystem {
           if (!enemy.active) continue;
           const distance = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
           if (distance <= 80) {
-            enemy.addStatusEffect({
-              type: 'slow',
-              value: slowValue,
-              duration: tickInterval + 100,
-              remainingTime: tickInterval + 100,
-              source: 'slow_field',
-            });
+            enemy.modifierStack.addModifier(
+              createSlowVisualModifier(slowValue, tickInterval + 100)
+            );
           }
         }
       },
@@ -844,13 +847,9 @@ export class CollisionSystem {
       const freezeDuration = ply.triggerCounterFreeze();
       if (freezeDuration > 0) {
         // Apply freeze to enemy
-        enem.addStatusEffect({
-          type: 'freeze',
-          value: 1,
-          duration: freezeDuration,
-          remainingTime: freezeDuration,
-          source: 'counter_freeze',
-        });
+        enem.modifierStack.addModifier(
+          createFreezeVisualModifier(freezeDuration)
+        );
 
         // Visual feedback for counter freeze - ice burst
         const iceBurst = this.scene.add.circle(enem.x, enem.y, 30, 0x88ddff, 0.8);

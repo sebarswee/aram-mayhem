@@ -154,6 +154,8 @@ export interface Skill {
   selectedUpgrades?: string[];  // 已选升级选项ID列表
   evolutionId?: string;         // 已选进化分支ID（Lv5时设置）
   specialBehaviors?: string[];  // 特殊行为列表
+  // 技能专属修饰符栈（新增）
+  modifierStack?: import('@/modifiers/core/ModifierStack').ModifierStack;
 }
 
 // ==================== 技能强化石（旧系统兼容）====================
@@ -323,3 +325,7 @@ export const CollisionGroup = {
   ENEMY_PROJECTILE: 'enemy_projectile',
   EXP_ORB: 'exp_orb',
 } as const;
+
+// ==================== 修饰符系统 ====================
+export * from '@/modifiers/interfaces/ModifierTypes';
+export * from '@/modifiers/interfaces/IBuffable';

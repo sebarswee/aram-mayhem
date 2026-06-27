@@ -2,19 +2,21 @@ import { SynergyEffectStrategy, SynergyExecutionContext } from './SynergyStrateg
 import { SynergyResult } from '@/types';
 import { Enemy } from '@/entities/Enemy';
 import Phaser from 'phaser';
+import {
+  createFreezeVisualModifier,
+  createStunVisualModifier,
+  createSlowVisualModifier,
+  createRootVisualModifier,
+} from '@/modifiers/visual/VisualModifiers';
 
 /**
  * 冻结策略
  */
 export class FreezeStrategy implements SynergyEffectStrategy {
   execute(synergy: SynergyResult, enemy: Enemy, _context: SynergyExecutionContext): void {
-    enemy.addStatusEffect({
-      type: 'freeze',
-      value: 0,
-      duration: synergy.duration || 3000,
-      remainingTime: synergy.duration || 3000,
-      source: 'synergy',
-    });
+    enemy.modifierStack.addModifier(
+      createFreezeVisualModifier(synergy.duration || 3000)
+    );
   }
 }
 
@@ -23,13 +25,9 @@ export class FreezeStrategy implements SynergyEffectStrategy {
  */
 export class StunStrategy implements SynergyEffectStrategy {
   execute(synergy: SynergyResult, enemy: Enemy, _context: SynergyExecutionContext): void {
-    enemy.addStatusEffect({
-      type: 'stun',
-      value: 0,
-      duration: synergy.duration || 1500,
-      remainingTime: synergy.duration || 1500,
-      source: 'synergy',
-    });
+    enemy.modifierStack.addModifier(
+      createStunVisualModifier(synergy.duration || 1500)
+    );
   }
 }
 
@@ -38,13 +36,9 @@ export class StunStrategy implements SynergyEffectStrategy {
  */
 export class SlowStrategy implements SynergyEffectStrategy {
   execute(synergy: SynergyResult, enemy: Enemy, _context: SynergyExecutionContext): void {
-    enemy.addStatusEffect({
-      type: 'slow',
-      value: synergy.value || 0.3,
-      duration: synergy.duration || 3000,
-      remainingTime: synergy.duration || 3000,
-      source: 'synergy',
-    });
+    enemy.modifierStack.addModifier(
+      createSlowVisualModifier(synergy.value || 30, synergy.duration || 3000)
+    );
   }
 }
 
@@ -53,13 +47,9 @@ export class SlowStrategy implements SynergyEffectStrategy {
  */
 export class RootStrategy implements SynergyEffectStrategy {
   execute(synergy: SynergyResult, enemy: Enemy, _context: SynergyExecutionContext): void {
-    enemy.addStatusEffect({
-      type: 'root',
-      value: 0,
-      duration: synergy.duration || 2000,
-      remainingTime: synergy.duration || 2000,
-      source: 'synergy',
-    });
+    enemy.modifierStack.addModifier(
+      createRootVisualModifier(synergy.duration || 2000)
+    );
   }
 }
 
@@ -68,13 +58,9 @@ export class RootStrategy implements SynergyEffectStrategy {
  */
 export class KnockupStrategy implements SynergyEffectStrategy {
   execute(synergy: SynergyResult, enemy: Enemy, context: SynergyExecutionContext): void {
-    enemy.addStatusEffect({
-      type: 'stun',
-      value: 0,
-      duration: 1000,
-      remainingTime: 1000,
-      source: 'synergy_knockup',
-    });
+    enemy.modifierStack.addModifier(
+      createStunVisualModifier(1000)
+    );
     // 视觉击飞
     context.scene.tweens.add({
       targets: enemy,
@@ -94,12 +80,8 @@ export class TrueDamageConfuseStrategy implements SynergyEffectStrategy {
     const confuseDamage = Math.floor(context.baseDamage * 0.3);
     // 真实伤害绕过防御和克制，不传递元素
     enemy.takeDamage(confuseDamage);
-    enemy.addStatusEffect({
-      type: 'stun',
-      value: 0,
-      duration: synergy.duration || 2000,
-      remainingTime: synergy.duration || 2000,
-      source: 'synergy_confuse',
-    });
+    enemy.modifierStack.addModifier(
+      createStunVisualModifier(synergy.duration || 2000)
+    );
   }
 }

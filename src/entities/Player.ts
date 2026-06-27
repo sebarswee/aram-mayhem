@@ -3,16 +3,17 @@ import { PlayerStats, Skill, Element } from '@/types';
 import { INITIAL_PLAYER_STATS } from '@/config/balance.config';
 import { WORLD_WIDTH, WORLD_HEIGHT } from '@/config/game.config';
 import { passiveEffectStrategyRegistry, PassiveEffectData, getThornsStrategy } from '@/strategies';
-
-/**
- * Status effect types that can be applied to the player
- */
-export interface PlayerStatusEffect {
-  type: 'burn' | 'poison' | 'slow' | 'root' | 'shield' | 'attack_boost' | 'speed_boost';
-  value: number;
-  duration: number;
-  remainingTime: number;
-}
+import { IBuffable } from '@/modifiers/interfaces/IBuffable';
+import { ModifierStack } from '@/modifiers/core/ModifierStack';
+import {
+  createBurnVisualModifier,
+  createPoisonVisualModifier,
+  createSlowVisualModifier,
+  createRootVisualModifier,
+  createAttackBoostVisualModifier,
+  createSpeedBoostVisualModifier,
+  createShieldVisualModifier,
+} from '@/modifiers/visual/VisualModifiers';
 
 /**
  * Reflect effect - bounces damage back to attacker
@@ -43,12 +44,7 @@ export interface CounterFreezeEffect {
   remainingTime: number;
 }
 
-/**
- * Debuff types for identification
- */
-const DEBUFF_TYPES = ['burn', 'poison', 'slow', 'root'];
-
-export class Player extends Phaser.Physics.Arcade.Sprite {
+export class Player extends Phaser.Physics.Arcade.Sprite implements IBuffable {
   public stats: PlayerStats;
   public skills: Skill[] = [];
   public ultimateSkills: Skill[] = []; // Separate slot for ultimate skills
@@ -59,13 +55,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   public readonly MAX_BASIC_SKILLS = 4;
   public readonly MAX_ULTIMATE_SKILLS = 2;
 
+  // 新增：修饰符栈
+  public readonly modifierStack: ModifierStack;
+
+  // 新增：实例 ID（用于 IBuffable.id）
+  public readonly id: string;
+
   private lastDamageTime: number = 0;
   public isInvincible: boolean = false;
   private shieldValue: number = 0;
-
-  // Status effects system
-  public statusEffects: PlayerStatusEffect[] = [];
-  private statusEffectTickTimers: Map<string, number> = new Map();
 
   // Reflect effects system
   private reflectEffects: ReflectEffect[] = [];
@@ -86,6 +84,22 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   // 动画状态
   private currentAnim: 'idle' | 'move' | 'attack' = 'idle';
   private isAttacking: boolean = false;
+
+  // IBuffable 要求的属性：基础属性（只读）
+  public get baseAttributes(): Readonly<Record<string, number>> {
+    return {
+      maxHp: this.stats.maxHp,
+      attack: this.stats.attack,
+      defense: this.stats.defense,
+      speed: this.stats.speed,
+      lifesteal: this.stats.lifesteal,
+    };
+  }
+
+  // IBuffable 要求的属性：isActive
+  public get isActive(): boolean {
+    return this.active;
+  }
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     // 优先使用新的精灵表纹理，否则回退到程序化生成的纹理
@@ -108,6 +122,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     // 设置深度
     this.setDepth(50);
+
+    // 初始化实例 ID
+    this.id = `player_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+
+    // 初始化修饰符栈
+    this.modifierStack = new ModifierStack(this);
 
     // 初始化元素抗性
     this.initializeElementResistance();
@@ -283,92 +303,63 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   /**
-   * Add a status effect to the player
+   * 添加状态效果（便捷方法，使用新的修饰符系统）
    */
-  addStatusEffect(effect: Omit<PlayerStatusEffect, 'remainingTime'>): void {
-    const existingIndex = this.statusEffects.findIndex(e => e.type === effect.type);
-
-    if (existingIndex >= 0) {
-      // Refresh or extend existing effect
-      const existing = this.statusEffects[existingIndex];
-      existing.value = Math.max(existing.value, effect.value);
-      existing.duration = Math.max(existing.duration, effect.duration);
-      existing.remainingTime = effect.duration;
-    } else {
-      // Add new effect
-      this.statusEffects.push({
-        ...effect,
-        remainingTime: effect.duration,
-      });
-
-      // Initialize tick timer for DoT effects
-      if (effect.type === 'burn' || effect.type === 'poison') {
-        this.statusEffectTickTimers.set(effect.type, 0);
-      }
-
-      // Create visual feedback
-      this.applyStatusEffectVisual(effect.type);
-    }
-
-    // Shield is a special case - add to shield value
-    if (effect.type === 'shield') {
-      this.addShield(effect.value);
-      // Remove from status effects array since we track shield separately
-      this.statusEffects = this.statusEffects.filter(e => e.type !== 'shield');
+  addStatusEffect(effect: { type: string; value: number; duration: number; element?: Element }): void {
+    switch (effect.type) {
+      case 'burn':
+        this.modifierStack.addModifier(
+          createBurnVisualModifier(effect.value, effect.duration, effect.element)
+        );
+        break;
+      case 'poison':
+        this.modifierStack.addModifier(
+          createPoisonVisualModifier(effect.value, effect.duration)
+        );
+        break;
+      case 'slow':
+        this.modifierStack.addModifier(
+          createSlowVisualModifier(effect.value, effect.duration)
+        );
+        break;
+      case 'root':
+        this.modifierStack.addModifier(
+          createRootVisualModifier(effect.duration)
+        );
+        break;
+      case 'attack_boost':
+        this.modifierStack.addModifier(
+          createAttackBoostVisualModifier(effect.value, effect.duration)
+        );
+        break;
+      case 'speed_boost':
+        this.modifierStack.addModifier(
+          createSpeedBoostVisualModifier(effect.value, effect.duration)
+        );
+        break;
+      case 'shield':
+        this.modifierStack.addModifier(
+          createShieldVisualModifier(effect.value)
+        );
+        break;
+      default:
+        console.warn(`[Player] Unknown status effect type: ${effect.type}`);
     }
   }
 
   /**
-   * Check if player has a specific status effect
+   * 检查是否有特定状态效果
+   * 便捷方法：封装 modifierStack.hasTag() 调用
    */
-  hasStatusEffect(type: PlayerStatusEffect['type']): boolean {
-    return this.statusEffects.some(e => e.type === type);
+  hasStatusEffect(type: string): boolean {
+    return this.modifierStack.hasTag(type);
   }
 
   /**
-   * Get the value of a specific status effect (returns 0 if not found)
+   * 更新持续效果（reflect、counter 等）
+   * 在 update() 中调用
    */
-  getStatusEffectValue(type: PlayerStatusEffect['type']): number {
-    const effect = this.statusEffects.find(e => e.type === type);
-    return effect ? effect.value : 0;
-  }
-
-  /**
-   * Update all active status effects (called in update loop)
-   */
-  updateStatusEffects(delta: number): void {
-    const effectsToRemove: string[] = [];
-
-    for (const effect of this.statusEffects) {
-      effect.remainingTime -= delta;
-
-      // Process DoT effects (burn, poison)
-      if (effect.type === 'burn' || effect.type === 'poison') {
-        const tickTimer = this.statusEffectTickTimers.get(effect.type) || 0;
-        const newTimer = tickTimer + delta;
-
-        // Tick every 500ms
-        if (newTimer >= 500) {
-          this.takeDamage(effect.value);
-          this.statusEffectTickTimers.set(effect.type, newTimer - 500);
-        } else {
-          this.statusEffectTickTimers.set(effect.type, newTimer);
-        }
-      }
-
-      // Remove expired effects
-      if (effect.remainingTime <= 0) {
-        effectsToRemove.push(effect.type);
-      }
-    }
-
-    // Remove expired effects and their visuals
-    for (const type of effectsToRemove) {
-      this.removeStatusEffectVisual(type as PlayerStatusEffect['type']);
-      this.statusEffects = this.statusEffects.filter(e => e.type !== type);
-      this.statusEffectTickTimers.delete(type);
-    }
-
+  private updateDurationEffects(delta: number): void {
     // Update reflect effects
     this.reflectEffects = this.reflectEffects.filter(effect => {
       effect.remainingTime -= delta;
@@ -389,70 +380,21 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   /**
-   * Clear all debuffs (called by golden apple special food)
+   * 清除所有减益效果
    */
   clearDebuffs(): void {
-    const debuffsToRemove = this.statusEffects.filter(e =>
-      DEBUFF_TYPES.includes(e.type)
-    );
+    // 使用 modifierStack 移除所有带有 debuff 标签的修饰符
+    const debuffTags = ['burn', 'poison', 'slow', 'root', 'freeze', 'stun', 'defense_break'];
+    this.modifierStack.removeByTags(debuffTags);
 
-    for (const debuff of debuffsToRemove) {
-      this.removeStatusEffectVisual(debuff.type);
-      this.statusEffectTickTimers.delete(debuff.type);
-    }
-
-    this.statusEffects = this.statusEffects.filter(e =>
-      !DEBUFF_TYPES.includes(e.type)
-    );
-
-    // Reset visual tint
-    this.updateVisualTint();
-  }
-
-  /**
-   * Apply visual feedback for a status effect
-   */
-  private applyStatusEffectVisual(type: PlayerStatusEffect['type']): void {
-    switch (type) {
-      case 'burn':
-        this.setTint(0xff8844); // Orange tint
-        break;
-      case 'poison':
-        this.setTint(0x44ff44); // Green tint
-        break;
-      case 'shield':
-        // Shield visual handled by tint
-        break;
-      case 'speed_boost':
-        this.createSpeedTrailParticles();
-        break;
-      case 'attack_boost':
-        this.setTint(0xff4444); // Red tint
-        break;
-    }
-    this.updateVisualTint();
-  }
-
-  /**
-   * Remove visual feedback for a status effect
-   */
-  private removeStatusEffectVisual(type: PlayerStatusEffect['type']): void {
-    switch (type) {
-      case 'speed_boost':
-        const emitter = this.particleEmitters.get('speed_trail');
-        if (emitter) {
-          emitter.destroy();
-          this.particleEmitters.delete('speed_trail');
-        }
-        break;
-    }
+    // 重置视觉着色
     this.updateVisualTint();
   }
 
   /**
    * Update the visual tint based on all active status effects
    */
-  private updateVisualTint(): void {
+  public updateVisualTint(): void {
     // Priority: burn > poison > attack_boost > shield > default
     if (this.hasStatusEffect('burn')) {
       this.setTint(0xff8844);
@@ -470,7 +412,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   /**
    * Create cyan trail particles for speed boost
    */
-  private createSpeedTrailParticles(): void {
+  public createSpeedTrailParticles(): void {
     // Check if particles texture exists
     if (!this.scene.textures.exists('particle')) {
       return;
@@ -490,47 +432,39 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   /**
+   * Get a particle emitter by name
+   */
+  public getParticleEmitter(name: string): Phaser.GameObjects.Particles.ParticleEmitter | undefined {
+    return this.particleEmitters.get(name);
+  }
+
+  /**
    * Get effective speed including status effect modifiers
+   * 便捷方法：封装 modifierStack.getAttributeValue() 调用
    */
   getEffectiveSpeed(): number {
-    let speed = this.stats.speed;
-
-    // Apply slow effect
-    if (this.hasStatusEffect('slow')) {
-      const slowValue = this.getStatusEffectValue('slow');
-      speed *= (1 - slowValue / 100);
-    }
-
-    // Apply speed boost effect
-    if (this.hasStatusEffect('speed_boost')) {
-      const boostValue = this.getStatusEffectValue('speed_boost');
-      speed *= (1 + boostValue / 100);
-    }
-
-    return speed;
+    const baseSpeed = this.stats.speed;
+    return this.modifierStack.getAttributeValue('speed', baseSpeed);
   }
 
   /**
    * Get effective attack including status effect modifiers
+   * 便捷方法：封装 modifierStack.getAttributeValue() 调用
    */
   getEffectiveAttack(): number {
-    let attack = this.stats.attack;
-
-    // Apply attack boost effect
-    if (this.hasStatusEffect('attack_boost')) {
-      const boostValue = this.getStatusEffectValue('attack_boost');
-      attack *= (1 + boostValue / 100);
-    }
+    const baseAttack = this.stats.attack;
 
     // Apply berserker effect (attack increases as HP decreases)
+    // This is a special passive effect, not a modifier
     const berserkerValue = (this.stats as any).berserkerValue || 0;
     if (berserkerValue > 0) {
       const hpPercent = this.stats.currentHp / this.stats.maxHp;
       const missingHpPercent = 1 - hpPercent;
-      attack *= (1 + berserkerValue * missingHpPercent);
+      const berserkerBonus = baseAttack * berserkerValue * missingHpPercent;
+      return this.modifierStack.getAttributeValue('attack', baseAttack + berserkerBonus);
     }
 
-    return attack;
+    return this.modifierStack.getAttributeValue('attack', baseAttack);
   }
 
   /**
@@ -805,8 +739,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setActive(true);
     this.setVisible(true);
     this.skillCooldowns.clear();
-    this.statusEffects = [];
-    this.statusEffectTickTimers.clear();
     this.shieldValue = 0;
     this.isInvincible = false;
     this.reflectEffects = [];
@@ -820,6 +752,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.particleEmitters.clear();
   }
 
+  // IBuffable 要求的方法：更新修饰符栈
+  updateModifiers(delta: number): void {
+    this.modifierStack.update(delta);
+  }
+
   update(delta: number): void {
     // 更新技能冷却
     this.skillCooldowns.forEach((cooldown, skillId) => {
@@ -828,8 +765,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       }
     });
 
-    // 更新状态效果
-    this.updateStatusEffects(delta);
+    // 更新修饰符栈（状态效果现在由修饰符系统处理）
+    this.updateModifiers(delta);
+
+    // 更新其他持续效果（reflect、counter 等）
+    this.updateDurationEffects(delta);
 
     // HP 回复（被动技能）
     const hpRegen = (this.stats as any).hpRegen || 0;

@@ -361,7 +361,8 @@ export class ShadowStepVisualStrategy implements VisualEffectStrategy {
     const bodyCore = scene.add.circle(0, 0, 6, 0xaa44ff, 0.85);
     clone.add([bodyOuter, bodyMid, bodyInner, bodyCore]);
 
-    scene.tweens.add({
+    // 存储无限循环 tween 以便清理
+    const pulseTween = scene.tweens.add({
       targets: clone,
       alpha: 0.6,
       scale: 1.08,
@@ -371,6 +372,10 @@ export class ShadowStepVisualStrategy implements VisualEffectStrategy {
     });
 
     scene.time.delayedCall(3000, () => {
+      // 停止无限循环的脉动 tween
+      if (pulseTween && pulseTween.isPlaying()) {
+        pulseTween.stop();
+      }
       scene.tweens.add({
         targets: clone,
         alpha: 0,

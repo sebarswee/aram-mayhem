@@ -40,7 +40,27 @@
       "Bash(bash *)",
       "Bash(curl -s http://localhost:5173)",
       "Bash(identify public/assets/characters/player/*.png)",
-      "Bash(identify public/assets/characters/enemies/normal/flame_slime_idle.png)"
+      "Bash(identify public/assets/characters/enemies/normal/flame_slime_idle.png)",
+      "WebSearch",
+      "WebFetch(domain:gameprogrammingpatterns.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.reddit.com)",
+      "Bash(npm test *)",
+      "Bash(npx vitest *)",
+      "Bash(awk '{print $1}')",
+      "Bash(cat)",
+      "Read(//tmp/**)",
+      "Read(//Users/sebarswee/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/**)",
+      "Bash(./scripts/task-brief /Users/sebarswee/IdeaProjects/demo/aram-mayhem/docs/superpowers/plans/2026-06-27-player-enemy-modifier-integration.md 1)",
+      "Bash(/Users/sebarswee/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/task-brief *)",
+      "Bash(/Users/sebarswee/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/review-package HEAD~10 *)",
+      "Bash(/Users/sebarswee/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/review-package HEAD~2 *)",
+      "Bash(/Users/sebarswee/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/review-package HEAD~3 *)",
+      "Bash(npm list *)",
+      "Bash(/Users/sebarswee/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/review-package HEAD~5 *)",
+      "Bash(/Users/sebarswee/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/review-package HEAD~1 *)",
+      "Bash(awk '{print $3}')",
+      "Bash(awk -F' ' '{print $3}')"
     ]
   }
 }

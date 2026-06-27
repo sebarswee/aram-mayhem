@@ -1,5 +1,11 @@
 import { Player } from '@/entities/Player';
 import { Enemy } from '@/entities/Enemy';
+import {
+  createBurnVisualModifier,
+  createSlowVisualModifier,
+  createPoisonVisualModifier,
+  createRootVisualModifier,
+} from '@/modifiers/visual/VisualModifiers';
 
 /**
  * 敌人攻击能力执行上下文
@@ -70,13 +76,9 @@ export const enemyAttackAbilityRegistry = EnemyAttackAbilityRegistry.getInstance
 export class BurnOnContactStrategy implements EnemyAttackAbilityStrategy {
   execute(context: EnemyAttackContext, params?: Record<string, any>): void {
     const { player } = context;
-    if (player.addStatusEffect) {
-      player.addStatusEffect({
-        type: 'burn',
-        value: params?.damage || 5,
-        duration: params?.duration || 2000,
-      });
-    }
+    player.modifierStack.addModifier(
+      createBurnVisualModifier(params?.damage || 5, params?.duration || 2000, 'fire')
+    );
   }
 }
 
@@ -86,13 +88,9 @@ export class BurnOnContactStrategy implements EnemyAttackAbilityStrategy {
 export class SlowOnAttackStrategy implements EnemyAttackAbilityStrategy {
   execute(context: EnemyAttackContext, params?: Record<string, any>): void {
     const { player } = context;
-    if (player.addStatusEffect) {
-      player.addStatusEffect({
-        type: 'slow',
-        value: params?.slow || 0.3,
-        duration: params?.duration || 1500,
-      });
-    }
+    player.modifierStack.addModifier(
+      createSlowVisualModifier(params?.slow || 30, params?.duration || 1500)
+    );
   }
 }
 
@@ -102,13 +100,9 @@ export class SlowOnAttackStrategy implements EnemyAttackAbilityStrategy {
 export class PoisonOnAttackStrategy implements EnemyAttackAbilityStrategy {
   execute(context: EnemyAttackContext, params?: Record<string, any>): void {
     const { player } = context;
-    if (player.addStatusEffect) {
-      player.addStatusEffect({
-        type: 'poison',
-        value: params?.damage || 5,
-        duration: params?.duration || 3000,
-      });
-    }
+    player.modifierStack.addModifier(
+      createPoisonVisualModifier(params?.damage || 5, params?.duration || 3000)
+    );
   }
 }
 
@@ -118,13 +112,9 @@ export class PoisonOnAttackStrategy implements EnemyAttackAbilityStrategy {
 export class RootOnAttackStrategy implements EnemyAttackAbilityStrategy {
   execute(context: EnemyAttackContext, params?: Record<string, any>): void {
     const { player } = context;
-    if (player.addStatusEffect) {
-      player.addStatusEffect({
-        type: 'root',
-        value: 1,
-        duration: params?.duration || 500,
-      });
-    }
+    player.modifierStack.addModifier(
+      createRootVisualModifier(params?.duration || 500)
+    );
   }
 }
 

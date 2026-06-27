@@ -1,78 +1,108 @@
-# Task 3 Report: 修改 Player 类使用动画
+# Task 3 报告: 创建视觉效果修饰符工厂
 
-## 1. 实现内容
+## 任务概述
+为所有状态效果创建包含视觉反馈的修饰符工厂函数。
 
-### 添加的属性
-- `currentAnim: 'idle' | 'move' | 'attack'` - 追踪当前动画状态
-- `isAttacking: boolean` - 标记是否正在播放攻击动画
+## 实现内容
 
-### 添加的方法
-1. **`playAnimation(anim: 'idle' | 'move' | 'attack'): void`** (私有)
-   - 检查动画是否需要切换（避免重复播放）
-   - 验证动画是否存在，不存在则回退到静态纹理
-   - 处理攻击动画完成事件，自动回到待机状态
+### 1. 创建的文件
 
-2. **`playAttackAnimation(): void`** (公共)
-   - 供技能系统调用的接口
-   - 在攻击动画播放中时忽略重复调用
+#### src/modifiers/visual/VisualModifiers.ts (415 行)
+实现了 10 个修饰符工厂函数：
 
-### 修改的方法
-1. **`createGlowEffect()`**
-   - 使用 `player_idle` 纹理（如果存在）替代旧的 `player` 纹理
-   - 保持向后兼容
+| 工厂函数 | 状态效果类型 | 功能描述 |
+|---------|------------|---------|
+| `createBurnVisualModifier` | BURN | 燃烧 DoT 效果，每 500ms 造成伤害，橙色着色 |
+| `createPoisonVisualModifier` | POISON | 中毒 DoT 效果，每 1000ms 造成伤害，绿色着色 |
+| `createFreezeVisualModifier` | FREEZE | 冻结控制效果，冰蓝色着色，高优先级 |
+| `createStunVisualModifier` | STUN | 眩晕控制效果，黄色着色，高优先级 |
+| `createRootVisualModifier` | ROOT | 定身控制效果，无视觉着色 |
+| `createSlowVisualModifier` | SLOW | 减速效果，由速度计算处理 |
+| `createAttackBoostVisualModifier` | ATTACK_BOOST | 攻击力加成，红色着色 |
+| `createSpeedBoostVisualModifier` | SPEED_BOOST | 速度加成，粒子轨迹效果 |
+| `createDefenseBreakVisualModifier` | DEFENSE_BREAK | 破甲效果，由伤害计算处理 |
+| `createShieldVisualModifier` | SHIELD | 护盾效果，无时间限制 |
 
-2. **`update(delta)`**
-   - 根据移动速度自动切换动画：
-     - 移动中 → `player_move_anim`
-     - 静止 → `player_idle_anim`
-   - 攻击动画期间锁定动画状态
-   - 同步发光效果精灵帧与主角动画帧
+#### src/modifiers/visual/__tests__/VisualModifiers.test.ts (286 行)
+完整的测试套件：
+- 37 个测试用例
+- 覆盖所有 10 个工厂函数
+- 测试属性正确性、回调函数存在性、叠加策略
 
-## 2. 测试结果
+### 2. 修改的文件
 
-### 编译测试
+#### src/entities/Player.ts
+- 添加 `getParticleEmitter(name: string)` 公开方法
+- 将 `createSpeedTrailParticles()` 改为公开方法
+- 将 `updateVisualTint()` 改为公开方法
+
+#### vite.config.ts
+- 添加 vitest 配置
+- 配置 jsdom 测试环境
+- 添加测试设置文件
+
+#### package.json
+- 添加 jsdom 开发依赖
+
+### 3. 新增文件
+
+#### src/test/setup.ts
+- Phaser 模拟实现
+- 用于测试环境
+
+## 修饰符回调实现
+
+### DoT 效果 (burn, poison)
+- `onApply`: 设置目标着色
+- `onRemove`: 恢复目标着色
+- `onUpdate`: 造成 tick 伤害
+
+### 控制效果 (freeze, stun)
+- `onApply`: 设置目标着色
+- `onRemove`: 恢复目标着色
+- 无 `onUpdate`: 控制效果不由 tick 驱动
+
+### 增益效果 (attack_boost, speed_boost)
+- `onApply`: 设置着色或创建粒子效果
+- `onRemove`: 清除视觉效果
+
+### 特殊效果 (shield)
+- `onApply`: 添加护盾值
+- `duration: -1`: 无时间限制
+
+## 测试结果
+
 ```
-✓ TypeScript 编译通过
-✓ Vite 构建成功
+ ✓ src/modifiers/visual/__tests__/VisualModifiers.test.ts (37 tests)
+
+ Test Files  8 passed (8)
+      Tests  92 passed (92)
 ```
 
-### 接口验证
-- ✅ `playAttackAnimation()` 方法已添加为公共方法
-- ✅ 向后兼容：动画不存在时回退到静态纹理
-- ✅ 发光效果纹理回退逻辑已实现
+## TypeScript 编译
 
-## 3. 自我审查发现的问题
-
-### 潜在问题
-1. **reset() 方法未重置动画状态**
-   - 当前 `reset()` 方法未重置 `currentAnim` 和 `isAttacking`
-   - 建议：在下一版本中添加动画状态重置
-
-### 改进建议（非阻塞）
-1. 可以考虑在 `reset()` 中添加：
-   ```typescript
-   this.currentAnim = 'idle';
-   this.isAttacking = false;
-   ```
-
-2. 攻击动画可能需要添加取消机制，用于玩家被击中时打断
-
-## 4. 提交信息
-
-**Commit Hash:** `20d69fada8761fdbf10b49ffb724a8c382fd7ed9`
-
-**Commit Message:**
 ```
-feat: Player 类使用精灵表动画
-
-- 添加动画状态追踪（currentAnim, isAttacking）
-- 添加 playAnimation 私有方法处理动画切换
-- 根据移动状态自动切换动画（idle/move）
-- 添加 playAttackAnimation 公共方法供技能系统调用
-- 同步发光效果与动画帧
-- 保持向后兼容：动画不存在时回退到静态纹理
+$ npx tsc --noEmit
+(无错误)
 ```
 
-## 5. 状态
+## 提交记录
 
-**DONE** - 任务完成，编译通过，代码已提交。
+```
+f2eb495 feat(modifiers): 创建视觉效果修饰符工厂
+```
+
+## 文件统计
+
+| 文件 | 行数 | 描述 |
+|-----|------|-----|
+| VisualModifiers.ts | 415 | 10 个修饰符工厂函数 |
+| VisualModifiers.test.ts | 286 | 37 个测试用例 |
+| setup.ts | 83 | Phaser 测试模拟 |
+| **总计** | **784** | |
+
+## 下一步
+
+Task 4: 实现便捷方法
+- 为 Player 和 Enemy 添加 applyBurn(), applyFreeze() 等便捷方法
+- 简化状态效果应用 API

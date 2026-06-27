@@ -206,8 +206,8 @@ export class RockSpikeVisualStrategy implements VisualEffectStrategy {
     }
     crack.setDepth(17);
 
-    // 多层脉动
-    scene.tweens.add({
+    // 多层脉动 - 存储无限 tween 以便清理
+    const pulseTween = scene.tweens.add({
       targets: [trapOuter, trapMid, trapInner],
       scale: 1.15,
       alpha: 0.6,
@@ -217,6 +217,10 @@ export class RockSpikeVisualStrategy implements VisualEffectStrategy {
     });
 
     scene.time.delayedCall(5000, () => {
+      // 停止无限循环的脉动 tween
+      if (pulseTween && pulseTween.isPlaying()) {
+        pulseTween.stop();
+      }
       scene.tweens.add({
         targets: [trapOuter, trapMid, trapInner, crack],
         alpha: 0,
