@@ -10,7 +10,7 @@ export let GAME_HEIGHT = BASE_HEIGHT;
 
 // Infinite world configuration (Vampire Survivors-like)
 export const CHUNK_SIZE = 256;           // 区块大小
-export const ACTIVE_CHUNK_RADIUS = 1;    // 活动区块半径（3x3）
+export const ACTIVE_CHUNK_RADIUS = 2;    // 活动区块半径（5x5 = 25个区块）
 export const WORLD_SEED = 12345;         // 固定种子（可随机）
 
 // 更新游戏尺寸
