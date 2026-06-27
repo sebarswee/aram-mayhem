@@ -11,7 +11,7 @@ import { StatusEffectType } from '@/modifiers/modifiers/StatusEffectModifier';
  */
 export class DragonBreathStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, findNearestEnemy } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, findNearestEnemy, applyEffects } = context;
     const duration = 2000;
     const tickInterval = 200;
     const range = skill.rangeValue;
@@ -91,6 +91,14 @@ export class DragonBreathStrategy implements SkillStrategy {
           const angleDiff = Math.abs(Phaser.Math.Angle.Wrap(enemyAngle - playerAngle));
           if (angleDiff < angleSpread / 2) {
             applyDamageToEnemy(enemy, Math.floor(damage * 0.3), skill);
+
+            // 应用燃烧效果
+            if (applyEffects && skill.effects) {
+              const burnEffect = skill.effects.find(e => e.type === 'burn');
+              if (burnEffect) {
+                applyEffects(enemy, [burnEffect]);
+              }
+            }
 
             // 火焰击中效果
             const hit = scene.add.circle(enemy.x, enemy.y, 15, 0xff6600, 0.7);
@@ -357,7 +365,7 @@ export class InfernoVisualStrategy implements VisualEffectStrategy {
  */
 export class AbyssVortexStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const centerX = player.x;
     const centerY = player.y;
     const radius = skill.rangeValue;
@@ -426,6 +434,14 @@ export class AbyssVortexStrategy implements SkillStrategy {
             enemy.y += Math.sin(angle) * 30;
           }
           applyDamageToEnemy(enemy, Math.floor(damage * 0.2), skill);
+
+          // 应用减速效果
+          if (applyEffects && skill.effects) {
+            const slowEffect = skill.effects.find(e => e.type === 'slow');
+            if (slowEffect) {
+              applyEffects(enemy, [slowEffect]);
+            }
+          }
         }
       },
       repeat: Math.floor(duration / tickInterval) - 1,
@@ -485,7 +501,7 @@ export class AbyssVortexVisualStrategy implements VisualEffectStrategy {
  */
 export class FrozenDomainStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const radius = skill.rangeValue;
     const duration = 4000;
     const tickInterval = 500;
@@ -580,6 +596,14 @@ export class FrozenDomainStrategy implements SkillStrategy {
         for (const enemy of enemies) {
           applyDamageToEnemy(enemy, Math.floor(damage * 0.2), skill);
 
+          // 应用冻结效果
+          if (applyEffects && skill.effects) {
+            const freezeEffect = skill.effects.find(e => e.type === 'freeze');
+            if (freezeEffect) {
+              applyEffects(enemy, [freezeEffect]);
+            }
+          }
+
           // 冰霜击中效果
           const frost = scene.add.circle(enemy.x, enemy.y, 12, 0x88ddff, 0.6);
           frost.setDepth(100);
@@ -651,7 +675,7 @@ export class FrozenDomainVisualStrategy implements VisualEffectStrategy {
    */
   export class AbsoluteZeroStrategy implements SkillStrategy {
     execute(skill: Skill, context: SkillExecutionContext): void {
-      const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+      const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
       const radius = skill.rangeValue;
       const executeThreshold = 0.10;
 
@@ -666,6 +690,14 @@ export class FrozenDomainVisualStrategy implements VisualEffectStrategy {
         } else {
           // 正常伤害
           applyDamageToEnemy(enemy, damage, skill);
+        }
+
+        // 应用冻结效果
+        if (applyEffects && skill.effects) {
+          const freezeEffect = skill.effects.find(e => e.type === 'freeze');
+          if (freezeEffect) {
+            applyEffects(enemy, [freezeEffect]);
+          }
         }
       }
     }
@@ -720,7 +752,7 @@ export class AbsoluteZeroVisualStrategy implements VisualEffectStrategy {
  */
 export class ThunderApocalypseStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const strikeCount = 12;
     const strikeInterval = 200;
     let currentStrike = 0;
@@ -786,6 +818,14 @@ export class ThunderApocalypseStrategy implements SkillStrategy {
         const enemies = findEnemiesInRange(strikeX, strikeY, 60);
         for (const enemy of enemies) {
           applyDamageToEnemy(enemy, damage, skill);
+
+          // 应用眩晕效果
+          if (applyEffects && skill.effects) {
+            const stunEffect = skill.effects.find(e => e.type === 'stun');
+            if (stunEffect) {
+              applyEffects(enemy, [stunEffect]);
+            }
+          }
         }
 
         // 消失动画
@@ -856,7 +896,7 @@ export class ThunderApocalypseVisualStrategy implements VisualEffectStrategy {
  */
 export class JudgmentLightStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const radius = skill.rangeValue;
     const healAmount = skill.effects.find(e => e.type === 'heal')?.value || 30;
 
@@ -919,6 +959,14 @@ export class JudgmentLightStrategy implements SkillStrategy {
     const enemies = findEnemiesInRange(player.x, player.y, radius);
     for (const enemy of enemies) {
       applyDamageToEnemy(enemy, damage, skill);
+
+      // 应用效果（如果有其他效果如伤害加深等）
+      if (applyEffects && skill.effects) {
+        const damageEffects = skill.effects.filter(e => e.type !== 'heal');
+        if (damageEffects.length > 0) {
+          applyEffects(enemy, damageEffects);
+        }
+      }
 
       // 光之击中效果
       const hit = scene.add.circle(enemy.x, enemy.y, 22, 0xffffff, 0.8);
@@ -1016,7 +1064,7 @@ export class JudgmentLightVisualStrategy implements VisualEffectStrategy {
  */
 export class ShadowDescentStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const radius = skill.rangeValue;
     const duration = 4000;
     const tickInterval = 500;
@@ -1097,6 +1145,14 @@ export class ShadowDescentStrategy implements SkillStrategy {
         for (const enemy of enemies) {
           applyDamageToEnemy(enemy, Math.floor(damage * 0.15), skill);
 
+          // 应用防御破坏效果
+          if (applyEffects && skill.effects) {
+            const defenseBreakEffect = skill.effects.find(e => e.type === 'defense_break');
+            if (defenseBreakEffect) {
+              applyEffects(enemy, [defenseBreakEffect]);
+            }
+          }
+
           // 暗影击中效果
           const shadow = scene.add.circle(enemy.x, enemy.y, 14, 0x8800ff, 0.6);
           shadow.setDepth(100);
@@ -1174,7 +1230,7 @@ export class ShadowDescentVisualStrategy implements VisualEffectStrategy {
  */
 export class DeathDecayStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const radius = skill.rangeValue;
     const duration = 5000;
     const tickInterval = 400;
@@ -1240,6 +1296,14 @@ export class DeathDecayStrategy implements SkillStrategy {
           const tickDamage = Math.floor(damage * 0.12);
           applyDamageToEnemy(enemy, tickDamage, skill);
           totalDamage += tickDamage;
+
+          // 应用中毒效果
+          if (applyEffects && skill.effects) {
+            const poisonEffect = skill.effects.find(e => e.type === 'poison');
+            if (poisonEffect) {
+              applyEffects(enemy, [poisonEffect]);
+            }
+          }
 
           // 死亡吸取效果
           const drain = scene.add.circle(enemy.x, enemy.y, 12, 0x880088, 0.6);
@@ -1307,7 +1371,7 @@ export class DeathDecayVisualStrategy implements VisualEffectStrategy {
  */
 export class MountainCollapseStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const radius = skill.rangeValue;
     const knockbackDist = 150;
 
@@ -1357,6 +1421,19 @@ export class MountainCollapseStrategy implements SkillStrategy {
     const enemies = findEnemiesInRange(player.x, player.y, radius);
     for (const enemy of enemies) {
       applyDamageToEnemy(enemy, damage, skill);
+
+      // 应用击退和眩晕效果
+      if (applyEffects && skill.effects) {
+        const knockbackEffect = skill.effects.find(e => e.type === 'knockback');
+        const stunEffect = skill.effects.find(e => e.type === 'stun');
+        if (knockbackEffect) {
+          applyEffects(enemy, [knockbackEffect]);
+        }
+        if (stunEffect) {
+          applyEffects(enemy, [stunEffect]);
+        }
+      }
+
       if (enemy.active && enemy.body) {
         const angle = Phaser.Math.Angle.Between(player.x, player.y, enemy.x, enemy.y);
         enemy.x += Math.cos(angle) * knockbackDist;
@@ -1409,7 +1486,7 @@ export class MountainCollapseVisualStrategy implements VisualEffectStrategy {
  */
 export class MeteorStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const radius = skill.rangeValue;
 
     // 多层预警区域
@@ -1468,6 +1545,14 @@ export class MeteorStrategy implements SkillStrategy {
       const enemies = findEnemiesInRange(player.x, player.y, radius);
       for (const enemy of enemies) {
         applyDamageToEnemy(enemy, damage, skill);
+
+        // 应用燃烧效果
+        if (applyEffects && skill.effects) {
+          const burnEffect = skill.effects.find(e => e.type === 'burn');
+          if (burnEffect) {
+            applyEffects(enemy, [burnEffect]);
+          }
+        }
       }
 
       scene.tweens.add({
@@ -1546,7 +1631,7 @@ export class MeteorVisualStrategy implements VisualEffectStrategy {
  */
 export class TsunamiStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const radius = skill.rangeValue;
     const knockbackDist = 200;
 
@@ -1600,6 +1685,15 @@ export class TsunamiStrategy implements SkillStrategy {
     const enemies = findEnemiesInRange(player.x, player.y, radius);
     for (const enemy of enemies) {
       applyDamageToEnemy(enemy, damage, skill);
+
+      // 应用击退效果
+      if (applyEffects && skill.effects) {
+        const knockbackEffect = skill.effects.find(e => e.type === 'knockback');
+        if (knockbackEffect) {
+          applyEffects(enemy, [knockbackEffect]);
+        }
+      }
+
       if (enemy.active && enemy.body) {
         const angle = Phaser.Math.Angle.Between(player.x, player.y, enemy.x, enemy.y);
         enemy.x += Math.cos(angle) * knockbackDist;
@@ -1635,7 +1729,7 @@ export class TsunamiVisualStrategy implements VisualEffectStrategy {
  */
 export class EarthquakeStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const radius = skill.rangeValue;
 
     // 多层地震波
@@ -1702,6 +1796,14 @@ export class EarthquakeStrategy implements SkillStrategy {
     const enemies = findEnemiesInRange(player.x, player.y, radius);
     for (const enemy of enemies) {
       applyDamageToEnemy(enemy, damage, skill);
+
+      // 应用眩晕效果
+      if (applyEffects && skill.effects) {
+        const stunEffect = skill.effects.find(e => e.type === 'stun');
+        if (stunEffect) {
+          applyEffects(enemy, [stunEffect]);
+        }
+      }
     }
   }
 }
@@ -1731,7 +1833,7 @@ export class EarthquakeVisualStrategy implements VisualEffectStrategy {
  */
 export class OvergrowthStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const radius = skill.rangeValue;
 
     // 多层藤蔓区域
@@ -1794,6 +1896,14 @@ export class OvergrowthStrategy implements SkillStrategy {
     const enemies = findEnemiesInRange(player.x, player.y, radius);
     for (const enemy of enemies) {
       applyDamageToEnemy(enemy, damage, skill);
+
+      // 应用眩晕效果
+      if (applyEffects && skill.effects) {
+        const stunEffect = skill.effects.find(e => e.type === 'stun');
+        if (stunEffect) {
+          applyEffects(enemy, [stunEffect]);
+        }
+      }
     }
 
     scene.tweens.add({
@@ -2001,7 +2111,7 @@ export class ForestRageVisualStrategy implements VisualEffectStrategy {
  */
 export class VoidRiftStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const centerX = player.x;
     const centerY = player.y;
     const radius = skill.rangeValue;
@@ -2069,6 +2179,14 @@ export class VoidRiftStrategy implements SkillStrategy {
             enemy.y += Math.sin(angle) * 25;
           }
           applyDamageToEnemy(enemy, Math.floor(damage * 0.25), skill);
+
+          // 应用中毒效果
+          if (applyEffects && skill.effects) {
+            const poisonEffect = skill.effects.find(e => e.type === 'poison');
+            if (poisonEffect) {
+              applyEffects(enemy, [poisonEffect]);
+            }
+          }
         }
       },
       repeat: Math.floor(duration / tickInterval) - 1,
