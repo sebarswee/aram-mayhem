@@ -350,9 +350,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IBuffable {
 
   /**
    * Check if player has a specific status effect
+   * 便捷方法：封装 modifierStack.hasTag() 调用
    */
   hasStatusEffect(type: PlayerStatusEffect['type']): boolean {
-    return this.statusEffects.some(e => e.type === type);
+    return this.modifierStack.hasTag(type);
   }
 
   /**
@@ -528,46 +529,31 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IBuffable {
 
   /**
    * Get effective speed including status effect modifiers
+   * 便捷方法：封装 modifierStack.getAttributeValue() 调用
    */
   getEffectiveSpeed(): number {
-    let speed = this.stats.speed;
-
-    // Apply slow effect
-    if (this.hasStatusEffect('slow')) {
-      const slowValue = this.getStatusEffectValue('slow');
-      speed *= (1 - slowValue / 100);
-    }
-
-    // Apply speed boost effect
-    if (this.hasStatusEffect('speed_boost')) {
-      const boostValue = this.getStatusEffectValue('speed_boost');
-      speed *= (1 + boostValue / 100);
-    }
-
-    return speed;
+    const baseSpeed = this.stats.speed;
+    return this.modifierStack.getAttributeValue('speed', baseSpeed);
   }
 
   /**
    * Get effective attack including status effect modifiers
+   * 便捷方法：封装 modifierStack.getAttributeValue() 调用
    */
   getEffectiveAttack(): number {
-    let attack = this.stats.attack;
-
-    // Apply attack boost effect
-    if (this.hasStatusEffect('attack_boost')) {
-      const boostValue = this.getStatusEffectValue('attack_boost');
-      attack *= (1 + boostValue / 100);
-    }
+    const baseAttack = this.stats.attack;
 
     // Apply berserker effect (attack increases as HP decreases)
+    // This is a special passive effect, not a modifier
     const berserkerValue = (this.stats as any).berserkerValue || 0;
     if (berserkerValue > 0) {
       const hpPercent = this.stats.currentHp / this.stats.maxHp;
       const missingHpPercent = 1 - hpPercent;
-      attack *= (1 + berserkerValue * missingHpPercent);
+      const berserkerBonus = baseAttack * berserkerValue * missingHpPercent;
+      return this.modifierStack.getAttributeValue('attack', baseAttack + berserkerBonus);
     }
 
-    return attack;
+    return this.modifierStack.getAttributeValue('attack', baseAttack);
   }
 
   /**

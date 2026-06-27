@@ -8,6 +8,7 @@ import {
   ModifierPriority,
   StackingPolicy
 } from '@/modifiers/interfaces/ModifierTypes';
+import { createBurnVisualModifier } from '@/modifiers/visual/VisualModifiers';
 
 /**
  * Player.modifiers.test.ts
@@ -82,6 +83,23 @@ class MockPlayer implements IBuffable {
 
   updateModifiers(delta: number): void {
     this.modifierStack.update(delta);
+  }
+
+  // 便捷方法：检查是否有特定标签的状态效果
+  hasStatusEffect(tag: string): boolean {
+    return this.modifierStack.hasTag(tag);
+  }
+
+  // 便捷方法：获取计算后的速度
+  getEffectiveSpeed(): number {
+    const baseSpeed = this.stats.speed;
+    return this.modifierStack.getAttributeValue('speed', baseSpeed);
+  }
+
+  // 便捷方法：获取计算后的攻击力
+  getEffectiveAttack(): number {
+    const baseAttack = this.stats.attack;
+    return this.modifierStack.getAttributeValue('attack', baseAttack);
   }
 
   // 可选回调
@@ -219,6 +237,72 @@ describe('Player - Modifier Integration (IBuffable Implementation)', () => {
       const newAttrs = player.baseAttributes;
       expect(newAttrs.attack).toBe(100);
       expect(initialAttrs.attack).toBe(50); // 原始值不变
+    });
+  });
+
+  describe('Convenience Methods', () => {
+    it('should check status effect via hasStatusEffect', () => {
+      const modifier = createBurnVisualModifier(10, 3000);
+      player.modifierStack.addModifier(modifier);
+
+      expect(player.hasStatusEffect('burn')).toBe(true);
+      expect(player.hasStatusEffect('freeze')).toBe(false);
+    });
+
+    it('should calculate effective speed with modifiers', () => {
+      const baseSpeed = player.stats.speed;
+
+      // 无修饰符时，返回基础速度
+      expect(player.getEffectiveSpeed()).toBe(baseSpeed);
+
+      // 添加速度属性修饰符
+      const speedMod: Modifier = {
+        id: 'test_speed_boost',
+        type: ModifierType.ATTRIBUTE,
+        targetAttribute: 'speed',
+        operation: ModifierOp.ADD,
+        value: 30,
+        priority: ModifierPriority.NORMAL,
+        duration: -1,
+        remainingTime: -1,
+        source: 'test_skill',
+        tags: new Set(['speed_boost', 'buff']),
+        stacking: { policy: StackingPolicy.INDEPENDENT }
+      };
+
+      player.modifierStack.addModifier(speedMod);
+      expect(player.getEffectiveSpeed()).toBe(baseSpeed + 30);
+    });
+
+    it('should calculate effective attack with modifiers', () => {
+      const baseAttack = player.stats.attack;
+
+      // 无修饰符时，返回基础攻击力
+      expect(player.getEffectiveAttack()).toBe(baseAttack);
+
+      // 添加攻击属性修饰符
+      const attackMod: Modifier = {
+        id: 'test_attack_boost',
+        type: ModifierType.ATTRIBUTE,
+        targetAttribute: 'attack',
+        operation: ModifierOp.PERCENT_ADD,
+        value: 50, // +50%
+        priority: ModifierPriority.NORMAL,
+        duration: -1,
+        remainingTime: -1,
+        source: 'test_skill',
+        tags: new Set(['attack_boost', 'buff']),
+        stacking: { policy: StackingPolicy.INDEPENDENT }
+      };
+
+      player.modifierStack.addModifier(attackMod);
+      expect(player.getEffectiveAttack()).toBe(Math.floor(baseAttack * 1.5));
+    });
+
+    it('should return false for hasStatusEffect when no matching tag', () => {
+      expect(player.hasStatusEffect('burn')).toBe(false);
+      expect(player.hasStatusEffect('freeze')).toBe(false);
+      expect(player.hasStatusEffect('poison')).toBe(false);
     });
   });
 });

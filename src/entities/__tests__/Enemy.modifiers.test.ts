@@ -8,6 +8,8 @@ import {
   ModifierPriority,
   StackingPolicy
 } from '@/modifiers/interfaces/ModifierTypes';
+import { createFreezeVisualModifier, createSlowVisualModifier } from '@/modifiers/visual/VisualModifiers';
+import { StatusEffectType } from '@/modifiers/modifiers/StatusEffectModifier';
 
 /**
  * Enemy.modifiers.test.ts
@@ -84,6 +86,27 @@ class MockEnemy implements IBuffable {
 
   updateModifiers(delta: number): void {
     this.modifierStack.update(delta);
+  }
+
+  // 便捷方法：检查是否有特定标签的状态效果
+  hasStatusEffect(tag: string): boolean {
+    return this.modifierStack.hasTag(tag);
+  }
+
+  // 便捷方法：检查是否被定身
+  isImmobilized(): boolean {
+    return this.modifierStack.hasTag('freeze') ||
+           this.modifierStack.hasTag('stun') ||
+           this.modifierStack.hasTag('root');
+  }
+
+  // 便捷方法：获取速度乘数
+  getSpeedMultiplier(): number {
+    if (this.modifierStack.hasTag('slow')) {
+      const slowValue = this.modifierStack.getStatusEffectValue(StatusEffectType.SLOW);
+      return 1 - slowValue / 100;
+    }
+    return 1;
   }
 
   // 可选回调
@@ -219,6 +242,42 @@ describe('Enemy - Modifier Integration (IBuffable Implementation)', () => {
       const newAttrs = enemy.baseAttributes;
       expect(newAttrs.damage).toBe(100);
       expect(initialAttrs.damage).toBe(10); // 原始值不变
+    });
+  });
+
+  describe('Convenience Methods', () => {
+    it('should check status effect via hasStatusEffect', () => {
+      const modifier = createFreezeVisualModifier(2000);
+      enemy.modifierStack.addModifier(modifier);
+
+      expect(enemy.hasStatusEffect('freeze')).toBe(true);
+      expect(enemy.hasStatusEffect('burn')).toBe(false);
+    });
+
+    it('should check immobilized status', () => {
+      // 初始状态未被定身
+      expect(enemy.isImmobilized()).toBe(false);
+
+      // 添加冻结效果
+      const freezeModifier = createFreezeVisualModifier(2000);
+      enemy.modifierStack.addModifier(freezeModifier);
+      expect(enemy.isImmobilized()).toBe(true);
+    });
+
+    it('should return false for hasStatusEffect when no matching tag', () => {
+      expect(enemy.hasStatusEffect('burn')).toBe(false);
+      expect(enemy.hasStatusEffect('freeze')).toBe(false);
+      expect(enemy.hasStatusEffect('poison')).toBe(false);
+    });
+
+    it('should calculate speed multiplier with slow effect', () => {
+      // 无减速时，速度乘数为 1
+      expect(enemy.getSpeedMultiplier()).toBe(1);
+
+      // 添加减速效果
+      const slowModifier = createSlowVisualModifier(30, 3000); // 30% 减速
+      enemy.modifierStack.addModifier(slowModifier);
+      expect(enemy.getSpeedMultiplier()).toBe(0.7);
     });
   });
 });

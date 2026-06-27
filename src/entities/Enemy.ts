@@ -10,6 +10,7 @@ import {
 } from '@/strategies';
 import { IBuffable } from '@/modifiers/interfaces/IBuffable';
 import { ModifierStack } from '@/modifiers/core/ModifierStack';
+import { StatusEffectType } from '@/modifiers/modifiers/StatusEffectModifier';
 
 // Status effect interface
 export interface StatusEffect {
@@ -346,6 +347,15 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IBuffable {
     this.modifierStack.update(delta);
   }
 
+  /**
+   * 检查是否有特定标签的状态效果
+   * 便捷方法：封装 modifierStack.hasTag() 调用
+   * @param tag 效果标签
+   */
+  hasStatusEffect(tag: string): boolean {
+    return this.modifierStack.hasTag(tag);
+  }
+
   // ==================== Status Effect Methods ====================
 
   /**
@@ -451,22 +461,24 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IBuffable {
 
   /**
    * Get speed multiplier from slow effects
+   * 使用 modifierStack.hasTag() 和 getStatusEffectValue() 计算
    */
   private getSpeedMultiplier(): number {
-    const slowEffect = this.statusEffects.find(e => e.type === 'slow');
-    if (slowEffect) {
-      return 1 - slowEffect.value; // value is 0-1, so 0.3 slow = 0.7x speed
+    if (this.modifierStack.hasTag('slow')) {
+      const slowValue = this.modifierStack.getStatusEffectValue(StatusEffectType.SLOW);
+      return 1 - slowValue / 100;
     }
     return 1;
   }
 
   /**
    * Check if enemy is immobilized (freeze/stun/root)
+   * 使用 modifierStack.hasTag() 进行判断
    */
   public isImmobilized(): boolean {
-    return this.statusEffects.some(e =>
-      e.type === 'freeze' || e.type === 'stun' || e.type === 'root'
-    );
+    return this.modifierStack.hasTag('freeze') ||
+           this.modifierStack.hasTag('stun') ||
+           this.modifierStack.hasTag('root');
   }
 
   // ==================== Element Mark Methods ====================
