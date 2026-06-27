@@ -20,6 +20,7 @@ import { getRandomBasicSkills, cloneSkill } from '@/data/skills';
 import { GAME_WIDTH, GAME_HEIGHT, updateGameSize, CHUNK_SIZE, ACTIVE_CHUNK_RADIUS, WORLD_SEED } from '@/config/game.config';
 import { GraphicsFactory } from '@/graphics/GraphicsFactory';
 import { ChunkManager } from '@/world/ChunkManager';
+import { EnemySpawnSystem } from '@/systems/EnemySpawnSystem';
 
 declare global {
   interface Window {
@@ -40,6 +41,7 @@ export class BattleScene extends Phaser.Scene {
   // 系统
   private inputSystem!: InputSystem;
   private enemySystem!: EnemySystem;
+  private enemySpawnSystem!: EnemySpawnSystem;
   private skillSystem!: SkillSystem;
   private collisionSystem!: CollisionSystem;
   private expSystem!: ExpSystem;
@@ -133,6 +135,20 @@ export class BattleScene extends Phaser.Scene {
     this.expSystem = new ExpSystem(this, this.gameState);
     this.enhancementSystem = new EnhancementSystem(this, this.player);
     this.skillUpgradeSystem = new SkillUpgradeSystem();
+
+    // 初始化敌人生成系统（Vampire Survivors 风格）
+    this.enemySpawnSystem = new EnemySpawnSystem(
+      this,
+      this.player,
+      this.enemySystem,
+      {
+        baseSpawnRate: 10,
+        minSpawnDistance: 500,
+        maxSpawnDistance: 700,
+        waveInterval: 60000,
+        difficultyScale: 1.5
+      }
+    );
 
     // 初始化UI
     this.hud = new HUD(this, this.player, this.gameState, this.expSystem);
@@ -444,6 +460,9 @@ export class BattleScene extends Phaser.Scene {
 
     // 更新区块管理器（基于玩家位置）
     this.chunkManager.update(this.player.x, this.player.y);
+
+    // 更新敌人生成系统
+    this.enemySpawnSystem.update(_time);
 
     // 处理输入
     const input = this.inputSystem.getInput();
