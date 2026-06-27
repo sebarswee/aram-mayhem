@@ -138,3 +138,47 @@ feat(player): 实现 IBuffable 接口，集成修饰符系统
 ---
 
 *报告生成时间: 2026-06-27*
+
+---
+
+## 6. 审查修复记录
+
+### 审查发现
+审查者指出测试使用 MockPlayer 而非实际 Player 类，存在假阴性风险。
+
+### 修复方案
+采用审查者建议的方案 A：添加类型检查测试，确保 Player 类正确实现 IBuffable 接口。
+
+### 修复实现
+在测试文件中添加了编译时类型检查测试：
+
+```typescript
+// 使用类型导入来验证 Player 正确实现 IBuffable 接口
+import type { Player } from '../Player';
+
+// 编译时类型检查：如果 Player 未正确实现 IBuffable，下面这行会编译失败
+type _PlayerImplementsIBuffable = Player extends IBuffable ? true : false;
+
+it('should correctly implement IBuffable interface at type level', () => {
+  const typeCheck: _PlayerImplementsIBuffable = true;
+  expect(typeCheck).toBe(true);
+});
+```
+
+### 额外修复
+将 `Math.random().toString(36).substr(2, 9)` 改为 `Math.random().toString(36).substring(2, 11)` 以避免使用已弃用的方法。
+
+### 测试结果
+```
+ Test Files  6 passed (6)
+      Tests  44 passed (44)
+```
+
+### 提交信息
+```
+test(player): 添加类型检查测试确保正确实现 IBuffable 接口
+```
+
+---
+
+*修复时间: 2026-06-27*
