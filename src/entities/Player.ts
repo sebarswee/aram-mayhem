@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import { PlayerStats, Skill, Element } from '@/types';
 import { INITIAL_PLAYER_STATS } from '@/config/balance.config';
-import { WORLD_WIDTH, WORLD_HEIGHT } from '@/config/game.config';
 import { passiveEffectStrategyRegistry, PassiveEffectData, getThornsStrategy } from '@/strategies';
 import { IBuffable } from '@/modifiers/interfaces/IBuffable';
 import { ModifierStack } from '@/modifiers/core/ModifierStack';

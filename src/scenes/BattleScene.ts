@@ -17,8 +17,9 @@ import { SkillSelectUI } from '@/ui/SkillSelectUI';
 import { UpgradeSelectUI } from '@/ui/UpgradeSelectUI';
 import { DamageNumberManager } from '@/ui/DamageNumberManager';
 import { getRandomBasicSkills, cloneSkill } from '@/data/skills';
-import { GAME_WIDTH, GAME_HEIGHT, updateGameSize, WORLD_WIDTH, WORLD_HEIGHT } from '@/config/game.config';
+import { GAME_WIDTH, GAME_HEIGHT, updateGameSize, CHUNK_SIZE, ACTIVE_CHUNK_RADIUS, WORLD_SEED } from '@/config/game.config';
 import { GraphicsFactory } from '@/graphics/GraphicsFactory';
+import { ChunkManager } from '@/world/ChunkManager';
 
 declare global {
   interface Window {
@@ -32,6 +33,9 @@ export class BattleScene extends Phaser.Scene {
   // 游戏对象
   private player!: Player;
   private gameState!: GameState;
+
+  // 世界系统
+  private chunkManager!: ChunkManager;
 
   // 系统
   private inputSystem!: InputSystem;
@@ -67,11 +71,15 @@ export class BattleScene extends Phaser.Scene {
     // 更新游戏尺寸
     this.updateSize();
 
-    // 设置无限世界边界（吸血鬼幸存者风格）
-    this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    // 移除固定的世界边界（无限地图）
+    // this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
-    // 创建背景（深色，覆盖整个世界）
-    this.createInfiniteBackground();
+    // 初始化 ChunkManager（无限地图系统）
+    this.chunkManager = new ChunkManager(this, {
+      chunkSize: CHUNK_SIZE,
+      activeRadius: ACTIVE_CHUNK_RADIUS,
+      seed: WORLD_SEED
+    });
 
     // 确保纹理存在（防止热重载或直接进入场景时纹理丢失）
     if (!this.textures.exists('player')) {
@@ -100,12 +108,13 @@ export class BattleScene extends Phaser.Scene {
       GAME_HEIGHT - padding * 2
     );
 
-    // 创建玩家（在世界中心）
-    this.player = new Player(this, WORLD_WIDTH / 2, WORLD_HEIGHT / 2);
+    // 创建玩家（在原点 (0, 0)，不再是固定中心）
+    this.player = new Player(this, 0, 0);
 
     // 设置摄像机跟随玩家（吸血鬼幸存者风格）
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
-    this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    // 移除相机边界限制（无限地图）
+    // this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
     // 初始化系统 - 读取摇杆设置
     const joystickMode = window.gameSettings?.joystickMode || 'follow';
@@ -152,33 +161,6 @@ export class BattleScene extends Phaser.Scene {
     const width = this.scale.width;
     const height = this.scale.height;
     updateGameSize(width, height);
-  }
-
-  /**
-   * 创建无限背景（吸血鬼幸存者风格）
-   * 使用深色背景，玩家可以自由移动
-   */
-  private createInfiniteBackground(): void {
-    // 创建一个大的深色背景覆盖整个世界
-    const bg = this.add.graphics();
-    bg.fillStyle(0x1a1a2e, 1);
-    bg.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-    bg.setDepth(-1); // 最底层
-
-    // 创建网格线效果（可选，增加视觉参考）
-    const grid = this.add.graphics();
-    grid.lineStyle(1, 0x2a2a3e, 0.3);
-    const gridSize = 100;
-    for (let x = 0; x <= WORLD_WIDTH; x += gridSize) {
-      grid.moveTo(x, 0);
-      grid.lineTo(x, WORLD_HEIGHT);
-    }
-    for (let y = 0; y <= WORLD_HEIGHT; y += gridSize) {
-      grid.moveTo(0, y);
-      grid.lineTo(WORLD_WIDTH, y);
-    }
-    grid.strokePath();
-    grid.setDepth(-1);
   }
 
   /**
@@ -460,6 +442,9 @@ export class BattleScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     if (this.gameState.isDead || this.gameState.isUpgrading || this.gameState.isSelectingSkill) return;
 
+    // 更新区块管理器（基于玩家位置）
+    this.chunkManager.update(this.player.x, this.player.y);
+
     // 处理输入
     const input = this.inputSystem.getInput();
     if (input.isMoving) {
@@ -524,6 +509,9 @@ export class BattleScene extends Phaser.Scene {
   }
 
   shutdown(): void {
+    // 清理 ChunkManager
+    this.chunkManager?.cleanup();
+
     // 清理系统
     this.inputSystem?.destroy();
     this.enemySystem?.destroy();

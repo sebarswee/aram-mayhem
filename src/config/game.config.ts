@@ -8,9 +8,10 @@ export const BASE_HEIGHT = 720;
 export let GAME_WIDTH = BASE_WIDTH;
 export let GAME_HEIGHT = BASE_HEIGHT;
 
-// Infinite world size (much larger than screen for Vampire Survivors-like gameplay)
-export const WORLD_WIDTH = 10000;
-export const WORLD_HEIGHT = 10000;
+// Infinite world configuration (Vampire Survivors-like)
+export const CHUNK_SIZE = 256;           // 区块大小
+export const ACTIVE_CHUNK_RADIUS = 1;    // 活动区块半径（3x3）
+export const WORLD_SEED = 12345;         // 固定种子（可随机）
 
 // 更新游戏尺寸
 export function updateGameSize(width: number, height: number): void {
