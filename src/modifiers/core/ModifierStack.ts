@@ -303,17 +303,22 @@ export class ModifierStack {
    * 更新属性修饰符
    */
   private updateAttributeModifiers(delta: number): void {
+    const toRemove: string[] = [];
+
     for (const [attr, modifiers] of this.attributeModifiers) {
-      const remaining = modifiers.filter(mod => {
-        if (mod.duration < 0) return true;  // 永久修饰符
-        mod.remainingTime -= delta;
-        if (mod.remainingTime <= 0) {
-          mod.onRemove?.(this.owner);
-          return false;
+      modifiers.forEach(mod => {
+        if (mod.duration >= 0) {
+          mod.remainingTime -= delta;
+          if (mod.remainingTime <= 0) {
+            toRemove.push(mod.id);
+          }
         }
-        return true;
       });
-      this.attributeModifiers.set(attr, remaining);
+    }
+
+    // 移除过期的
+    for (const id of toRemove) {
+      this.removeModifier(id);
     }
   }
 
@@ -321,16 +326,21 @@ export class ModifierStack {
    * 更新触发器修饰符
    */
   private updateTriggerModifiers(delta: number): void {
-    this.triggerModifiers = this.triggerModifiers.filter(mod => {
+    const toRemove: string[] = [];
+
+    this.triggerModifiers.forEach(mod => {
       if (mod.duration > 0) {
         mod.remainingTime -= delta;
       }
       if (mod.remainingTime <= 0 || mod.remainingTriggers <= 0) {
-        mod.onRemove?.(this.owner);
-        return false;
+        toRemove.push(mod.id);
       }
-      return true;
     });
+
+    // 移除过期的
+    for (const id of toRemove) {
+      this.removeModifier(id);
+    }
   }
 
   /**
