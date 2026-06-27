@@ -323,3 +323,7 @@ export const CollisionGroup = {
   ENEMY_PROJECTILE: 'enemy_projectile',
   EXP_ORB: 'exp_orb',
 } as const;
+
+// ==================== 修饰符系统 ====================
+export * from '@/modifiers/interfaces/ModifierTypes';
+export * from '@/modifiers/interfaces/IBuffable';
