@@ -1,6 +1,7 @@
 import { SynergyEffectStrategy, SynergyExecutionContext } from './SynergyStrategyRegistry';
 import { SynergyResult } from '@/types';
 import { Enemy } from '@/entities/Enemy';
+import { createAttackBoostVisualModifier } from '@/modifiers/visual/VisualModifiers';
 
 /**
  * 真实伤害策略 - 基于百分比的额外伤害
@@ -40,13 +41,11 @@ export class GuaranteedCritStrategy implements SynergyEffectStrategy {
  */
 export class DamageIncreaseStrategy implements SynergyEffectStrategy {
   execute(synergy: SynergyResult, enemy: Enemy, context: SynergyExecutionContext): void {
-    const damageBuffValue = synergy.value || 0.3;
+    const damageBuffValue = synergy.value || 30;
     const damageBuffDuration = synergy.duration || 5000;
-    context.player.addStatusEffect({
-      type: 'attack_boost',
-      value: damageBuffValue,
-      duration: damageBuffDuration,
-    });
+    context.player.modifierStack.addModifier(
+      createAttackBoostVisualModifier(damageBuffValue, damageBuffDuration)
+    );
     // 传递元素信息以触发克制加成
     enemy.takeDamage(context.baseDamage, context.skillElement);
   }

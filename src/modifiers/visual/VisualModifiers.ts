@@ -409,3 +409,44 @@ export function createShieldVisualModifier(value: number): StatusEffectModifier 
     },
   };
 }
+
+/**
+ * 创建 Tick 速度加成效果修饰符
+ * 用于加速 DoT 效果的触发频率
+ * @param value 速度倍率（如 2.0 表示双倍速度）
+ * @param duration 持续时间（毫秒）
+ */
+export function createTickSpeedUpVisualModifier(
+  value: number,
+  duration: number
+): StatusEffectModifier {
+  return {
+    id: `tick_speed_up_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    type: ModifierType.STATUS_EFFECT,
+    effectType: StatusEffectType.TICK_SPEED_UP,
+    source: 'status_effect_system',
+    operation: ModifierOp.MULTIPLY,
+    value: value,
+    effectValue: value,
+    duration: duration,
+    remainingTime: duration,
+    priority: ModifierPriority.NORMAL,
+    tags: new Set(['tick_speed_up', 'buff']),
+    stacking: {
+      policy: StackingPolicy.REFRESH_BY_SOURCE,
+      valueRefresh: true,
+    },
+
+    onApply: (target: IBuffable) => {
+      if (target instanceof Enemy) {
+        target.tickSpeedMultiplier = value;
+      }
+    },
+
+    onRemove: (target: IBuffable) => {
+      if (target instanceof Enemy) {
+        target.tickSpeedMultiplier = 1.0;
+      }
+    },
+  };
+}

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Player, CounterDamageEffect, CounterFreezeEffect } from '@/entities/Player';
 import { Skill } from '@/types';
+import { createAttackBoostVisualModifier } from '@/modifiers/visual/VisualModifiers';
 
 /**
  * Buff技能执行上下文
@@ -129,11 +130,9 @@ export class HaloStrategy implements BuffSkillStrategy {
 export class BlessingStrategy implements BuffSkillStrategy {
   execute(context: BuffSkillContext): void {
     const { player } = context;
-    player.addStatusEffect({
-      type: 'attack_boost',
-      value: 0.3,
-      duration: 10000,
-    });
+    player.modifierStack.addModifier(
+      createAttackBoostVisualModifier(30, 10000)
+    );
   }
 }
 

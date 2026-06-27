@@ -16,6 +16,11 @@ import {
   StatusEffectExecutionContext,
   buffSkillStrategyRegistry,
 } from '@/strategies';
+import {
+  createBurnVisualModifier,
+  createPoisonVisualModifier,
+  createSlowVisualModifier,
+} from '@/modifiers/visual/VisualModifiers';
 
 // 元素颜色映射 (all 8 elements)
 const ELEMENT_COLORS: Record<string, number> = {
@@ -1191,22 +1196,33 @@ export class SkillSystem {
    * Spread debuffs from enemy to nearby enemies
    */
   private spreadDebuffToNearby(sourceEnemy: Enemy): void {
-    const debuffTypes = ['burn', 'poison', 'slow', 'root'];
-    const debuffs = sourceEnemy.statusEffects.filter(e => debuffTypes.includes(e.type));
-
-    if (debuffs.length === 0) return;
+    // 使用新修饰符系统检查和传播效果
+    const debuffChecks = [
+      { type: 'burn', factory: createBurnVisualModifier },
+      { type: 'poison', factory: createPoisonVisualModifier },
+      { type: 'slow', factory: createSlowVisualModifier },
+    ];
 
     const nearbyEnemies = this.findEnemiesInRange(sourceEnemy.x, sourceEnemy.y, 100);
-    for (const enemy of nearbyEnemies) {
-      if (enemy === sourceEnemy) continue;
-      for (const debuff of debuffs) {
-        enemy.addStatusEffect({
-          type: debuff.type,
-          value: debuff.value,
-          duration: debuff.duration,
-          remainingTime: debuff.duration,
-          source: 'synergy_spread',
-        });
+
+    for (const check of debuffChecks) {
+      // 检查是否有该效果类型（使用标签系统）
+      if (sourceEnemy.modifierStack.hasTag(check.type)) {
+        // 获取效果值
+        const value = sourceEnemy.modifierStack.getStatusEffectValue(
+          check.type === 'burn' ? 'BURN' as any :
+          check.type === 'poison' ? 'POISON' as any :
+          'SLOW' as any
+        );
+
+        // 传播给附近敌人
+        for (const enemy of nearbyEnemies) {
+          if (enemy === sourceEnemy) continue;
+          // 使用默认持续时间传播效果
+          enemy.modifierStack.addModifier(
+            check.factory(value, 3000)
+          );
+        }
       }
     }
   }
@@ -2222,13 +2238,9 @@ export class SkillSystem {
         const enemies = this.findEnemiesInRange(this.player.x, this.player.y, radius);
         for (const enemy of enemies) {
           this.applyDamageToEnemy(enemy, damage, skill);
-          enemy.addStatusEffect({
-            type: 'slow',
-            value: 0.5,
-            duration: 500,
-            remainingTime: 500,
-            source: 'quicksand',
-          });
+          enemy.modifierStack.addModifier(
+            createSlowVisualModifier(50, 500)
+          );
         }
       },
       repeat: Math.floor(duration / tickInterval) - 1,

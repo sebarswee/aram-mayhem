@@ -3,6 +3,8 @@ import { Skill } from '@/types';
 import { Enemy } from '@/entities/Enemy';
 import { VisualEffectUtils } from '@/graphics/VisualEffectUtils';
 import Phaser from 'phaser';
+import { createBurnVisualModifier } from '@/modifiers/visual/VisualModifiers';
+import { StatusEffectType } from '@/modifiers/modifiers/StatusEffectModifier';
 
 /**
  * 炎龙吐息策略 - 扇形持续火焰
@@ -224,21 +226,15 @@ export class InfernoStrategy implements SkillStrategy {
     const deathHandler = (enemy: Enemy) => {
       if (!this.activeInfernos.has(instanceId)) return;
 
-      const hasInfernoBurn = enemy.statusEffects.some(
-        (effect) => effect.type === 'burn' && effect.source === 'inferno'
-      );
+      const hasInfernoBurn = enemy.modifierStack.hasStatusEffect(StatusEffectType.BURN);
 
       if (hasInfernoBurn) {
         const nearbyEnemies = findEnemiesInRange(enemy.x, enemy.y, this.burnSpreadRadius);
 
         for (const nearbyEnemy of nearbyEnemies) {
-          nearbyEnemy.addStatusEffect({
-            type: 'burn',
-            value: burnValue,
-            duration: burnDuration,
-            remainingTime: burnDuration,
-            source: 'inferno',
-          });
+          nearbyEnemy.modifierStack.addModifier(
+            createBurnVisualModifier(burnValue, burnDuration, 'fire')
+          );
         }
 
         // 多层燃烧扩散视觉效果
@@ -288,13 +284,9 @@ export class InfernoStrategy implements SkillStrategy {
         const enemies = findEnemiesInRange(player.x, player.y, radius);
         for (const enemy of enemies) {
           applyDamageToEnemy(enemy, Math.floor(damage * 0.15), skill);
-          enemy.addStatusEffect({
-            type: 'burn',
-            value: burnValue,
-            duration: burnDuration,
-            remainingTime: burnDuration,
-            source: 'inferno',
-          });
+          enemy.modifierStack.addModifier(
+            createBurnVisualModifier(burnValue, burnDuration, 'fire')
+          );
         }
       },
       repeat: Math.floor(duration / tickInterval) - 1,
