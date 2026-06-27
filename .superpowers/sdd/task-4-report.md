@@ -1,61 +1,136 @@
-# Task 4 Report: 修改 GraphicsFactory 保留备用
+# Task 4 报告: 实现修饰符便捷方法
 
-## 1. 当前 GraphicsFactory 状态检查
+## 概述
 
-经过检查 `src/graphics/GraphicsFactory.ts`，发现任务要求的所有独立生成方法**已经存在**，且全部为**公共方法**：
+成功为 Player 和 Enemy 类实现了便捷方法，封装对 modifierStack 的调用，简化状态效果检查和属性计算。
 
-| 方法名 | 行号 | 访问级别 | 功能 |
-|--------|------|----------|------|
-| `generateAll()` | 17-26 | public | 生成所有素材 |
-| `generateSkillIcons()` | 31-33 | public | 只生成技能图标 |
-| `generateEnemySprites()` | 38-40 | public | 只生成敌人精灵 |
-| `generateProjectileSprites()` | 45-47 | public | 只生成投射物精灵 |
-| `generateEffectSprites()` | 52-54 | public | 只生成效果精灵 |
-| `generateParticles()` | 59-61 | public | 只生成粒子 |
-| `generateFoodSprites()` | 66-68 | public | 只生成食物精灵 |
-| `generateExpOrbSprites()` | 73-75 | public | 只生成经验球精灵 |
+## 实现内容
 
-所有公共方法都正确调用对应的私有 `create*` 方法（如 `createEnemySprites()`、`createProjectileSprites()` 等），保持了良好的封装性。
+### Player.ts
 
-## 2. 是否需要修改
+#### 1. `hasStatusEffect(type)` 便捷方法
 
-**无需修改。**
-
-任务要求的所有内容已经在 Task 1 中完成：
-- ✅ `generateAll()` 方法保持不变
-- ✅ 所有独立生成方法都已存在
-- ✅ 所有独立方法都是 public（而非 private）
-- ✅ 玩家纹理生成方法 `createPlayerSprite()` 保持为 private，作为备用方案
-
-## 3. 测试结果
-
-### 3.1 编译测试
+```typescript
+hasStatusEffect(type: PlayerStatusEffect['type']): boolean {
+  return this.modifierStack.hasTag(type);
+}
 ```
-npm run build
+
+**变更说明**: 从检查 `statusEffects` 数组改为调用 `modifierStack.hasTag()`。
+
+#### 2. `getEffectiveSpeed()` 便捷方法
+
+```typescript
+getEffectiveSpeed(): number {
+  const baseSpeed = this.stats.speed;
+  return this.modifierStack.getAttributeValue('speed', baseSpeed);
+}
 ```
-**结果：✅ 通过**
-- TypeScript 编译成功
-- Vite 打包成功
-- 输出文件正常生成
 
-### 3.2 功能验证
-- ✅ 素材生成方法可正常调用
-- ✅ 独立生成方法可按需使用
-- ✅ 玩家纹理生成保留为备用方案
+**变更说明**: 从手动计算减速和加速效果改为直接调用 `modifierStack.getAttributeValue()`。
 
-## 4. 提交的 commit hash
+#### 3. `getEffectiveAttack()` 便捷方法
 
-**无需提交** - 任务已在 Task 1 中完成，当前代码状态完全符合要求。
+```typescript
+getEffectiveAttack(): number {
+  const baseAttack = this.stats.attack;
 
----
+  // Apply berserker effect (attack increases as HP decreases)
+  // This is a special passive effect, not a modifier
+  const berserkerValue = (this.stats as any).berserkerValue || 0;
+  if (berserkerValue > 0) {
+    const hpPercent = this.stats.currentHp / this.stats.maxHp;
+    const missingHpPercent = 1 - hpPercent;
+    const berserkerBonus = baseAttack * berserkerValue * missingHpPercent;
+    return this.modifierStack.getAttributeValue('attack', baseAttack + berserkerBonus);
+  }
 
-## 总结
+  return this.modifierStack.getAttributeValue('attack', baseAttack);
+}
+```
 
-**状态：DONE**
+**变更说明**: 使用 `modifierStack.getAttributeValue()` 计算最终攻击力，保留狂战士被动的特殊处理。
 
-Task 4 的需求已经在 Task 1 实现过程中完成。`GraphicsFactory` 类已经支持：
-- `generateAll()` 一次性生成所有素材
-- 各个独立 `generate*()` 方法支持按需生成特定类型素材
-- 玩家纹理生成保留为私有方法 `createPlayerSprite()`，作为备用方案
+### Enemy.ts
 
-代码质量良好，结构清晰，无需额外修改。
+#### 1. 新增 `hasStatusEffect(tag)` 方法
+
+```typescript
+hasStatusEffect(tag: string): boolean {
+  return this.modifierStack.hasTag(tag);
+}
+```
+
+#### 2. 修改 `isImmobilized()` 方法
+
+```typescript
+public isImmobilized(): boolean {
+  return this.modifierStack.hasTag('freeze') ||
+         this.modifierStack.hasTag('stun') ||
+         this.modifierStack.hasTag('root');
+}
+```
+
+**变更说明**: 从检查 `statusEffects` 数组改为使用 `modifierStack.hasTag()` 检查控制效果标签。
+
+#### 3. 修改 `getSpeedMultiplier()` 方法
+
+```typescript
+private getSpeedMultiplier(): number {
+  if (this.modifierStack.hasTag('slow')) {
+    const slowValue = this.modifierStack.getStatusEffectValue(StatusEffectType.SLOW);
+    return 1 - slowValue / 100;
+  }
+  return 1;
+}
+```
+
+**变更说明**: 使用 `modifierStack.hasTag()` 检查减速效果，使用 `getStatusEffectValue()` 获取减速值。
+
+### 导入变更
+
+在 `Enemy.ts` 中添加了 `StatusEffectType` 的导入：
+
+```typescript
+import { StatusEffectType } from '@/modifiers/modifiers/StatusEffectModifier';
+```
+
+## 测试覆盖
+
+### Player.modifiers.test.ts
+
+新增测试用例：
+
+1. `should check status effect via hasStatusEffect` - 验证 hasStatusEffect 便捷方法
+2. `should calculate effective speed with modifiers` - 验证 getEffectiveSpeed 便捷方法
+3. `should calculate effective attack with modifiers` - 验证 getEffectiveAttack 便捷方法
+4. `should return false for hasStatusEffect when no matching tag` - 验证无匹配标签的情况
+
+### Enemy.modifiers.test.ts
+
+新增测试用例：
+
+1. `should check status effect via hasStatusEffect` - 验证 hasStatusEffect 便捷方法
+2. `should check immobilized status` - 验证 isImmobilized 便捷方法
+3. `should return false for hasStatusEffect when no matching tag` - 验证无匹配标签的情况
+4. `should calculate speed multiplier with slow effect` - 验证 getSpeedMultiplier 便捷方法
+
+## 验证结果
+
+- TypeScript strict mode 编译: ✅ 通过
+- 单元测试: ✅ 30 个测试全部通过
+
+## 保留的方法
+
+按照任务要求，保留了以下方法（由修饰符回调调用）：
+
+- `Player.updateVisualTint()` - 更新视觉效果着色
+- `Player.applyElementTint()` - 应用元素着色
+- `Enemy.applyElementTint()` - 应用元素着色
+
+## 文件变更清单
+
+- `src/entities/Player.ts` - 修改 3 个便捷方法
+- `src/entities/Enemy.ts` - 添加 1 个方法，修改 2 个方法
+- `src/entities/__tests__/Player.modifiers.test.ts` - 添加导入和测试
+- `src/entities/__tests__/Enemy.modifiers.test.ts` - 添加导入和测试

@@ -304,59 +304,8 @@ export class InfernoStrategy implements SkillStrategy {
 
 export class InfernoVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层烈焰区域
-    const infernoLayers: Phaser.GameObjects.Arc[] = [];
-    const layerConfigs = [
-      { radius: radius * 1.1, color: 0xff2200, alpha: 0.12 },
-      { radius: radius, color: 0xff4400, alpha: 0.2 },
-      { radius: radius * 0.8, color: 0xff6600, alpha: 0.18 },
-      { radius: radius * 0.5, color: 0xffaa00, alpha: 0.12 },
-    ];
-
-    layerConfigs.forEach((config, i) => {
-      const layer = scene.add.circle(x, y, config.radius, config.color, config.alpha);
-      layer.setDepth(17 + i);
-      infernoLayers.push(layer);
-
-      scene.tweens.add({
-        targets: layer,
-        scaleX: 1.08,
-        scaleY: 1.08,
-        alpha: config.alpha * 0.5,
-        duration: 500,
-        yoyo: true,
-        repeat: 9,
-      });
-    });
-
-    // 火焰粒子
-    const fireParticles = scene.add.particles(x, y, 'particle_fire_core', {
-      speed: { min: 20, max: 60 },
-      angle: { min: 0, max: 360 },
-      scale: { start: 0.5, end: 0 },
-      alpha: { start: 0.6, end: 0 },
-      tint: [0xff4400, 0xff6600, 0xffaa00],
-      lifespan: 1500,
-      frequency: 80,
-      quantity: 3,
-      emitZone: {
-        type: 'random' as const,
-        source: new Phaser.Geom.Circle(0, 0, radius * 0.9) as Phaser.Types.GameObjects.Particles.RandomZoneSource,
-      },
-    });
-    fireParticles.setDepth(22);
-
-    scene.time.delayedCall(5000, () => {
-      scene.tweens.add({
-        targets: [...infernoLayers, fireParticles],
-        alpha: 0,
-        duration: 500,
-        onComplete: () => {
-          infernoLayers.forEach(l => l.destroy());
-          fireParticles.destroy();
-        },
-      });
-    });
+    // 燃烧区域和火焰粒子由 InfernoStrategy 创建和管理
+    // 这里不创建任何重复的持续视觉效果
   }
 }
 
@@ -451,48 +400,8 @@ export class AbyssVortexStrategy implements SkillStrategy {
 
 export class AbyssVortexVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层漩涡环
-    const vortex = scene.add.container(x, y);
-    vortex.setDepth(18);
-
-    for (let i = 0; i < 5; i++) {
-      const ring = scene.add.graphics();
-      ring.lineStyle(4 - i * 0.5, 0x4488ff, 0.45 - i * 0.06);
-      ring.strokeCircle(0, 0, radius * (0.3 + i * 0.18));
-      vortex.add(ring);
-    }
-
-    vortex.list.forEach((ring, i) => {
-      scene.tweens.add({
-        targets: ring,
-        angle: 360 * (i % 2 === 0 ? 1 : -1),
-        duration: 800 + i * 200,
-        repeat: 3,
-      });
-    });
-
-    // 中心深渊
-    const abyssOuter = scene.add.circle(x, y, 40, 0x2244aa, 0.5);
-    const abyssMid = scene.add.circle(x, y, 28, 0x3366cc, 0.65);
-    const abyssInner = scene.add.circle(x, y, 16, 0x4488ff, 0.8);
-    abyssOuter.setDepth(19);
-    abyssMid.setDepth(20);
-    abyssInner.setDepth(21);
-
-    scene.time.delayedCall(3000, () => {
-      scene.tweens.add({
-        targets: [vortex, abyssOuter, abyssMid, abyssInner],
-        alpha: 0,
-        scale: 0.5,
-        duration: 350,
-        onComplete: () => {
-          vortex.destroy();
-          abyssOuter.destroy();
-          abyssMid.destroy();
-          abyssInner.destroy();
-        },
-      });
-    });
+    // 漩涡容器、深渊圆和粒子由 AbyssVortexStrategy 创建和管理
+    // 这里不创建任何重复的持续视觉效果
   }
 }
 
@@ -1571,56 +1480,8 @@ export class MeteorStrategy implements SkillStrategy {
 
 export class MeteorVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层预警
-    const warningLayers: Phaser.GameObjects.Arc[] = [];
-    for (let i = 0; i < 3; i++) {
-      const warning = scene.add.circle(x, y, radius * (0.6 + i * 0.2), 0xff4400, 0.12 + i * 0.06);
-      warning.setDepth(18 + i);
-      warningLayers.push(warning);
-    }
-
-    scene.tweens.add({
-      targets: warningLayers,
-      scale: 1.1,
-      alpha: 0.45,
-      duration: 200,
-      yoyo: true,
-      repeat: 2,
-      onComplete: () => {
-        warningLayers.forEach(w => w.destroy());
-
-        // 多层爆炸
-        const explosionOuter = scene.add.circle(x, y, radius * 1.1, 0xff2200, 0.4);
-        const explosionMid = scene.add.circle(x, y, radius, 0xff6600, 0.6);
-        const explosionInner = scene.add.circle(x, y, radius * 0.7, 0xffaa00, 0.75);
-        const explosionCore = scene.add.circle(x, y, radius * 0.4, 0xffffff, 0.9);
-        explosionOuter.setDepth(95);
-        explosionMid.setDepth(96);
-        explosionInner.setDepth(97);
-        explosionCore.setDepth(98);
-
-        // 冲击波
-        VisualEffectUtils.createShockwave(scene, x, y, {
-          color: 0xff6600,
-          radius: radius * 1.1,
-          rings: 4,
-          duration: 400,
-        });
-
-        scene.tweens.add({
-          targets: [explosionOuter, explosionMid, explosionInner, explosionCore],
-          alpha: 0,
-          scale: 1.25,
-          duration: 500,
-          onComplete: () => {
-            explosionOuter.destroy();
-            explosionMid.destroy();
-            explosionInner.destroy();
-            explosionCore.destroy();
-          },
-        });
-      },
-    });
+    // 预警区域和爆炸序列由 MeteorStrategy 创建和管理
+    // 这里不创建任何重复的视觉效果
   }
 }
 
@@ -2194,47 +2055,8 @@ export class VoidRiftStrategy implements SkillStrategy {
 
 export class VoidRiftVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层虚空裂隙核心
-    const riftOuter = scene.add.circle(x, y, 50, 0x4400aa, 0.4);
-    const riftMid = scene.add.circle(x, y, 35, 0x6600cc, 0.6);
-    const riftInner = scene.add.circle(x, y, 20, 0x8800ff, 0.8);
-    riftOuter.setDepth(20);
-    riftMid.setDepth(21);
-    riftInner.setDepth(22);
-
-    // 多层虚空环
-    const voidRings = scene.add.container(x, y);
-    voidRings.setDepth(18);
-    for (let i = 0; i < 5; i++) {
-      const ring = scene.add.graphics();
-      ring.lineStyle(4 - i * 0.5, 0x8800ff, 0.4 - i * 0.05);
-      ring.strokeCircle(0, 0, radius * (0.25 + i * 0.2));
-      voidRings.add(ring);
-    }
-
-    voidRings.list.forEach((ring, i) => {
-      scene.tweens.add({
-        targets: ring,
-        angle: 360 * (i % 2 === 0 ? 1 : -1),
-        duration: 700 + i * 150,
-        repeat: 3,
-      });
-    });
-
-    scene.time.delayedCall(3000, () => {
-      scene.tweens.add({
-        targets: [riftOuter, riftMid, riftInner, voidRings],
-        alpha: 0,
-        scale: 0.5,
-        duration: 350,
-        onComplete: () => {
-          riftOuter.destroy();
-          riftMid.destroy();
-          riftInner.destroy();
-          voidRings.destroy();
-        },
-      });
-    });
+    // 虚空裂隙核心和虚空环由 VoidRiftStrategy 创建和管理
+    // 这里不创建任何重复的持续视觉效果
   }
 }
 

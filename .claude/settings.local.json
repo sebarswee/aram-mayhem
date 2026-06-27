@@ -53,7 +53,14 @@
       "Read(//Users/sebarswee/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/**)",
       "Bash(./scripts/task-brief /Users/sebarswee/IdeaProjects/demo/aram-mayhem/docs/superpowers/plans/2026-06-27-player-enemy-modifier-integration.md 1)",
       "Bash(/Users/sebarswee/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/task-brief *)",
-      "Bash(/Users/sebarswee/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/review-package HEAD~10 *)"
+      "Bash(/Users/sebarswee/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/review-package HEAD~10 *)",
+      "Bash(/Users/sebarswee/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/review-package HEAD~2 *)",
+      "Bash(/Users/sebarswee/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/review-package HEAD~3 *)",
+      "Bash(npm list *)",
+      "Bash(/Users/sebarswee/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/review-package HEAD~5 *)",
+      "Bash(/Users/sebarswee/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/review-package HEAD~1 *)",
+      "Bash(awk '{print $3}')",
+      "Bash(awk -F' ' '{print $3}')"
     ]
   }
 }

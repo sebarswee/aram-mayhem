@@ -32,3 +32,13 @@ Final fixes: complete (commit cc070c1)
 
 === IMPLEMENTATION COMPLETE ===
 All 10 tasks completed + code review fixes applied
+Task 19: complete (commits f17cb06..2dc6f6a, review PASS)
+Task 20: complete (commits 5c89510..09c3818, review PASS)
+Task 22: complete (commits 976c919..f2eb495, review PASS with Minor: substr deprecated)
+Task 23: complete (commits f2eb495..38c4b9c, review PASS)
+Task 21: complete (commits 2dc6f6a..32415c3, review PASS)
+Task 24: complete (commits f2eb495..847b8f9, review PASS)
+Task 25: complete (commits HEAD~1..HEAD, validation PASS)
+
+=== ALL TASKS COMPLETE ===
+Task 27: complete - 修复大招策略缺少效果应用的问题
