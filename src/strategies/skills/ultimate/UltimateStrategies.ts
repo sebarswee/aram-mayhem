@@ -995,6 +995,9 @@ export class DeathDecayStrategy implements SkillStrategy {
     const tickInterval = 400;
     const lifestealPercent = 0.3;
 
+    // 存储需要清理的 tweens
+    const activeTweens: Phaser.Tweens.Tween[] = [];
+
     // 多层死亡凋零区域
     const decayLayers: Phaser.GameObjects.Arc[] = [];
     const layerConfigs = [
@@ -1009,7 +1012,7 @@ export class DeathDecayStrategy implements SkillStrategy {
       layer.setDepth(17 + i);
       decayLayers.push(layer);
 
-      scene.tweens.add({
+      const tween = scene.tweens.add({
         targets: layer,
         scaleX: 1.06,
         scaleY: 1.06,
@@ -1018,6 +1021,7 @@ export class DeathDecayStrategy implements SkillStrategy {
         yoyo: true,
         repeat: -1,
       });
+      activeTweens.push(tween);
     });
 
     // 死亡粒子
@@ -1044,6 +1048,12 @@ export class DeathDecayStrategy implements SkillStrategy {
         elapsed += tickInterval;
         if (elapsed >= duration) {
           decayTimer.destroy();
+          // 停止所有无限循环的 tweens
+          activeTweens.forEach(tween => {
+            if (tween && tween.isPlaying()) {
+              tween.stop();
+            }
+          });
           decayLayers.forEach(l => l.destroy());
           deathParticles.destroy();
           return;
