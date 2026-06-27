@@ -42,3 +42,4 @@ Task 25: complete (commits HEAD~1..HEAD, validation PASS)
 
 === ALL TASKS COMPLETE ===
 Task 27: complete - 修复大招策略缺少效果应用的问题
+Task 41: complete - 修复15个大招视觉重复问题

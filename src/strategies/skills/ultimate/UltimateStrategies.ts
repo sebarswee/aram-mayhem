@@ -290,6 +290,9 @@ export class AbyssVortexStrategy implements SkillStrategy {
     const duration = 3000;
     const tickInterval = 200;
 
+    // 存储需要清理的 tweens
+    const activeTweens: Phaser.Tweens.Tween[] = [];
+
     // 多层漩涡视觉效果
     const vortex = scene.add.container(centerX, centerY);
     vortex.setDepth(18);
@@ -300,12 +303,13 @@ export class AbyssVortexStrategy implements SkillStrategy {
       ring.strokeCircle(0, 0, radius * (0.3 + i * 0.18));
       vortex.add(ring);
 
-      scene.tweens.add({
+      const tween = scene.tweens.add({
         targets: ring,
         angle: 360 * (i % 2 === 0 ? 1 : -1),
         duration: 800 + i * 200,
         repeat: -1,
       });
+      activeTweens.push(tween);
     }
 
     // 中心深渊
@@ -336,6 +340,12 @@ export class AbyssVortexStrategy implements SkillStrategy {
         elapsed += tickInterval;
         if (elapsed >= duration) {
           vortexTimer.destroy();
+          // 停止所有无限循环的 tweens
+          activeTweens.forEach(tween => {
+            if (tween && tween.isPlaying()) {
+              tween.stop();
+            }
+          });
           vortex.destroy();
           abyssOuter.destroy();
           abyssMid.destroy();
@@ -384,6 +394,9 @@ export class FrozenDomainStrategy implements SkillStrategy {
     const duration = 4000;
     const tickInterval = 500;
 
+    // 存储需要清理的 tweens
+    const activeTweens: Phaser.Tweens.Tween[] = [];
+
     // 多层冰封领域
     const domainLayers: Phaser.GameObjects.Arc[] = [];
     const layerConfigs = [
@@ -398,7 +411,7 @@ export class FrozenDomainStrategy implements SkillStrategy {
       layer.setDepth(17 + i);
       domainLayers.push(layer);
 
-      scene.tweens.add({
+      const tween = scene.tweens.add({
         targets: layer,
         scaleX: 1.06,
         scaleY: 1.06,
@@ -407,6 +420,7 @@ export class FrozenDomainStrategy implements SkillStrategy {
         yoyo: true,
         repeat: -1,
       });
+      activeTweens.push(tween);
     });
 
     // 霜冻粒子
@@ -457,6 +471,12 @@ export class FrozenDomainStrategy implements SkillStrategy {
         if (elapsed >= duration) {
           domainTimer.destroy();
           // 停止所有无限循环的 tweens
+          activeTweens.forEach(tween => {
+            if (tween && tween.isPlaying()) {
+              tween.stop();
+            }
+          });
+          // 停止旋转冰环的 tweens
           if ((iceRings as any).activeTweens) {
             (iceRings as any).activeTweens.forEach((t: Phaser.Tweens.Tween) => {
               if (t && t.isPlaying()) {
@@ -870,6 +890,9 @@ export class ShadowDescentStrategy implements SkillStrategy {
     const duration = 4000;
     const tickInterval = 500;
 
+    // 存储需要清理的 tweens
+    const activeTweens: Phaser.Tweens.Tween[] = [];
+
     // 多层暗影区域
     const shadowLayers: Phaser.GameObjects.Arc[] = [];
     const layerConfigs = [
@@ -884,7 +907,7 @@ export class ShadowDescentStrategy implements SkillStrategy {
       layer.setDepth(17 + i);
       shadowLayers.push(layer);
 
-      scene.tweens.add({
+      const tween = scene.tweens.add({
         targets: layer,
         scaleX: 1.08,
         scaleY: 1.08,
@@ -893,6 +916,7 @@ export class ShadowDescentStrategy implements SkillStrategy {
         yoyo: true,
         repeat: -1,
       });
+      activeTweens.push(tween);
     });
 
     // 暗影粒子
@@ -921,12 +945,13 @@ export class ShadowDescentStrategy implements SkillStrategy {
       ring.strokeCircle(0, 0, radius * (0.4 + i * 0.25));
       vortex.add(ring);
 
-      scene.tweens.add({
+      const tween = scene.tweens.add({
         targets: ring,
         angle: 360 * (i % 2 === 0 ? 1 : -1),
         duration: 1500 + i * 300,
         repeat: -1,
       });
+      activeTweens.push(tween);
     }
 
     let elapsed = 0;
@@ -936,6 +961,12 @@ export class ShadowDescentStrategy implements SkillStrategy {
         elapsed += tickInterval;
         if (elapsed >= duration) {
           shadowTimer.destroy();
+          // 停止所有无限循环的 tweens
+          activeTweens.forEach(tween => {
+            if (tween && tween.isPlaying()) {
+              tween.stop();
+            }
+          });
           shadowLayers.forEach(l => l.destroy());
           shadowParticles.destroy();
           vortex.destroy();
@@ -1758,6 +1789,9 @@ export class VoidRiftStrategy implements SkillStrategy {
     const duration = 3000;
     const tickInterval = 300;
 
+    // 存储需要清理的 tweens
+    const activeTweens: Phaser.Tweens.Tween[] = [];
+
     // 多层虚空裂隙核心
     const riftOuter = scene.add.circle(centerX, centerY, 50, 0x4400aa, 0.5);
     const riftMid = scene.add.circle(centerX, centerY, 35, 0x6600cc, 0.7);
@@ -1775,12 +1809,13 @@ export class VoidRiftStrategy implements SkillStrategy {
       ring.strokeCircle(0, 0, radius * (0.25 + i * 0.2));
       voidRings.add(ring);
 
-      scene.tweens.add({
+      const tween = scene.tweens.add({
         targets: ring,
         angle: 360 * (i % 2 === 0 ? 1 : -1),
         duration: 700 + i * 150,
         repeat: -1,
       });
+      activeTweens.push(tween);
     }
 
     // 吸入粒子
@@ -1803,6 +1838,12 @@ export class VoidRiftStrategy implements SkillStrategy {
         elapsed += tickInterval;
         if (elapsed >= duration) {
           riftTimer.destroy();
+          // 停止所有无限循环的 tweens
+          activeTweens.forEach(tween => {
+            if (tween && tween.isPlaying()) {
+              tween.stop();
+            }
+          });
           riftOuter.destroy();
           riftMid.destroy();
           riftInner.destroy();
@@ -1854,6 +1895,9 @@ export class BlackHoleStrategy implements SkillStrategy {
     const tickInterval = 300;
     let elapsed = 0;
 
+    // 存储需要清理的 tweens
+    const activeTweens: Phaser.Tweens.Tween[] = [];
+
     // 多层黑洞核心
     const blackHoleOuter = scene.add.circle(centerX, centerY, 55, 0x220066, 0.6);
     const blackHoleMid = scene.add.circle(centerX, centerY, 40, 0x330088, 0.75);
@@ -1871,12 +1915,13 @@ export class BlackHoleStrategy implements SkillStrategy {
       ring.strokeCircle(0, 0, radius * (0.2 + i * 0.15));
       gravityRings.add(ring);
 
-      scene.tweens.add({
+      const tween = scene.tweens.add({
         targets: ring,
         angle: 360 * (i % 2 === 0 ? 1 : -1),
         duration: 600 + i * 100,
         repeat: -1,
       });
+      activeTweens.push(tween);
     }
 
     // 吸入粒子
@@ -1898,6 +1943,12 @@ export class BlackHoleStrategy implements SkillStrategy {
         elapsed += tickInterval;
         if (elapsed >= duration) {
           damageTimer.destroy();
+          // 停止所有无限循环的 tweens
+          activeTweens.forEach(tween => {
+            if (tween && tween.isPlaying()) {
+              tween.stop();
+            }
+          });
           blackHoleOuter.destroy();
           blackHoleMid.destroy();
           blackHoleInner.destroy();
@@ -2153,6 +2204,9 @@ export class SanctuaryStrategy implements SkillStrategy {
     const duration = 5000;
     const tickInterval = 500;
 
+    // 存储需要清理的 tweens
+    const activeTweens: Phaser.Tweens.Tween[] = [];
+
     // 多层圣域区域
     const sanctuaryLayers: Phaser.GameObjects.Arc[] = [];
     const layerConfigs = [
@@ -2195,12 +2249,13 @@ export class SanctuaryStrategy implements SkillStrategy {
       ring.strokeCircle(0, 0, radius * (0.4 + i * 0.25));
       sanctuaryRings.add(ring);
 
-      scene.tweens.add({
+      const tween = scene.tweens.add({
         targets: ring,
         angle: 360,
         duration: 2000 + i * 400,
         repeat: -1,
       });
+      activeTweens.push(tween);
     }
 
     let elapsed = 0;
@@ -2210,6 +2265,12 @@ export class SanctuaryStrategy implements SkillStrategy {
         elapsed += tickInterval;
         if (elapsed >= duration) {
           healTimer.destroy();
+          // 停止所有无限循环的 tweens
+          activeTweens.forEach(tween => {
+            if (tween && tween.isPlaying()) {
+              tween.stop();
+            }
+          });
           sanctuaryLayers.forEach(l => l.destroy());
           holyParticles.destroy();
           sanctuaryRings.destroy();
