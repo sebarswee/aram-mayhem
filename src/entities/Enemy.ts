@@ -2,7 +2,6 @@ import Phaser from 'phaser';
 import { EnemyConfig, EnemyType, Element, ElementMark, BossPhase, EnemyAbility } from '@/types';
 import { COUNTER_RELATIONS, ELEMENT_COLORS, getCounterBonus } from '@/data/elements';
 import {
-  statusEffectColorRegistry,
   enemyTypeScaleRegistry,
   enemyPassiveAbilityRegistry,
   enemyDeathAbilityRegistry,
@@ -11,19 +10,16 @@ import {
 import { IBuffable } from '@/modifiers/interfaces/IBuffable';
 import { ModifierStack } from '@/modifiers/core/ModifierStack';
 import { StatusEffectType } from '@/modifiers/modifiers/StatusEffectModifier';
-
-// Status effect interface
-export interface StatusEffect {
-  type: 'burn' | 'freeze' | 'stun' | 'poison' | 'slow' | 'root' | 'defense_break' | 'tick_speed_up';
-  value: number;
-  duration: number;
-  remainingTime: number;
-  source: string; // source skill ID
-  element?: Element; // element type for DoT effects
-}
-
-// 优先级顺序：freeze > stun > poison > defense_break > slow > burn
-const EFFECT_PRIORITY: StatusEffect['type'][] = ['freeze', 'stun', 'poison', 'defense_break', 'slow', 'burn', 'tick_speed_up'];
+import {
+  createBurnVisualModifier,
+  createPoisonVisualModifier,
+  createFreezeVisualModifier,
+  createStunVisualModifier,
+  createRootVisualModifier,
+  createSlowVisualModifier,
+  createDefenseBreakVisualModifier,
+  createTickSpeedUpVisualModifier,
+} from '@/modifiers/visual/VisualModifiers';
 
 // 敌人类型到精灵纹理的映射
 const ENEMY_TEXTURE_MAP: Record<string, string> = {
@@ -71,9 +67,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IBuffable {
   public instanceId: string; // 唯一实例ID（用于连锁判定）
   public element: Element;
 
-  // Status effects
-  public statusEffects: StatusEffect[] = [];
-
   // 新增：修饰符栈
   public readonly modifierStack: ModifierStack;
 
@@ -101,7 +94,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IBuffable {
 
   private target: Phaser.GameObjects.Sprite | null = null;
   private shadowGraphics: Phaser.GameObjects.Graphics | null = null;
-  private lastDotTickTime: Record<string, number> = {};
   private elementTintApplied: boolean = false;
 
   // IBuffable 要求的属性：基础属性（只读）
@@ -359,103 +351,52 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IBuffable {
   // ==================== Status Effect Methods ====================
 
   /**
-   * Add a status effect to this enemy
+   * 添加状态效果（便捷方法，使用新的修饰符系统）
    */
-  addStatusEffect(effect: StatusEffect): void {
-    // Check if same type already exists
-    const existingIndex = this.statusEffects.findIndex(e => e.type === effect.type);
-
-    if (existingIndex >= 0) {
-      // Refresh duration if new one is stronger or longer
-      const existing = this.statusEffects[existingIndex];
-      if (effect.value >= existing.value || effect.duration >= existing.remainingTime) {
-        this.statusEffects[existingIndex] = { ...effect, remainingTime: effect.duration };
-      }
-    } else {
-      this.statusEffects.push({ ...effect, remainingTime: effect.duration });
-    }
-
-    // 更新视觉效果（根据优先级）
-    this.updateStatusVisual();
-  }
-
-  /**
-   * 根据优先级更新视觉效果
-   */
-  private updateStatusVisual(): void {
-    // 按优先级排序，找到最高优先级的效果
-    for (const effectType of EFFECT_PRIORITY) {
-      const effect = this.statusEffects.find(e => e.type === effectType);
-      if (effect) {
-        this.applyStatusEffectColor(effectType);
-        return;
-      }
-    }
-    // 没有状态效果，恢复元素颜色
-    this.applyElementTint();
-  }
-
-  /**
-   * Apply visual color for status type
-   */
-  private applyStatusEffectColor(type: StatusEffect['type']): void {
-    // 使用策略模式
-    if (statusEffectColorRegistry.hasColor(type)) {
-      const color = statusEffectColorRegistry.getColor(type as any);
-      if (color !== undefined) {
-        this.setTint(color);
-        return;
-      }
-    }
-    // 没有颜色映射，恢复元素颜色
-    this.applyElementTint();
-  }
-
-  /**
-   * Update all status effects - tick damage and expire
-   */
-  private updateStatusEffects(time: number): void {
-    const delta = this.scene.game.loop.delta;
-
-    // Check for tick_speed_up effect and update multiplier
-    const tickSpeedUp = this.statusEffects.find(e => e.type === 'tick_speed_up');
-    this.tickSpeedMultiplier = tickSpeedUp ? 2.0 : 1.0;
-
-    let visualNeedsUpdate = false;
-
-    this.statusEffects = this.statusEffects.filter(effect => {
-      effect.remainingTime -= delta;
-
-      // Process tick-based effects
-      if (effect.type === 'burn' || effect.type === 'poison') {
-        // Base tick interval, reduced by tickSpeedMultiplier
-        const baseTickInterval = effect.type === 'burn' ? 500 : 1000;
-        const tickInterval = baseTickInterval / this.tickSpeedMultiplier;
-        const key = `${this.instanceId}_${effect.type}`;
-
-        if (!this.lastDotTickTime[key]) {
-          this.lastDotTickTime[key] = time;
-        }
-
-        if (time - this.lastDotTickTime[key] >= tickInterval) {
-          this.takeDamage(effect.value);
-          this.lastDotTickTime[key] = time;
-        }
-      }
-
-      // Remove expired effects
-      if (effect.remainingTime <= 0) {
-        delete this.lastDotTickTime[`${this.instanceId}_${effect.type}`];
-        visualNeedsUpdate = true;
-        return false;
-      }
-
-      return true;
-    });
-
-    // 如果有效果过期，更新视觉效果
-    if (visualNeedsUpdate) {
-      this.updateStatusVisual();
+  addStatusEffect(effect: { type: string; value: number; duration: number; source?: string; element?: Element }): void {
+    switch (effect.type) {
+      case 'burn':
+        this.modifierStack.addModifier(
+          createBurnVisualModifier(effect.value, effect.duration, effect.element)
+        );
+        break;
+      case 'poison':
+        this.modifierStack.addModifier(
+          createPoisonVisualModifier(effect.value, effect.duration)
+        );
+        break;
+      case 'freeze':
+        this.modifierStack.addModifier(
+          createFreezeVisualModifier(effect.duration)
+        );
+        break;
+      case 'stun':
+        this.modifierStack.addModifier(
+          createStunVisualModifier(effect.duration)
+        );
+        break;
+      case 'root':
+        this.modifierStack.addModifier(
+          createRootVisualModifier(effect.duration)
+        );
+        break;
+      case 'slow':
+        this.modifierStack.addModifier(
+          createSlowVisualModifier(effect.value, effect.duration)
+        );
+        break;
+      case 'defense_break':
+        this.modifierStack.addModifier(
+          createDefenseBreakVisualModifier(effect.value, effect.duration)
+        );
+        break;
+      case 'tick_speed_up':
+        this.modifierStack.addModifier(
+          createTickSpeedUpVisualModifier(effect.value, effect.duration)
+        );
+        break;
+      default:
+        console.warn(`[Enemy] Unknown status effect type: ${effect.type}`);
     }
   }
 
@@ -640,8 +581,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IBuffable {
    * Get defense break bonus (increased damage taken)
    */
   private getDefenseBreakBonus(): number {
-    const defenseBreak = this.statusEffects.find(e => e.type === 'defense_break');
-    return defenseBreak?.value || 0;
+    if (this.modifierStack.hasTag('defense_break')) {
+      return this.modifierStack.getStatusEffectValue(StatusEffectType.DEFENSE_BREAK);
+    }
+    return 0;
   }
 
   // ==================== Boss Abilities ====================

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { Player } from '@/entities/Player';
-import { Enemy, StatusEffect } from '@/entities/Enemy';
+import { Enemy } from '@/entities/Enemy';
 import { Projectile, ProjectileConfig } from '@/entities/Projectile';
 import { Skill, Element, SynergyResult } from '@/types';
 import { SkillEffects } from '@/graphics/SkillEffects';

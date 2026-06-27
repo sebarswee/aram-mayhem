@@ -104,9 +104,9 @@ export class SpreadDebuffStrategy implements SynergyEffectStrategy {
  */
 export class DispelAndDamageStrategy implements SynergyEffectStrategy {
   execute(_synergy: SynergyResult, enemy: Enemy, context: SynergyExecutionContext): void {
-    // 清除所有状态效果 - 通过重新设置 statusEffects 数组
-    // 注意：这是特殊情况，需要直接操作旧系统
-    enemy.statusEffects = [];
+    // 清除所有状态效果 - 使用新的修饰符系统
+    const allEffectTags = ['burn', 'poison', 'slow', 'root', 'freeze', 'stun', 'defense_break'];
+    enemy.modifierStack.removeByTags(allEffectTags);
     enemy.takeDamage(Math.floor(context.baseDamage * 0.5), context.skillElement);
   }
 }

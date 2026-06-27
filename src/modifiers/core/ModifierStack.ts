@@ -405,4 +405,40 @@ export class ModifierStack {
       }
     });
   }
+
+  /**
+   * 根据标签移除所有匹配的修饰符
+   * @param tag 要移除的标签
+   * @returns 移除的修饰符数量
+   */
+  removeByTag(tag: string): number {
+    const ids = this.tagIndex.get(tag);
+    if (!ids || ids.size === 0) {
+      return 0;
+    }
+
+    // 复制 ID 列表以避免在迭代时修改
+    const idsToRemove = [...ids];
+    let count = 0;
+
+    for (const id of idsToRemove) {
+      this.removeModifier(id);
+      count++;
+    }
+
+    return count;
+  }
+
+  /**
+   * 根据多个标签移除所有匹配的修饰符
+   * @param tags 要移除的标签列表
+   * @returns 移除的修饰符数量
+   */
+  removeByTags(tags: string[]): number {
+    let totalRemoved = 0;
+    for (const tag of tags) {
+      totalRemoved += this.removeByTag(tag);
+    }
+    return totalRemoved;
+  }
 }
