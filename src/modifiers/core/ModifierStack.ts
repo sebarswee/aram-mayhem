@@ -254,4 +254,134 @@ export class ModifierStack {
   getTriggers(triggerType: TriggerType): TriggerModifier[] {
     return this.triggerModifiers.filter(mod => mod.triggerType === triggerType);
   }
+
+  /**
+   * 更新所有修饰符（每帧调用）
+   */
+  update(delta: number): void {
+    // 更新状态效果
+    this.updateStatusEffects(delta);
+
+    // 更新属性修饰符
+    this.updateAttributeModifiers(delta);
+
+    // 更新触发器
+    this.updateTriggerModifiers(delta);
+  }
+
+  /**
+   * 更新状态效果
+   */
+  private updateStatusEffects(delta: number): void {
+    const toRemove: string[] = [];
+
+    for (const [id, effect] of this.statusEffects) {
+      effect.remainingTime -= delta;
+
+      // 触发tick效果（DoT）
+      if (effect.tickInterval && effect.remainingTime > 0) {
+        effect.lastTickTime = (effect.lastTickTime || 0) + delta;
+        if (effect.lastTickTime >= effect.tickInterval) {
+          effect.onUpdate?.(this.owner, effect.lastTickTime);
+          effect.lastTickTime = 0;
+        }
+      }
+
+      // 标记过期
+      if (effect.remainingTime <= 0 && effect.duration > 0) {
+        toRemove.push(id);
+      }
+    }
+
+    // 移除过期的
+    for (const id of toRemove) {
+      this.removeModifier(id);
+    }
+  }
+
+  /**
+   * 更新属性修饰符
+   */
+  private updateAttributeModifiers(delta: number): void {
+    for (const [attr, modifiers] of this.attributeModifiers) {
+      const remaining = modifiers.filter(mod => {
+        if (mod.duration < 0) return true;  // 永久修饰符
+        mod.remainingTime -= delta;
+        if (mod.remainingTime <= 0) {
+          mod.onRemove?.(this.owner);
+          return false;
+        }
+        return true;
+      });
+      this.attributeModifiers.set(attr, remaining);
+    }
+  }
+
+  /**
+   * 更新触发器修饰符
+   */
+  private updateTriggerModifiers(delta: number): void {
+    this.triggerModifiers = this.triggerModifiers.filter(mod => {
+      if (mod.duration > 0) {
+        mod.remainingTime -= delta;
+      }
+      if (mod.remainingTime <= 0 || mod.remainingTriggers <= 0) {
+        mod.onRemove?.(this.owner);
+        return false;
+      }
+      return true;
+    });
+  }
+
+  /**
+   * 移除修饰符
+   */
+  removeModifier(id: string): void {
+    // 从属性修饰符中移除
+    for (const [attr, modifiers] of this.attributeModifiers) {
+      const index = modifiers.findIndex(m => m.id === id);
+      if (index >= 0) {
+        const removed = modifiers.splice(index, 1)[0];
+        this.removeFromTagIndex(removed);
+        removed.onRemove?.(this.owner);
+        this.owner.onModifierRemoved?.(removed);
+        return;
+      }
+    }
+
+    // 从状态效果中移除
+    if (this.statusEffects.has(id)) {
+      const removed = this.statusEffects.get(id)!;
+      this.statusEffects.delete(id);
+      this.removeFromTagIndex(removed);
+      removed.onRemove?.(this.owner);
+      this.owner.onModifierRemoved?.(removed);
+      return;
+    }
+
+    // 从触发器中移除
+    const triggerIndex = this.triggerModifiers.findIndex(m => m.id === id);
+    if (triggerIndex >= 0) {
+      const removed = this.triggerModifiers.splice(triggerIndex, 1)[0];
+      this.removeFromTagIndex(removed);
+      removed.onRemove?.(this.owner);
+      this.owner.onModifierRemoved?.(removed);
+      return;
+    }
+  }
+
+  /**
+   * 从标签索引中移除
+   */
+  private removeFromTagIndex(modifier: Modifier): void {
+    modifier.tags.forEach(tag => {
+      const set = this.tagIndex.get(tag);
+      if (set) {
+        set.delete(modifier.id);
+        if (set.size === 0) {
+          this.tagIndex.delete(tag);
+        }
+      }
+    });
+  }
 }
