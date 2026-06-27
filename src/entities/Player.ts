@@ -482,7 +482,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IBuffable {
   /**
    * Update the visual tint based on all active status effects
    */
-  private updateVisualTint(): void {
+  public updateVisualTint(): void {
     // Priority: burn > poison > attack_boost > shield > default
     if (this.hasStatusEffect('burn')) {
       this.setTint(0xff8844);
@@ -500,7 +500,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IBuffable {
   /**
    * Create cyan trail particles for speed boost
    */
-  private createSpeedTrailParticles(): void {
+  public createSpeedTrailParticles(): void {
     // Check if particles texture exists
     if (!this.scene.textures.exists('particle')) {
       return;
@@ -517,6 +517,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IBuffable {
     });
     emitter.setDepth(48);
     this.particleEmitters.set('speed_trail', emitter);
+  }
+
+  /**
+   * Get a particle emitter by name
+   */
+  public getParticleEmitter(name: string): Phaser.GameObjects.Particles.ParticleEmitter | undefined {
+    return this.particleEmitters.get(name);
   }
 
   /**
