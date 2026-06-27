@@ -14,6 +14,7 @@ export class EnemySpawnSystem {
   private config: EnemySpawnConfig;
   private lastSpawnTime: number = 0;
   private totalEnemiesSpawned: number = 0;
+  private lastWaveTriggerTime: number = -Infinity; // 防止巨浪重复触发
 
   constructor(
     private scene: Phaser.Scene,
@@ -42,9 +43,14 @@ export class EnemySpawnSystem {
     const spawnRate = this.config.baseSpawnRate + minutesElapsed * this.config.difficultyScale;
 
     // 检查是否是巨浪时间（每分钟一次大波）
-    const timeSinceLastWave = time % this.config.waveInterval;
-    if (timeSinceLastWave < 1000 && time > this.config.waveInterval) {
+    // 使用标志位防止在同一时间窗口内重复触发
+    const timeSinceLastTrigger = time - this.lastWaveTriggerTime;
+    const shouldTriggerWave = time >= this.config.waveInterval &&
+                              timeSinceLastTrigger >= this.config.waveInterval;
+
+    if (shouldTriggerWave) {
       // 巨浪生成（3倍数量）
+      this.lastWaveTriggerTime = time;
       this.spawnWave(spawnRate * 3, time);
     } else {
       // 常规生成

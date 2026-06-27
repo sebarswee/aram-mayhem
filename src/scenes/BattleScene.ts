@@ -121,7 +121,8 @@ export class BattleScene extends Phaser.Scene {
     // 初始化系统 - 读取摇杆设置
     const joystickMode = window.gameSettings?.joystickMode || 'follow';
     this.inputSystem = new InputSystem(this, joystickMode);
-    this.enemySystem = new EnemySystem(this, this.player);
+    // 禁用 EnemySystem 的自动生成，让 EnemySpawnSystem 成为唯一生源
+    this.enemySystem = new EnemySystem(this, this.player, false);
     this.elementSystem = new ElementSystem();
     this.skillSystem = new SkillSystem(this, this.player);
     this.skillSystem.setElementSystem(this.elementSystem);

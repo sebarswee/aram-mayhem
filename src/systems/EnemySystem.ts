@@ -30,10 +30,12 @@ export class EnemySystem {
   private spawnTimer: Phaser.Time.TimerEvent | null = null;
   private bossActive: boolean = false;
   private lastBossWave: number = 0;
+  private autoSpawnEnabled: boolean = true;
 
-  constructor(scene: Phaser.Scene, player: Phaser.GameObjects.Sprite) {
+  constructor(scene: Phaser.Scene, player: Phaser.GameObjects.Sprite, autoSpawn: boolean = true) {
     this.scene = scene;
     this.player = player;
+    this.autoSpawnEnabled = autoSpawn;
 
     // Create enemy group
     this.enemies = scene.physics.add.group({
@@ -44,8 +46,10 @@ export class EnemySystem {
     // Listen for summon events
     this.scene.events.on('enemySummon', this.handleSummonEvent, this);
 
-    // Start continuous spawning
-    this.startContinuousSpawning();
+    // Start continuous spawning only if auto-spawn is enabled
+    if (this.autoSpawnEnabled) {
+      this.startContinuousSpawning();
+    }
   }
 
   /**
