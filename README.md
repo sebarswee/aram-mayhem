@@ -81,7 +81,7 @@ src/
 - **Phaser 3**：游戏引擎
 - **TypeScript**：开发语言
 - **Vite**：构建工具
-- **Jest**：测试框架
+- **Vitest**：测试框架
 
 ## 许可证
 
