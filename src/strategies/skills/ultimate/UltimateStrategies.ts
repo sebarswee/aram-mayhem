@@ -1710,7 +1710,8 @@ export class ForestRageStrategy implements SkillStrategy {
 
 export class ForestRageVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层地面裂痕
+    // 中心叶片效果由 ForestRageStrategy 创建和管理
+    // 这里只创建瞬发的地面裂痕效果
     const groundCrack = scene.add.graphics();
     groundCrack.lineStyle(3, 0x2d6b2d, 0.55);
     for (let i = 0; i < 10; i++) {
@@ -1724,26 +1725,13 @@ export class ForestRageVisualStrategy implements VisualEffectStrategy {
     }
     groundCrack.setDepth(25);
 
-    // 多层绿色光环
-    const auraOuter = scene.add.circle(x, y, radius, 0x44ff44, 0.22);
-    const auraMid = scene.add.circle(x, y, radius * 0.7, 0x66ff66, 0.3);
-    const auraInner = scene.add.circle(x, y, radius * 0.4, 0x88ff88, 0.35);
-    auraOuter.setDepth(26);
-    auraMid.setDepth(27);
-    auraInner.setDepth(28);
-
     scene.tweens.add({
-      targets: [auraOuter, auraMid, auraInner, groundCrack],
+      targets: groundCrack,
       alpha: 0,
       scaleX: 1.4,
       scaleY: 1.4,
       duration: 550,
-      onComplete: () => {
-        auraOuter.destroy();
-        auraMid.destroy();
-        auraInner.destroy();
-        groundCrack.destroy();
-      },
+      onComplete: () => groundCrack.destroy(),
     });
   }
 }
@@ -2075,22 +2063,8 @@ export class ThunderStrikeStrategy implements SkillStrategy {
 
 export class ThunderStrikeVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层雷云
-    const cloudLayers: Phaser.GameObjects.Arc[] = [];
-    for (let i = 0; i < 3; i++) {
-      const cloud = scene.add.circle(x, y - 50, radius * (0.4 + i * 0.1), 0x333355, 0.55 - i * 0.08);
-      cloud.setDepth(40 + i);
-      cloudLayers.push(cloud);
-    }
-
-    scene.tweens.add({
-      targets: cloudLayers,
-      alpha: 0.25,
-      duration: 300,
-      yoyo: true,
-      repeat: 4,
-      onComplete: () => cloudLayers.forEach(c => c.destroy()),
-    });
+    // 雷云由 ThunderStrikeStrategy 创建和管理
+    // 这里不创建任何重复的持续视觉效果
   }
 }
 
@@ -2246,33 +2220,8 @@ export class SanctuaryStrategy implements SkillStrategy {
 
 export class SanctuaryVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层圣域光环
-    const sanctuaryLayers: Phaser.GameObjects.Arc[] = [];
-    const layerConfigs = [
-      { radius: radius * 1.1, color: 0xffcc00, alpha: 0.1 },
-      { radius: radius, color: 0xffdd44, alpha: 0.18 },
-      { radius: radius * 0.8, color: 0xffee88, alpha: 0.15 },
-    ];
-
-    layerConfigs.forEach((config, i) => {
-      const layer = scene.add.circle(x, y, config.radius, config.color, config.alpha);
-      layer.setStrokeStyle(2, 0xffcc00, 0.45);
-      layer.setDepth(17 + i);
-      sanctuaryLayers.push(layer);
-    });
-
-    // 脉动效果
-    sanctuaryLayers.forEach(layer => {
-      scene.tweens.add({
-        targets: layer,
-        scaleX: 1.08,
-        scaleY: 1.08,
-        alpha: layer.alpha * 1.5,
-        duration: 500,
-        yoyo: true,
-        repeat: -1,
-      });
-    });
+    // 圣域区域和旋转光环由 SanctuaryStrategy 创建和管理
+    // 这里不创建任何重复的持续视觉效果
   }
 }
 
