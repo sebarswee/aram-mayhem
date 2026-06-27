@@ -774,7 +774,15 @@ export class ThunderApocalypseStrategy implements SkillStrategy {
         currentStrike++;
         if (currentStrike > strikeCount) {
           strikeTimer.destroy();
-          cloudLayers.forEach(c => c.destroy());
+          // 云层淡出动画
+          scene.tweens.add({
+            targets: cloudLayers,
+            alpha: 0,
+            duration: 300,
+            onComplete: () => {
+              cloudLayers.forEach(c => c.destroy());
+            },
+          });
           return;
         }
 
