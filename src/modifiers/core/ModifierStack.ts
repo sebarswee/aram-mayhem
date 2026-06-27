@@ -33,6 +33,16 @@ export class ModifierStack {
    * 添加修饰符
    */
   addModifier(modifier: Modifier): void {
+    // 验证修饰符基本属性
+    if (!modifier.id || !modifier.source) {
+      console.warn('[ModifierStack] Modifier missing required fields (id or source)');
+      return;
+    }
+    if (modifier.duration !== undefined && modifier.duration < -1) {
+      console.warn('[ModifierStack] Invalid duration:', modifier.duration);
+      return;
+    }
+
     // 处理叠加规则
     if (!this.handleStacking(modifier)) {
       return;
@@ -206,11 +216,11 @@ export class ModifierStack {
       }
     }
 
-    // Phase 3: 覆盖操作
+    // Phase 3: 覆盖操作（最后一个 OVERRIDE 生效）
     for (const mod of sorted) {
       if (mod.operation === ModifierOp.OVERRIDE) {
         value = mod.value;
-        break;  // 覆盖操作只取最后一个
+        // 不 break，让循环继续，最终最后一个 OVERRIDE 会生效
       }
     }
 
@@ -281,9 +291,10 @@ export class ModifierStack {
       // 触发tick效果（DoT）
       if (effect.tickInterval && effect.remainingTime > 0) {
         effect.lastTickTime = (effect.lastTickTime || 0) + delta;
-        if (effect.lastTickTime >= effect.tickInterval) {
-          effect.onUpdate?.(this.owner, effect.lastTickTime);
-          effect.lastTickTime = 0;
+        // 使用 while 循环保留多余时间，避免 tick 计时漂移
+        while (effect.lastTickTime >= effect.tickInterval) {
+          effect.onUpdate?.(this.owner, effect.tickInterval);
+          effect.lastTickTime -= effect.tickInterval;
         }
       }
 
