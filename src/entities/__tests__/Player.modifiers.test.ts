@@ -12,11 +12,33 @@ import {
 /**
  * Player.modifiers.test.ts
  *
- * 由于 Player 依赖 Phaser，我们验证 Player 类正确实现了 IBuffable 接口的所有要求：
- * 1. 检查 Player 类是否声明实现 IBuffable 接口
- * 2. 验证接口所需的属性和方法签名
- * 3. 通过编译器验证类型正确性
+ * 测试策略：
+ * 1. 类型检查测试：编译时验证 Player 类正确实现 IBuffable 接口
+ * 2. MockPlayer 测试：验证 IBuffable 实现的运行时行为
  */
+
+// ============================================
+// 类型检查测试 - 确保编译时接口正确性
+// ============================================
+// 使用类型导入来验证 Player 正确实现 IBuffable 接口
+// 这不会在运行时加载 Phaser，但会在编译时验证类型正确性
+import type { Player } from '../Player';
+
+// 编译时类型检查：如果 Player 未正确实现 IBuffable，下面这行会编译失败
+// 这是真正的类型安全测试 - 不需要任何运行时代码
+type _PlayerImplementsIBuffable = Player extends IBuffable ? true : false;
+
+describe('Player IBuffable Type Check', () => {
+  it('should correctly implement IBuffable interface at type level', () => {
+    // 类型断言：确保 Player 类正确实现 IBuffable 接口
+    // 这个测试主要价值在于编译时验证
+    // 如果 Player 未实现 IBuffable，TypeScript 编译器会在类型导入时报错
+    // 编译时类型检查 _PlayerImplementsIBuffable 已验证了类型兼容性
+    // 运行时我们验证类型声明存在
+    const typeCheck: _PlayerImplementsIBuffable = true;
+    expect(typeCheck).toBe(true);
+  });
+});
 
 // 创建一个模拟的 Player 类来测试 IBuffable 实现
 // 这避免了 Phaser 依赖问题，同时验证接口实现逻辑
@@ -36,7 +58,7 @@ class MockPlayer implements IBuffable {
   };
 
   constructor() {
-    this.id = `player_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    this.id = `player_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     this.modifierStack = new ModifierStack(this);
   }
 

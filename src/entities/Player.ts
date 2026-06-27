@@ -134,7 +134,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IBuffable {
     this.setDepth(50);
 
     // 初始化实例 ID
-    this.id = `player_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    this.id = `player_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
     // 初始化修饰符栈
     this.modifierStack = new ModifierStack(this);
