@@ -8,6 +8,8 @@ import {
   enemyDeathAbilityRegistry,
   enemyElementDeathRegistry,
 } from '@/strategies';
+import { IBuffable } from '@/modifiers/interfaces/IBuffable';
+import { ModifierStack } from '@/modifiers/core/ModifierStack';
 
 // Status effect interface
 export interface StatusEffect {
@@ -62,7 +64,7 @@ const ELEMENT_DEATH_COLORS: Record<Element, number> = {
   earth: 0xaa8844,
 };
 
-export class Enemy extends Phaser.Physics.Arcade.Sprite {
+export class Enemy extends Phaser.Physics.Arcade.Sprite implements IBuffable {
   public config: EnemyConfig;
   public currentHp: number;
   public instanceId: string; // 唯一实例ID（用于连锁判定）
@@ -70,6 +72,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
   // Status effects
   public statusEffects: StatusEffect[] = [];
+
+  // 新增：修饰符栈
+  public readonly modifierStack: ModifierStack;
 
   // Tick speed multiplier for DoT effects (default 1.0, 2.0 = double speed)
   public tickSpeedMultiplier: number = 1.0;
@@ -98,6 +103,26 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private lastDotTickTime: Record<string, number> = {};
   private elementTintApplied: boolean = false;
 
+  // IBuffable 要求的属性：基础属性（只读）
+  public get baseAttributes(): Readonly<Record<string, number>> {
+    return {
+      maxHp: this.config.hp,
+      damage: this.config.damage,
+      speed: this.config.speed,
+      defense: 0,
+    };
+  }
+
+  // IBuffable 要求的属性：isActive
+  public get isActive(): boolean {
+    return this.active;
+  }
+
+  // IBuffable 要求的属性：id（使用 instanceId）
+  public get id(): string {
+    return this.instanceId;
+  }
+
   constructor(scene: Phaser.Scene, x: number, y: number, config: EnemyConfig) {
     // 检查是否有精灵表动画素材
     const idleTextureKey = `${config.id}_idle`;
@@ -108,7 +133,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.config = config;
     this.currentHp = config.hp;
     this.maxHp = config.hp;  // 用于计算血量百分比
-    this.instanceId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    this.instanceId = `${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     this.element = config.element;
     this.hasSpriteAnimation = hasAnimation;
 
@@ -152,6 +177,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       // Apply element color tint (only for static sprites)
       this.applyElementTint();
     }
+
+    // 初始化修饰符栈
+    this.modifierStack = new ModifierStack(this);
 
     // Apply passive abilities
     this.applyPassiveAbilities();
@@ -265,8 +293,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     const body = this.body as Phaser.Physics.Arcade.Body | null;
     if (!body || !this.scene) return;
 
-    // Update status effects (ticking)
-    this.updateStatusEffects(time);
+    // 更新修饰符栈（替代旧的 updateStatusEffects）
+    this.updateModifiers(_delta);
 
     // Calculate actual speed considering slow effects
     const speedMultiplier = this.getSpeedMultiplier();
@@ -311,6 +339,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (this.shadowGraphics) {
       this.updateShadow();
     }
+  }
+
+  // IBuffable 要求的方法：更新修饰符栈
+  updateModifiers(delta: number): void {
+    this.modifierStack.update(delta);
   }
 
   // ==================== Status Effect Methods ====================
