@@ -112,7 +112,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IBuffable {
     this.stats = { ...INITIAL_PLAYER_STATS };
 
     // 设置物理体
-    this.setCollideWorldBounds(true);
+    // 注意：移除世界边界碰撞，允许玩家在无限地图中自由移动
+    // this.setCollideWorldBounds(true);
     this.setDrag(0);
     this.setBounce(0);
 

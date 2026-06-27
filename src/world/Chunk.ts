@@ -78,6 +78,8 @@ export class Chunk {
     const worldX = this.x * this.size + this.size / 2;
     const worldY = this.y * this.size + this.size / 2;
 
+    console.log(`[Chunk] Creating background for chunk (${this.x}, ${this.y}) at world position (${worldX}, ${worldY})`);
+
     // 创建 TileSprite（使用可平铺纹理）
     this.tileSprite = this.scene.add.tileSprite(
       worldX,

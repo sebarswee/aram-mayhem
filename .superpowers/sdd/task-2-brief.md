@@ -1,185 +1,210 @@
-## Task 2: Enemy 实现 IBuffable 接口
+## Task 2: 创建 ChunkManager 类
 
 **Files:**
-- Modify: `src/entities/Enemy.ts`
-- Test: `src/entities/__tests__/Enemy.modifiers.test.ts`
+- Create: `src/world/ChunkManager.ts`
+- Test: 手动验证区块管理器工作正常
 
 **Interfaces:**
-- Consumes: `IBuffable` (from Task 1), `ModifierStack` (from Task 1)
-- Produces: Enemy class implementing IBuffable with `modifierStack`, `baseAttributes`, `updateModifiers()`, `isActive`
+- Consumes: `Chunk` 类
+- Produces: `ChunkManager` 类，管理所有区块的加载和卸载
 
-- [ ] **Step 1: 添加导入语句**
+- [ ] **Step 1: 创建 ChunkManager 类**
 
-在 `src/entities/Enemy.ts` 文件顶部添加：
-
-```typescript
-import { IBuffable } from '@/modifiers/interfaces/IBuffable';
-import { ModifierStack } from '@/modifiers/core/ModifierStack';
-```
-
-- [ ] **Step 2: 修改类声明实现 IBuffable 接口**
-
-将类声明从：
-```typescript
-export class Enemy extends Phaser.Physics.Arcade.Sprite {
-```
-
-修改为：
-```typescript
-export class Enemy extends Phaser.Physics.Arcade.Sprite implements IBuffable {
-```
-
-- [ ] **Step 3: 添加 modifierStack 属性**
-
-在类属性部分添加（约第 73 行之后）：
+创建文件 `src/world/ChunkManager.ts`:
 
 ```typescript
-  // 新增：修饰符栈
-  public readonly modifierStack: ModifierStack;
-```
+import Phaser from 'phaser';
+import { Chunk, ChunkConfig } from './Chunk';
 
-- [ ] **Step 4: 实现 baseAttributes 和 isActive getter**
+export interface ChunkManagerConfig {
+  chunkSize?: number;        // 区块大小，默认 256
+  activeRadius?: number;     // 活动区块半径，默认 1（3x3）
+  seed?: number;             // 种子，默认随机
+}
 
-在构造函数之前添加：
+export class ChunkManager {
+  private chunks: Map<string, Chunk> = new Map();
+  private readonly chunkSize: number;
+  private readonly activeRadius: number;
+  private readonly seed: number;
+  private readonly scene: Phaser.Scene;
 
-```typescript
-  // IBuffable 要求的属性：基础属性（只读）
-  public get baseAttributes(): Readonly<Record<string, number>> {
+  // 性能统计
+  private totalChunksLoaded: number = 0;
+  private totalChunksUnloaded: number = 0;
+
+  constructor(
+    scene: Phaser.Scene,
+    config: ChunkManagerConfig = {}
+  ) {
+    this.scene = scene;
+    this.chunkSize = config.chunkSize || 256;
+    this.activeRadius = config.activeRadius || 1;
+    this.seed = config.seed || Date.now();
+  }
+
+  /**
+   * 更新区块（每帧调用，基于玩家位置）
+   */
+  update(playerX: number, playerY: number): void {
+    // 计算玩家所在的区块坐标
+    const playerChunkX = Math.floor(playerX / this.chunkSize);
+    const playerChunkY = Math.floor(playerY / this.chunkSize);
+
+    // 确定活动区块范围
+    const minX = playerChunkX - this.activeRadius;
+    const maxX = playerChunkX + this.activeRadius;
+    const minY = playerChunkY - this.activeRadius;
+    const maxY = playerChunkY + this.activeRadius;
+
+    // 1. 加载新区块
+    for (let x = minX; x <= maxX; x++) {
+      for (let y = minY; y <= maxY; y++) {
+        const key = this.getChunkKey(x, y);
+
+        if (!this.chunks.has(key)) {
+          this.loadChunk(x, y);
+        }
+      }
+    }
+
+    // 2. 卸载远离的区块
+    const keysToRemove: string[] = [];
+
+    this.chunks.forEach((chunk, key) => {
+      // 超出活动范围 + 缓冲距离的区块需要卸载
+      if (
+        chunk.x < minX - 1 ||
+        chunk.x > maxX + 1 ||
+        chunk.y < minY - 1 ||
+        chunk.y > maxY + 1
+      ) {
+        keysToRemove.push(key);
+      }
+    });
+
+    // 批量卸载
+    keysToRemove.forEach(key => {
+      this.unloadChunk(key);
+    });
+  }
+
+  /**
+   * 加载区块
+   */
+  private loadChunk(x: number, y: number): void {
+    const config: ChunkConfig = {
+      x,
+      y,
+      size: this.chunkSize,
+      seed: this.seed
+    };
+
+    const chunk = new Chunk(this.scene, config);
+    chunk.load();
+
+    const key = this.getChunkKey(x, y);
+    this.chunks.set(key, chunk);
+
+    this.totalChunksLoaded++;
+
+    console.log(`[ChunkManager] Loaded chunk (${x}, ${y}). Total active: ${this.chunks.size}`);
+  }
+
+  /**
+   * 卸载区块
+   */
+  private unloadChunk(key: string): void {
+    const chunk = this.chunks.get(key);
+    if (chunk) {
+      chunk.unload();
+      this.chunks.delete(key);
+      this.totalChunksUnloaded++;
+
+      console.log(`[ChunkManager] Unloaded chunk (${chunk.x}, ${chunk.y}). Total active: ${this.chunks.size}`);
+    }
+  }
+
+  /**
+   * 获取区块键值
+   */
+  private getChunkKey(x: number, y: number): string {
+    return `${x},${y}`;
+  }
+
+  /**
+   * 获取活动区块数量
+   */
+  getActiveChunkCount(): number {
+    return this.chunks.size;
+  }
+
+  /**
+   * 获取性能统计
+   */
+  getStats(): { loaded: number; unloaded: number; active: number } {
     return {
-      maxHp: this.config.hp,
-      damage: this.config.damage,
-      speed: this.config.speed,
-      defense: 0,
+      loaded: this.totalChunksLoaded,
+      unloaded: this.totalChunksUnloaded,
+      active: this.chunks.size
     };
   }
 
-  // IBuffable 要求的属性：isActive
-  public get isActive(): boolean {
-    return this.active;
+  /**
+   * 清理所有区块
+   */
+  cleanup(): void {
+    console.log('[ChunkManager] Cleaning up all chunks...');
+
+    this.chunks.forEach(chunk => {
+      chunk.unload();
+    });
+
+    this.chunks.clear();
   }
-```
 
-- [ ] **Step 5: 在构造函数中初始化 modifierStack**
+  /**
+   * 获取指定位置的区块（如果已加载）
+   */
+  getChunkAt(worldX: number, worldY: number): Chunk | null {
+    const chunkX = Math.floor(worldX / this.chunkSize);
+    const chunkY = Math.floor(worldY / this.chunkSize);
+    const key = this.getChunkKey(chunkX, chunkY);
 
-在构造函数中，`this.applyPassiveAbilities();` 之前添加：
-
-```typescript
-    // 初始化修饰符栈
-    this.modifierStack = new ModifierStack(this);
-```
-
-- [ ] **Step 6: 实现 updateModifiers 方法**
-
-在类方法部分添加（约第 315 行之后）：
-
-```typescript
-  // IBuffable 要求的方法：更新修饰符栈
-  updateModifiers(delta: number): void {
-    this.modifierStack.update(delta);
+    return this.chunks.get(key) || null;
   }
+
+  /**
+   * 获取区块大小
+   */
+  getChunkSize(): number {
+    return this.chunkSize;
+  }
+
+  /**
+   * 获取种子
+   */
+  getSeed(): number {
+    return this.seed;
+  }
+}
 ```
 
-- [ ] **Step 7: 修改 update 方法调用 updateModifiers**
+- [ ] **Step 2: 验证 ChunkManager 类创建成功**
 
-在 `update(time: number, _delta: number)` 方法中，将：
-```typescript
-    // Update status effects (ticking)
-    this.updateStatusEffects(time);
-```
-
-修改为：
-```typescript
-    // 更新修饰符栈（替代旧的 updateStatusEffects）
-    this.updateModifiers(_delta);
-```
-
-- [ ] **Step 8: 创建测试文件**
-
-创建文件 `src/entities/__tests__/Enemy.modifiers.test.ts`：
-
-```typescript
-import { describe, it, expect, beforeEach } from 'vitest';
-import { Enemy } from '../Enemy';
-import { ModifierStack } from '@/modifiers/core/ModifierStack';
-import { EnemyConfig, Element } from '@/types';
-
-describe('Enemy - Modifier Integration', () => {
-  let enemy: Enemy;
-  let mockScene: any;
-  let mockConfig: EnemyConfig;
-
-  beforeEach(() => {
-    mockScene = {
-      add: { existing: () => {}, graphics: () => ({ setDepth: () => {} }) },
-      physics: { add: { existing: () => {} } },
-      textures: { exists: () => false },
-      anims: { exists: () => false },
-      tweens: { add: () => {} },
-      time: { delayedCall: () => {} },
-      events: { emit: () => {} },
-      game: { loop: { delta: 16 } },
-      cameras: { main: { shake: () => {} } },
-    };
-
-    mockConfig = {
-      id: 'flame_slime',
-      name: 'Flame Slime',
-      type: 'normal',
-      element: 'fire' as Element,
-      hp: 100,
-      damage: 10,
-      speed: 50,
-      expValue: 10,
-      abilities: [],
-    };
-
-    enemy = new Enemy(mockScene, 100, 100, mockConfig);
-  });
-
-  it('should implement IBuffable interface', () => {
-    expect(enemy.modifierStack).toBeInstanceOf(ModifierStack);
-    expect(enemy.instanceId).toBeDefined();
-  });
-
-  it('should have baseAttributes getter', () => {
-    const attrs = enemy.baseAttributes;
-    expect(attrs).toHaveProperty('maxHp');
-    expect(attrs).toHaveProperty('damage');
-    expect(attrs).toHaveProperty('speed');
-    expect(attrs).toHaveProperty('defense');
-  });
-
-  it('should have isActive property', () => {
-    expect(enemy.isActive).toBe(true);
-    enemy.setActive(false);
-    expect(enemy.isActive).toBe(false);
-  });
-
-  it('should have updateModifiers method', () => {
-    expect(typeof enemy.updateModifiers).toBe('function');
-  });
-
-  it('should update modifiers in update loop', () => {
-    const updateSpy = vi.spyOn(enemy.modifierStack, 'update');
-    enemy.update(0, 16);
-    expect(updateSpy).toHaveBeenCalledWith(16);
-  });
-});
-```
-
-- [ ] **Step 9: 运行测试验证**
+运行 TypeScript 编译检查：
 
 ```bash
-npm test src/entities/__tests__/Enemy.modifiers.test.ts
+npm run build
 ```
 
-Expected: 所有测试通过
+Expected: 编译成功，无类型错误
 
-- [ ] **Step 10: 提交代码**
+- [ ] **Step 3: 提交代码**
 
 ```bash
-git add src/entities/Enemy.ts src/entities/__tests__/Enemy.modifiers.test.ts
-git commit -m "feat(enemy): 实现 IBuffable 接口，集成修饰符系统"
+git add src/world/ChunkManager.ts
+git commit -m "feat(world): implement ChunkManager with dynamic loading/unloading"
 ```
 
 ---

@@ -1,179 +1,170 @@
-## Task 4: 实现便捷方法
+## Task 4: 集成 ChunkManager 到 BattleScene
 
 **Files:**
-- Modify: `src/entities/Player.ts`
-- Modify: `src/entities/Enemy.ts`
-- Test: `src/entities/__tests__/Player.modifiers.test.ts` (update)
-- Test: `src/entities/__tests__/Enemy.modifiers.test.ts` (update)
+- Modify: `src/scenes/BattleScene.ts`
+- Modify: `src/config/game.config.ts`
 
 **Interfaces:**
-- Consumes: `modifierStack` from Task 1 & 2
-- Produces: Convenience methods `hasStatusEffect()`, `getEffectiveSpeed()`, `getEffectiveAttack()`, `isImmobilized()`, `getSpeedMultiplier()`
+- Consumes: `ChunkManager`, `Chunk`
+- Produces: 无限地图系统
 
-- [ ] **Step 1: Player - 实现 hasStatusEffect 便捷方法**
+- [ ] **Step 1: 修改游戏配置**
 
-在 `src/entities/Player.ts` 中，将现有的 `hasStatusEffect` 方法修改为：
+修改 `src/config/game.config.ts`，移除固定的世界边界：
 
 ```typescript
-  /**
-   * 检查是否有特定标签的状态效果
-   * @param tag 效果标签
-   */
-  hasStatusEffect(tag: string): boolean {
-    return this.modifierStack.hasTag(tag);
-  }
+// 移除固定世界大小
+// export const WORLD_WIDTH = 10000;  ← 删除
+// export const WORLD_HEIGHT = 10000; ← 删除
+
+// 添加新的配置
+export const CHUNK_SIZE = 256;           // 区块大小
+export const ACTIVE_CHUNK_RADIUS = 1;    // 活动区块半径（3x3）
+export const WORLD_SEED = 12345;         // 固定种子（可随机）
 ```
 
-- [ ] **Step 2: Player - 修改 getEffectiveSpeed 方法**
+- [ ] **Step 2: 修改 BattleScene 导入**
 
-将 `getEffectiveSpeed()` 方法修改为：
+在 `src/scenes/BattleScene.ts` 顶部添加导入：
 
 ```typescript
-  /**
-   * 获取计算后的速度（基础值 + 修饰符）
-   */
-  getEffectiveSpeed(): number {
-    const baseSpeed = this.stats.speed;
-    return this.modifierStack.getAttributeValue('speed', baseSpeed);
-  }
+import { ChunkManager } from '@/world/ChunkManager';
+import { CHUNK_SIZE, ACTIVE_CHUNK_RADIUS, WORLD_SEED } from '@/config/game.config';
 ```
 
-- [ ] **Step 3: Player - 修改 getEffectiveAttack 方法**
-
-将 `getEffectiveAttack()` 方法修改为：
+移除旧的导入：
 
 ```typescript
-  /**
-   * 获取计算后的攻击力（基础值 + 修饰符）
-   */
-  getEffectiveAttack(): number {
-    const baseAttack = this.stats.attack;
-    return this.modifierStack.getAttributeValue('attack', baseAttack);
-  }
+// 移除：WORLD_WIDTH, WORLD_HEIGHT
 ```
 
-- [ ] **Step 4: Player - 更新测试文件**
+- [ ] **Step 3: 添加 ChunkManager 属性**
 
-在 `src/entities/__tests__/Player.modifiers.test.ts` 中添加测试：
+在 BattleScene 类中添加：
 
 ```typescript
-  it('should check status effect via hasStatusEffect', () => {
-    const modifier = createBurnVisualModifier(10, 3000);
-    player.modifierStack.addModifier(modifier);
+export class BattleScene extends Phaser.Scene {
+  // 游戏对象
+  private player!: Player;
+  private gameState!: GameState;
 
-    expect(player.hasStatusEffect('burn')).toBe(true);
-    expect(player.hasStatusEffect('freeze')).toBe(false);
+  // 世界系统
+  private chunkManager!: ChunkManager;  // 新增
+
+  // ... 其他属性 ...
+}
+```
+
+- [ ] **Step 4: 修改 create() 方法**
+
+修改 `src/scenes/BattleScene.ts` 的 `create()` 方法：
+
+```typescript
+create(): void {
+  // 更新游戏尺寸
+  this.updateSize();
+
+  // 移除固定的世界边界
+  // this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT); ← 删除
+
+  // 初始化 ChunkManager（无限地图系统）
+  this.chunkManager = new ChunkManager(this, {
+    chunkSize: CHUNK_SIZE,
+    activeRadius: ACTIVE_CHUNK_RADIUS,
+    seed: WORLD_SEED
   });
 
-  it('should calculate effective speed with modifiers', () => {
-    const baseSpeed = player.stats.speed;
+  // 移除旧的背景创建方法
+  // this.createInfiniteBackground(); ← 删除
 
-    // 无修饰符时
-    expect(player.getEffectiveSpeed()).toBe(baseSpeed);
-
-    // 添加减速效果（通过修饰符）
-    // 注意：减速需要属性修饰符，这里测试便捷方法调用 modifierStack
-    const effectiveSpeed = player.getEffectiveSpeed();
-    expect(typeof effectiveSpeed).toBe('number');
-  });
-
-  it('should calculate effective attack with modifiers', () => {
-    const baseAttack = player.stats.attack;
-
-    // 无修饰符时
-    expect(player.getEffectiveAttack()).toBe(baseAttack);
-  });
-```
-
-- [ ] **Step 5: Enemy - 实现 hasStatusEffect 便捷方法**
-
-在 `src/entities/Enemy.ts` 中，添加方法：
-
-```typescript
-  /**
-   * 检查是否有特定标签的状态效果
-   * @param tag 效果标签
-   */
-  hasStatusEffect(tag: string): boolean {
-    return this.modifierStack.hasTag(tag);
+  // 确保纹理存在
+  if (!this.textures.exists('player')) {
+    console.log('Generating textures...');
+    const graphicsFactory = new GraphicsFactory(this);
+    graphicsFactory.generateAll();
   }
+
+  // ... 其他初始化代码 ...
+
+  // 创建玩家（在原点 (0, 0)，不再是固定中心）
+  this.player = new Player(this, 0, 0);
+
+  // 设置摄像机跟随玩家
+  this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+  // 移除相机边界限制
+  // this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT); ← 删除
+
+  // ... 其他代码保持不变 ...
+}
 ```
 
-- [ ] **Step 6: Enemy - 修改 isImmobilized 方法**
+- [ ] **Step 5: 修改 update() 方法**
 
-将 `isImmobilized()` 方法修改为：
+在 `src/scenes/BattleScene.ts` 的 `update()` 方法中，添加 ChunkManager 更新：
 
 ```typescript
-  /**
-   * 检查是否被定身（冻结/眩晕/定身）
-   */
-  public isImmobilized(): boolean {
-    return this.modifierStack.hasTag('freeze') ||
-           this.modifierStack.hasTag('stun') ||
-           this.modifierStack.hasTag('root');
+update(_time: number, delta: number): void {
+  if (this.gameState.isDead || this.gameState.isUpgrading || this.gameState.isSelectingSkill) return;
+
+  // 更新区块管理器（基于玩家位置）
+  this.chunkManager.update(this.player.x, this.player.y);
+
+  // 处理输入
+  const input = this.inputSystem.getInput();
+  if (input.isMoving) {
+    const speed = this.player.stats.speed;
+    this.player.move(input.moveX * speed, input.moveY * speed);
+  } else {
+    this.player.move(0, 0);
   }
+
+  // ... 其他更新代码保持不变 ...
+}
 ```
 
-- [ ] **Step 7: Enemy - 修改 getSpeedMultiplier 方法**
+- [ ] **Step 6: 修改 shutdown() 方法**
 
-将 `getSpeedMultiplier()` 方法修改为：
+在 `src/scenes/BattleScene.ts` 的 `shutdown()` 方法中，添加 ChunkManager 清理：
 
 ```typescript
-  /**
-   * 获取速度乘数（考虑减速效果）
-   */
-  private getSpeedMultiplier(): number {
-    if (this.modifierStack.hasTag('slow')) {
-      const slowValue = this.modifierStack.getStatusEffectValue(StatusEffectType.SLOW);
-      return 1 - slowValue / 100;
-    }
-    return 1;
-  }
+shutdown(): void {
+  // 清理 ChunkManager
+  this.chunkManager?.cleanup();
+
+  // 清理系统
+  this.inputSystem?.destroy();
+  // ... 其他清理代码 ...
+}
 ```
 
-- [ ] **Step 8: Enemy - 更新测试文件**
+- [ ] **Step 7: 移除旧的背景创建方法**
 
-在 `src/entities/__tests__/Enemy.modifiers.test.ts` 中添加测试：
+删除 `createInfiniteBackground()` 方法（不再需要）：
 
 ```typescript
-  it('should check status effect via hasStatusEffect', () => {
-    const modifier = createFreezeVisualModifier(2000);
-    enemy.modifierStack.addModifier(modifier);
-
-    expect(enemy.hasStatusEffect('freeze')).toBe(true);
-    expect(enemy.hasStatusEffect('burn')).toBe(false);
-  });
-
-  it('should check immobilized status', () => {
-    expect(enemy.isImmobilized()).toBe(false);
-
-    const freezeModifier = createFreezeVisualModifier(2000);
-    enemy.modifierStack.addModifier(freezeModifier);
-    expect(enemy.isImmobilized()).toBe(true);
-  });
-
-  it('should calculate speed multiplier', () => {
-    // 无减速时
-    const normalSpeed = enemy.config.speed;
-    // getSpeedMultiplier 是 private 方法，通过行为验证
-    // 这里测试 update() 方法中速度计算是否正常
-    expect(enemy.config.speed).toBe(normalSpeed);
-  });
+// 删除整个方法
+// private createInfiniteBackground(): void { ... }
 ```
 
-- [ ] **Step 9: 运行测试验证**
+- [ ] **Step 8: 验证集成成功**
+
+运行游戏，检查控制台输出：
 
 ```bash
-npm test src/entities/__tests__/
+npm run dev
 ```
 
-Expected: 所有测试通过
+Expected:
+- 控制台显示区块加载日志："Loaded chunk (0, 0)"
+- 控制台显示区块加载日志："Loaded chunk (-1, -1)" 等
+- 游戏正常运行，背景显示平铺纹理
+- 玩家移动时，区块动态加载和卸载
 
-- [ ] **Step 10: 提交代码**
+- [ ] **Step 9: 提交代码**
 
 ```bash
-git add src/entities/ src/entities/__tests__/
-git commit -m "feat(entities): 实现修饰符便捷方法"
+git add src/scenes/BattleScene.ts src/config/game.config.ts
+git commit -m "feat(scene): integrate ChunkManager for infinite world"
 ```
 
 ---

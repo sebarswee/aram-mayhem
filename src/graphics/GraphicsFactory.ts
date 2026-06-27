@@ -1703,13 +1703,14 @@ export class GraphicsFactory {
    */
   generateGroundTile(): void {
     const key = 'ground_tile';
-    const size = 256;
 
-    // 如果纹理已存在，跳过
+    // 如果纹理已存在（从外部文件加载），跳过程序化生成
     if (this.scene.textures.exists(key)) {
+      console.log(`ground_tile texture already exists (loaded from file), skipping generation`);
       return;
     }
 
+    const size = 256;
     const graphics = this.scene.add.graphics();
 
     // 创建深色地面基底
