@@ -549,12 +549,18 @@ export class FrozenDomainStrategy implements SkillStrategy {
       ring.strokeCircle(0, 0, radius * (0.4 + i * 0.25));
       iceRings.add(ring);
 
-      scene.tweens.add({
+      // 存储无限旋转 tween 以便清理
+      const ringTween = scene.tweens.add({
         targets: ring,
         angle: 360 * (i % 2 === 0 ? 1 : -1),
         duration: 1500 + i * 300,
         repeat: -1,
       });
+      // 在容器上存储 tween 引用以便清理
+      if (!(iceRings as any).activeTweens) {
+        (iceRings as any).activeTweens = [];
+      }
+      (iceRings as any).activeTweens.push(ringTween);
     }
 
     let elapsed = 0;
@@ -564,6 +570,14 @@ export class FrozenDomainStrategy implements SkillStrategy {
         elapsed += tickInterval;
         if (elapsed >= duration) {
           domainTimer.destroy();
+          // 停止所有无限循环的 tweens
+          if ((iceRings as any).activeTweens) {
+            (iceRings as any).activeTweens.forEach((t: Phaser.Tweens.Tween) => {
+              if (t && t.isPlaying()) {
+                t.stop();
+              }
+            });
+          }
           domainLayers.forEach(l => l.destroy());
           frostParticles.destroy();
           iceRings.destroy();
@@ -2710,6 +2724,7 @@ export class EarthGuardianStrategy implements SkillStrategy {
 
     // 岩石碎片环绕
     const rocks: Phaser.GameObjects.Graphics[] = [];
+    const rockTweens: Phaser.Tweens.Tween[] = [];
     for (let i = 0; i < 8; i++) {
       const rock = scene.add.graphics();
       rock.fillStyle(0x665544, 0.9);
@@ -2721,7 +2736,7 @@ export class EarthGuardianStrategy implements SkillStrategy {
       rocks.push(rock);
 
       const orbitAngle = (i / 8) * Math.PI * 2;
-      scene.tweens.add({
+      const orbitTween = scene.tweens.add({
         targets: rock,
         x: player.x + Math.cos(orbitAngle) * 50,
         y: player.y + Math.sin(orbitAngle) * 50,
@@ -2729,10 +2744,17 @@ export class EarthGuardianStrategy implements SkillStrategy {
         duration: 3000,
         repeat: -1,
       });
+      rockTweens.push(orbitTween);
     }
 
     scene.time.delayedCall(duration, () => {
       (player.stats as any).defense = originalDefense;
+      // 停止所有无限循环的轨道 tweens
+      rockTweens.forEach(t => {
+        if (t && t.isPlaying()) {
+          t.stop();
+        }
+      });
       scene.tweens.add({
         targets: [shieldOuter, shieldMid, shieldInner, ...rocks],
         alpha: 0,
