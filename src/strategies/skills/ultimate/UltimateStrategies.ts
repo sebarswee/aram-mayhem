@@ -120,30 +120,8 @@ export class DragonBreathStrategy implements SkillStrategy {
 
 export class DragonBreathVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    const angleSpread = Math.PI / 3;
-
-    // 多层火焰锥形
-    const breathLayers: Phaser.GameObjects.Graphics[] = [];
-    const layerConfigs = [
-      { radius: radius * 1.1, color: 0xff2200, alpha: 0.15 },
-      { radius: radius, color: 0xff4400, alpha: 0.3 },
-      { radius: radius * 0.8, color: 0xff6600, alpha: 0.45 },
-      { radius: radius * 0.5, color: 0xffaa00, alpha: 0.6 },
-    ];
-
-    layerConfigs.forEach((config, i) => {
-      const breath = scene.add.graphics();
-      breath.fillStyle(config.color, config.alpha);
-      breath.beginPath();
-      breath.moveTo(x, y);
-      breath.arc(x, y, config.radius, -angleSpread / 2, angleSpread / 2);
-      breath.closePath();
-      breath.fill();
-      breath.setDepth(38 + i);
-      breathLayers.push(breath);
-    });
-
-    // 火焰粒子爆发
+    // 火焰锥形由 DragonBreathStrategy 创建和管理
+    // 这里只创建瞬发的火焰粒子爆发效果
     VisualEffectUtils.createParticleBurst(scene, x, y, {
       count: 40,
       color: 0xff6600,
@@ -152,15 +130,6 @@ export class DragonBreathVisualStrategy implements VisualEffectStrategy {
       scale: { start: 0.9, end: 0 },
       lifespan: 600,
       texture: 'particle_fire_core',
-    });
-
-    scene.tweens.add({
-      targets: breathLayers,
-      alpha: 0,
-      scaleX: 1.3,
-      scaleY: 1.3,
-      duration: 700,
-      onComplete: () => breathLayers.forEach(b => b.destroy()),
     });
   }
 }
@@ -532,50 +501,8 @@ export class FrozenDomainStrategy implements SkillStrategy {
 
 export class FrozenDomainVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层冰封领域
-    const domainLayers: Phaser.GameObjects.Arc[] = [];
-    const layerConfigs = [
-      { radius: radius * 1.1, color: 0x66ccff, alpha: 0.1 },
-      { radius: radius, color: 0x88ddff, alpha: 0.15 },
-      { radius: radius * 0.8, color: 0xaaeeff, alpha: 0.12 },
-    ];
-
-    layerConfigs.forEach((config, i) => {
-      const layer = scene.add.circle(x, y, config.radius, config.color, config.alpha);
-      layer.setDepth(17 + i);
-      domainLayers.push(layer);
-    });
-
-    // 旋转冰环
-    const iceRings = scene.add.container(x, y);
-    iceRings.setDepth(18);
-    for (let i = 0; i < 3; i++) {
-      const ring = scene.add.graphics();
-      ring.lineStyle(2, 0xaaeeff, 0.4);
-      ring.strokeCircle(0, 0, radius * (0.4 + i * 0.25));
-      iceRings.add(ring);
-    }
-
-    iceRings.list.forEach((ring, i) => {
-      scene.tweens.add({
-        targets: ring,
-        angle: 360 * (i % 2 === 0 ? 1 : -1),
-        duration: 1500 + i * 300,
-        repeat: 7,
-      });
-    });
-
-    scene.time.delayedCall(4000, () => {
-      scene.tweens.add({
-        targets: [...domainLayers, iceRings],
-        alpha: 0,
-        duration: 500,
-        onComplete: () => {
-          domainLayers.forEach(l => l.destroy());
-          iceRings.destroy();
-        },
-      });
-    });
+    // 冰封区域和冰环由 FrozenDomainStrategy 创建和管理
+    // 这里不创建任何重复的持续视觉效果
   }
 }
 
@@ -922,46 +849,13 @@ export class JudgmentLightStrategy implements SkillStrategy {
 
 export class JudgmentLightVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层光柱
-    const beamOuter = scene.add.rectangle(x, y, 90, radius * 2, 0xffcc00, 0.2);
-    const beamMid = scene.add.rectangle(x, y, 60, radius * 2, 0xffdd44, 0.35);
-    const beamInner = scene.add.rectangle(x, y, 30, radius * 2, 0xffffff, 0.55);
-    beamOuter.setDepth(18);
-    beamMid.setDepth(19);
-    beamInner.setDepth(20);
-
-    // 光芒射线
-    const rays: Phaser.GameObjects.Graphics[] = [];
-    for (let i = 0; i < 12; i++) {
-      const angle = (i / 12) * Math.PI * 2;
-      const ray = scene.add.graphics();
-      ray.fillStyle(0xffffff, 0.65);
-      ray.fillTriangle(0, 0, -4, radius, 4, radius);
-      ray.setPosition(x, y);
-      ray.setRotation(angle);
-      ray.setDepth(21);
-      rays.push(ray);
-    }
-
-    // 核心光爆
+    // 光柱和射线由 JudgmentLightStrategy 创建和管理
+    // 这里只创建瞬发的核心光爆效果
     VisualEffectUtils.createElementGlow(scene, x, y, {
       color: 0xffcc00,
       radius: 40,
       duration: 500,
       pulseCount: 2,
-    });
-
-    scene.tweens.add({
-      targets: [beamOuter, beamMid, beamInner, ...rays],
-      alpha: 0,
-      scale: 1.3,
-      duration: 650,
-      onComplete: () => {
-        beamOuter.destroy();
-        beamMid.destroy();
-        beamInner.destroy();
-        rays.forEach(r => r.destroy());
-      },
     });
   }
 }
@@ -1085,50 +979,8 @@ export class ShadowDescentStrategy implements SkillStrategy {
 
 export class ShadowDescentVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层暗影区域
-    const shadowLayers: Phaser.GameObjects.Arc[] = [];
-    const layerConfigs = [
-      { radius: radius * 1.1, color: 0x220044, alpha: 0.15 },
-      { radius: radius, color: 0x440066, alpha: 0.25 },
-      { radius: radius * 0.8, color: 0x660088, alpha: 0.2 },
-    ];
-
-    layerConfigs.forEach((config, i) => {
-      const layer = scene.add.circle(x, y, config.radius, config.color, config.alpha);
-      layer.setDepth(17 + i);
-      shadowLayers.push(layer);
-    });
-
-    // 暗影漩涡
-    const vortex = scene.add.container(x, y);
-    vortex.setDepth(18);
-    for (let i = 0; i < 3; i++) {
-      const ring = scene.add.graphics();
-      ring.lineStyle(2, 0x8800ff, 0.35);
-      ring.strokeCircle(0, 0, radius * (0.4 + i * 0.25));
-      vortex.add(ring);
-    }
-
-    vortex.list.forEach((ring, i) => {
-      scene.tweens.add({
-        targets: ring,
-        angle: 360 * (i % 2 === 0 ? 1 : -1),
-        duration: 1500 + i * 300,
-        repeat: 7,
-      });
-    });
-
-    scene.time.delayedCall(4000, () => {
-      scene.tweens.add({
-        targets: [...shadowLayers, vortex],
-        alpha: 0,
-        duration: 500,
-        onComplete: () => {
-          shadowLayers.forEach(l => l.destroy());
-          vortex.destroy();
-        },
-      });
-    });
+    // 暗影区域和漩涡由 ShadowDescentStrategy 创建和管理
+    // 这里不创建任何重复的持续视觉效果
   }
 }
 
@@ -1248,28 +1100,8 @@ export class DeathDecayStrategy implements SkillStrategy {
 
 export class DeathDecayVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层死亡凋零区域
-    const decayLayers: Phaser.GameObjects.Arc[] = [];
-    const layerConfigs = [
-      { radius: radius * 1.1, color: 0x220022, alpha: 0.15 },
-      { radius: radius, color: 0x440044, alpha: 0.25 },
-      { radius: radius * 0.8, color: 0x660066, alpha: 0.2 },
-    ];
-
-    layerConfigs.forEach((config, i) => {
-      const layer = scene.add.circle(x, y, config.radius, config.color, config.alpha);
-      layer.setDepth(17 + i);
-      decayLayers.push(layer);
-    });
-
-    scene.time.delayedCall(5000, () => {
-      scene.tweens.add({
-        targets: decayLayers,
-        alpha: 0,
-        duration: 500,
-        onComplete: () => decayLayers.forEach(l => l.destroy()),
-      });
-    });
+    // 凋零区域圆由 DeathDecayStrategy 创建和管理
+    // 这里不创建任何重复的持续视觉效果
   }
 }
 
@@ -1360,30 +1192,13 @@ export class MountainCollapseStrategy implements SkillStrategy {
 
 export class MountainCollapseVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层地裂
-    const crackLayers: Phaser.GameObjects.Graphics[] = [];
-    for (let i = 0; i < 4; i++) {
-      const crack = scene.add.graphics();
-      crack.fillStyle(0x553311, 0.5 - i * 0.1);
-      crack.fillCircle(x, y, radius * (1 - i * 0.15));
-      crack.setDepth(20 + i);
-      crackLayers.push(crack);
-    }
-
-    // 冲击波
+    // 地裂效果由 MountainCollapseStrategy 创建和管理
+    // 这里只创建瞬发的冲击波效果
     VisualEffectUtils.createShockwave(scene, x, y, {
       color: 0x886644,
       radius: radius,
       rings: 4,
       duration: 450,
-    });
-
-    scene.tweens.add({
-      targets: crackLayers,
-      alpha: 0,
-      scale: 1.4,
-      duration: 600,
-      onComplete: () => crackLayers.forEach(c => c.destroy()),
     });
   }
 }
@@ -1564,22 +1379,8 @@ export class TsunamiStrategy implements SkillStrategy {
 
 export class TsunamiVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层海啸波
-    const waveLayers: Phaser.GameObjects.Arc[] = [];
-    for (let i = 0; i < 5; i++) {
-      const wave = scene.add.circle(x, y, 25 + i * 20, 0x4488ff, 0.45 - i * 0.06);
-      wave.setStrokeStyle(3 - i * 0.5, 0x66aaff, 0.6 - i * 0.08);
-      wave.setDepth(20 + i);
-      waveLayers.push(wave);
-    }
-
-    scene.tweens.add({
-      targets: waveLayers,
-      radius: radius,
-      alpha: 0,
-      duration: 850,
-      onComplete: () => waveLayers.forEach(w => w.destroy()),
-    });
+    // 海啸波浪由 TsunamiStrategy 创建和管理
+    // 这里不创建任何重复的持续视觉效果
   }
 }
 
@@ -1780,26 +1581,8 @@ export class OvergrowthStrategy implements SkillStrategy {
 
 export class OvergrowthVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 多层藤蔓区域
-    const vineLayers: Phaser.GameObjects.Arc[] = [];
-    const layerConfigs = [
-      { radius: radius * 1.1, color: 0x226622, alpha: 0.15 },
-      { radius: radius, color: 0x44aa44, alpha: 0.22 },
-      { radius: radius * 0.8, color: 0x66cc66, alpha: 0.18 },
-    ];
-
-    layerConfigs.forEach((config, i) => {
-      const layer = scene.add.circle(x, y, config.radius, config.color, config.alpha);
-      layer.setDepth(17 + i);
-      vineLayers.push(layer);
-    });
-
-    scene.tweens.add({
-      targets: vineLayers,
-      alpha: 0,
-      duration: 1000,
-      onComplete: () => vineLayers.forEach(v => v.destroy()),
-    });
+    // 藤蔓区域由 OvergrowthStrategy 创建和管理
+    // 这里不创建任何重复的持续视觉效果
   }
 }
 
