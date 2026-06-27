@@ -1,5 +1,4 @@
 // src/modifiers/interfaces/ModifierTypes.ts
-import { Element } from '@/types';
 
 /**
  * 修饰符类型
