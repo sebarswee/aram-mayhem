@@ -412,18 +412,22 @@ player.modifierStack.addModifier(
 **Player 移除项：**
 1. `statusEffects: PlayerStatusEffect[]` 属性
 2. `statusEffectTickTimers: Map<string, number>` 属性
-3. `updateStatusEffects(delta: number)` 方法
-4. `addStatusEffect()` 方法（保留，但内部改为调用 modifierStack）
-5. `clearDebuffs()` 方法（保留，但内部改为使用 modifierStack）
-6. 移除 `PlayerStatusEffect` 接口定义
+3. `updateStatusEffects(delta: number)` 方法（内部逻辑完全移除）
+4. 移除 `PlayerStatusEffect` 接口定义
+
+**Player 保留但重构的方法：**
+- `addStatusEffect(effect)` - 保留方法签名，内部改为调用 modifierStack.addModifier()
+- `clearDebuffs()` - 保留方法签名，内部改为使用 modifierStack.removeModifier()
 
 **Enemy 移除项：**
 1. `statusEffects: StatusEffect[]` 属性
 2. `lastDotTickTime: Record<string, number>` 属性
-3. `updateStatusEffects(time: number)` 方法
-4. `addStatusEffect()` 方法（保留，但内部改为调用 modifierStack）
-5. `EFFECT_PRIORITY` 常量
-6. 移除 `StatusEffect` 接口定义
+3. `updateStatusEffects(time: number)` 方法（内部逻辑完全移除）
+4. `EFFECT_PRIORITY` 常量
+5. 移除 `StatusEffect` 接口定义
+
+**Enemy 保留但重构的方法：**
+- `addStatusEffect(effect)` - 保留方法签名，内部改为调用 modifierStack.addModifier()
 
 **注意：**
 - `addStatusEffect()` 方法可以保留作为便捷方法，内部调用 modifierStack
