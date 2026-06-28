@@ -37,6 +37,12 @@ export class EnemySpawnSystem {
    * 更新敌人生成（每帧调用）
    */
   update(time: number): void {
+    // 检查敌人数量上限，防止性能问题
+    const currentEnemyCount = this.enemySystem.getActiveEnemyCount();
+    if (currentEnemyCount >= 100) {
+      return; // 达到上限，暂停生成
+    }
+
     const minutesElapsed = time / 60000;
 
     // 计算当前生成率（随时间增加）

@@ -372,6 +372,12 @@ export class EnemySystem {
    * 在指定位置生成敌人（供 EnemySpawnSystem 使用）
    */
   spawnEnemyAt(x: number, y: number, type: string): void {
+    // 检查敌人数量上限，防止性能问题
+    const currentCount = this.getActiveEnemyCount();
+    if (currentCount >= MAX_ENEMIES) {
+      return; // 达到上限，不再生成
+    }
+
     const enemyConfig = this.getEnemyConfig(type);
     if (enemyConfig) {
       const enemy = new EnemyEntity(this.scene, x, y, enemyConfig);
