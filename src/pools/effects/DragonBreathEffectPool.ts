@@ -49,15 +49,23 @@ export interface DragonBreathEffectConfig extends VisualEffectConfig {
  */
 export class DragonBreathEffectPool extends VisualEffectPool<DragonBreathEffectConfig> {
   constructor(scene: Phaser.Scene, initialSize: number = 3) {
+    // 第一步：先跳过父类的自动预热
     super(
       scene,
-      // 创建函数
-      () => this.createDragonBreathEffect(),
-      // 重置函数
-      (obj, config: DragonBreathEffectConfig) => this.resetDragonBreathEffect(obj, config),
-      // 配置选项
-      { initialSize, name: 'DragonBreathEffectPool' }
+      // 延迟绑定，warmUp 时才会调用
+      () => (this as any)._createFn(),
+      (obj, config: DragonBreathEffectConfig) => (this as any)._resetFn(obj, config),
+      { initialSize: 0, name: 'DragonBreathEffectPool', skipInitialWarmUp: true }
     );
+
+    // 第二步：设置实际的创建和重置函数
+    (this as any)._createFn = this.createDragonBreathEffect.bind(this);
+    (this as any)._resetFn = this.resetDragonBreathEffect.bind(this);
+
+    // 第三步：手动预热
+    if (initialSize > 0) {
+      this.warmUp(initialSize);
+    }
   }
 
   /**
