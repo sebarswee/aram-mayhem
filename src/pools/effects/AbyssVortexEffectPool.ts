@@ -76,15 +76,23 @@ export class AbyssVortexEffectPool extends VisualEffectPool<AbyssVortexEffectCon
   };
 
   constructor(scene: Phaser.Scene, initialSize: number = 3) {
+    // 第一步：先跳过父类的自动预热
     super(
       scene,
-      // 创建函数
-      () => this.createAbyssVortexEffect(),
-      // 重置函数
-      (obj, config: AbyssVortexEffectConfig) => this.resetAbyssVortexEffect(obj, config),
-      // 配置选项
-      { initialSize, name: 'AbyssVortexEffectPool' }
+      // 延迟绑定，warmUp 时才会调用
+      () => (this as any)._createFn(),
+      (obj, config: AbyssVortexEffectConfig) => (this as any)._resetFn(obj, config),
+      { initialSize: 0, name: 'AbyssVortexEffectPool', skipInitialWarmUp: true }
     );
+
+    // 第二步：设置实际的创建和重置函数
+    (this as any)._createFn = this.createAbyssVortexEffect.bind(this);
+    (this as any)._resetFn = this.resetAbyssVortexEffect.bind(this);
+
+    // 第三步：手动预热
+    if (initialSize > 0) {
+      this.warmUp(initialSize);
+    }
   }
 
   /**

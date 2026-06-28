@@ -20,15 +20,23 @@ export interface InfernoEffectConfig extends VisualEffectConfig {
  */
 export class InfernoEffectPool extends VisualEffectPool<InfernoEffectConfig> {
   constructor(scene: Phaser.Scene, initialSize: number = 3) {
+    // 第一步：先跳过父类的自动预热
     super(
       scene,
-      // 创建函数
-      () => this.createInfernoEffect(),
-      // 重置函数
-      (obj, config: InfernoEffectConfig) => this.resetInfernoEffect(obj, config),
-      // 配置选项
-      { initialSize, name: 'InfernoEffectPool' }
+      // 延迟绑定，warmUp 时才会调用
+      () => (this as any)._createFn(),
+      (obj, config: InfernoEffectConfig) => (this as any)._resetFn(obj, config),
+      { initialSize: 0, name: 'InfernoEffectPool', skipInitialWarmUp: true }
     );
+
+    // 第二步：设置实际的创建和重置函数
+    (this as any)._createFn = this.createInfernoEffect.bind(this);
+    (this as any)._resetFn = this.resetInfernoEffect.bind(this);
+
+    // 第三步：手动预热
+    if (initialSize > 0) {
+      this.warmUp(initialSize);
+    }
   }
 
   /**
