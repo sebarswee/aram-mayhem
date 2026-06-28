@@ -238,6 +238,28 @@ export class InfernoStrategy implements SkillStrategy {
 
     scene.events.on('enemyKilled', deathHandler);
 
+    // 添加备用清理机制，确保视觉效果一定会被清理
+    const backupCleanupTime = duration + 1000;
+    scene.time.delayedCall(backupCleanupTime, () => {
+      if (this.activeInfernos.has(instanceId)) {
+        this.activeInfernos.delete(instanceId);
+        scene.events.off('enemyKilled', deathHandler);
+        activeTweens.forEach(tween => {
+          if (tween && tween.isPlaying()) {
+            tween.stop();
+          }
+        });
+        infernoLayers.forEach(l => {
+          if (l && l.active) {
+            l.destroy();
+          }
+        });
+        if (fireParticles && fireParticles.active) {
+          fireParticles.destroy();
+        }
+      }
+    });
+
     let elapsed = 0;
     const infernoTimer = scene.time.addEvent({
       delay: tickInterval,
