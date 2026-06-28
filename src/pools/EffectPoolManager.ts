@@ -1,5 +1,9 @@
 import Phaser from 'phaser';
 import { InfernoEffectPool } from './effects/InfernoEffectPool';
+import { DragonBreathEffectPool } from './effects/DragonBreathEffectPool';
+import { AbyssVortexEffectPool } from './effects/AbyssVortexEffectPool';
+import { FrozenDomainEffectPool } from './effects/FrozenDomainEffectPool';
+import { ThunderApocalypseEffectPool } from './effects/ThunderApocalypseEffectPool';
 
 /**
  * 效果池管理器
@@ -10,6 +14,10 @@ import { InfernoEffectPool } from './effects/InfernoEffectPool';
 export class EffectPoolManager {
   // 大招效果池 (P0 优先级)
   public inferno: InfernoEffectPool;
+  public dragonBreath: DragonBreathEffectPool;
+  public abyssVortex: AbyssVortexEffectPool;
+  public frozenDomain: FrozenDomainEffectPool;
+  public thunderApocalypse: ThunderApocalypseEffectPool;
   // public thunder: ThunderEffectPool;
   // public blizzard: BlizzardEffectPool;
 
@@ -23,6 +31,10 @@ export class EffectPoolManager {
   constructor(private scene: Phaser.Scene) {
     // 初始化 P0 大招效果池（初始大小 3，根据使用频率调整）
     this.inferno = new InfernoEffectPool(scene, 3);
+    this.dragonBreath = new DragonBreathEffectPool(scene, 3);
+    this.abyssVortex = new AbyssVortexEffectPool(scene, 3);
+    this.frozenDomain = new FrozenDomainEffectPool(scene, 3);
+    this.thunderApocalypse = new ThunderApocalypseEffectPool(scene, 3);
     // this.thunder = new ThunderEffectPool(scene, 3);
     // this.blizzard = new BlizzardEffectPool(scene, 3);
 
@@ -41,6 +53,10 @@ export class EffectPoolManager {
    */
   clearAll(): void {
     this.inferno.clear();
+    this.dragonBreath.clear();
+    this.abyssVortex.clear();
+    this.frozenDomain.clear();
+    this.thunderApocalypse.clear();
     // this.thunder.clear();
     // this.blizzard.clear();
     // this.poisonCloud.clear();
@@ -57,6 +73,10 @@ export class EffectPoolManager {
 
     // P0 大招
     stats.inferno = this.inferno.getStats();
+    stats.dragonBreath = this.dragonBreath.getStats();
+    stats.abyssVortex = this.abyssVortex.getStats();
+    stats.frozenDomain = this.frozenDomain.getStats();
+    stats.thunderApocalypse = this.thunderApocalypse.getStats();
     // stats.thunder = this.thunder.getStats();
     // stats.blizzard = this.blizzard.getStats();
 

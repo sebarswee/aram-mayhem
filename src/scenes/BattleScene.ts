@@ -21,6 +21,7 @@ import { GAME_WIDTH, GAME_HEIGHT, updateGameSize, CHUNK_SIZE, ACTIVE_CHUNK_RADIU
 import { GraphicsFactory } from '@/graphics/GraphicsFactory';
 import { ChunkManager } from '@/world/ChunkManager';
 import { EnemySpawnSystem } from '@/systems/EnemySpawnSystem';
+import { EffectPoolManager } from '@/pools';
 
 declare global {
   interface Window {
@@ -57,6 +58,9 @@ export class BattleScene extends Phaser.Scene {
   private skillSelectUI!: SkillSelectUI;
   private upgradeSelectUI!: UpgradeSelectUI;
   private damageNumberManager!: DamageNumberManager;
+
+  // 效果池
+  public effectPools!: EffectPoolManager;
 
   // 波次控制
   private waveTimer!: Phaser.Time.TimerEvent;
@@ -150,6 +154,9 @@ export class BattleScene extends Phaser.Scene {
         difficultyScale: 1.5
       }
     );
+
+    // 初始化效果池管理器
+    this.effectPools = new EffectPoolManager(this);
 
     // 初始化UI
     this.hud = new HUD(this, this.player, this.gameState, this.expSystem);
@@ -529,6 +536,9 @@ export class BattleScene extends Phaser.Scene {
   }
 
   shutdown(): void {
+    // 清理效果池
+    this.effectPools?.clearAll();
+
     // 清理 ChunkManager
     this.chunkManager?.cleanup();
 

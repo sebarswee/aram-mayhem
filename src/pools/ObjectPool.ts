@@ -14,6 +14,8 @@ export interface ObjectPoolOptions {
   debug?: boolean;
   /** 池名称，用于调试日志（默认 'ObjectPool'） */
   name?: string;
+  /** 是否跳过初始预热（默认 false，用于子类延迟初始化） */
+  skipInitialWarmUp?: boolean;
 }
 
 /**
@@ -99,8 +101,8 @@ export abstract class ObjectPool<T> {
       autoExpandEnabled: this.autoExpand,
     };
 
-    // 预创建初始对象
-    if (this.initialSize > 0) {
+    // 预创建初始对象（除非跳过）
+    if (this.initialSize > 0 && !options.skipInitialWarmUp) {
       this.expand(this.initialSize);
     }
 

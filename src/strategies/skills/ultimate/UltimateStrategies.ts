@@ -5,9 +5,12 @@ import { VisualEffectUtils } from '@/graphics/VisualEffectUtils';
 import Phaser from 'phaser';
 import { createBurnVisualModifier } from '@/modifiers/visual/VisualModifiers';
 import { StatusEffectType } from '@/modifiers/modifiers/StatusEffectModifier';
+import { EffectPoolManager, InfernoEffectConfig, DragonBreathEffectConfig, AbyssVortexEffectConfig, FrozenDomainEffectConfig, ThunderApocalypseEffectConfig } from '@/pools';
 
 /**
  * 炎龙吐息策略 - 扇形持续火焰
+ *
+ * 使用对象池管理视觉效果
  */
 export class DragonBreathStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
@@ -22,52 +25,45 @@ export class DragonBreathStrategy implements SkillStrategy {
       ? Phaser.Math.Angle.Between(player.x, player.y, nearestEnemy.x, nearestEnemy.y)
       : 0;
 
-    // 多层火焰锥形
-    const breathLayers: Phaser.GameObjects.Graphics[] = [];
-    const layerConfigs = [
+    // 从对象池获取效果
+    const effectPools = (scene as any).effectPools as EffectPoolManager;
+
+    // 配置图层
+    const layerConfigs: DragonBreathEffectConfig['layerConfigs'] = [
       { radius: range * 1.1, color: 0xff2200, alpha: 0.2 },
       { radius: range, color: 0xff4400, alpha: 0.35 },
       { radius: range * 0.8, color: 0xff6600, alpha: 0.5 },
       { radius: range * 0.5, color: 0xffaa00, alpha: 0.65 },
     ];
 
-    layerConfigs.forEach((config, i) => {
-      const breath = scene.add.graphics();
-      breath.fillStyle(config.color, config.alpha);
-      breath.beginPath();
-      breath.moveTo(player.x, player.y);
-      breath.arc(player.x, player.y, config.radius, playerAngle - angleSpread / 2, playerAngle + angleSpread / 2);
-      breath.closePath();
-      breath.fill();
-      breath.setDepth(38 + i);
-      breathLayers.push(breath);
-    });
-
-    // 火焰粒子喷发
-    const fireParticles = scene.add.particles(player.x, player.y, 'particle_fire_core', {
-      speed: { min: 200, max: 450 },
-      angle: { min: (playerAngle - angleSpread / 2) * 180 / Math.PI, max: (playerAngle + angleSpread / 2) * 180 / Math.PI },
-      scale: { start: 1, end: 0 },
-      alpha: { start: 1, end: 0 },
-      tint: [0xff4400, 0xff6600, 0xffaa00, 0xffff00],
+    // 配置粒子
+    const fireParticleConfig = {
+      speedMin: 200,
+      speedMax: 450,
       lifespan: 500,
       frequency: 20,
       quantity: 4,
-    });
-    fireParticles.setDepth(42);
+    };
 
-    // 火花粒子
-    const sparkParticles = scene.add.particles(player.x, player.y, 'particle_fire_spark', {
-      speed: { min: 250, max: 500 },
-      angle: { min: (playerAngle - angleSpread / 2) * 180 / Math.PI, max: (playerAngle + angleSpread / 2) * 180 / Math.PI },
-      scale: { start: 0.6, end: 0 },
-      alpha: { start: 1, end: 0 },
-      tint: [0xffffff, 0xffff00, 0xffaa00],
+    const sparkParticleConfig = {
+      speedMin: 250,
+      speedMax: 500,
       lifespan: 400,
       frequency: 30,
       quantity: 3,
+    };
+
+    const effect = effectPools.dragonBreath.acquireWithConfig({
+      x: player.x,
+      y: player.y,
+      radius: range,
+      angleSpread: angleSpread,
+      playerAngle: playerAngle,
+      duration: duration,
+      layerConfigs: layerConfigs,
+      fireParticleConfig: fireParticleConfig,
+      sparkParticleConfig: sparkParticleConfig,
     });
-    sparkParticles.setDepth(43);
 
     // 屏幕震动
     VisualEffectUtils.screenShake(scene, { intensity: 0.008, duration: 300 });
@@ -79,9 +75,7 @@ export class DragonBreathStrategy implements SkillStrategy {
         elapsed += tickInterval;
         if (elapsed >= duration) {
           breathTimer.destroy();
-          breathLayers.forEach(l => l.destroy());
-          fireParticles.destroy();
-          sparkParticles.destroy();
+          // 对象池会自动回收效果
           return;
         }
 
@@ -136,6 +130,8 @@ export class DragonBreathVisualStrategy implements VisualEffectStrategy {
 
 /**
  * 烈焰风暴策略 - 持续燃烧区域 + 燃烧扩散机制
+ *
+ * 使用对象池管理视觉效果
  */
 export class InfernoStrategy implements SkillStrategy {
   private burnSpreadRadius = 80;
@@ -153,53 +149,24 @@ export class InfernoStrategy implements SkillStrategy {
     const burnValue = 12;
     const burnDuration = 8000;
 
-    // 存储需要清理的 tweens
-    const activeTweens: Phaser.Tweens.Tween[] = [];
-
-    // 多层燃烧区域
-    const infernoLayers: Phaser.GameObjects.Arc[] = [];
-    const layerConfigs = [
+    // 从对象池获取效果
+    const effectPools = (scene as any).effectPools as EffectPoolManager;
+    const layerConfigs: InfernoEffectConfig['layerConfigs'] = [
       { radius: radius * 1.1, color: 0xff2200, alpha: 0.15 },
       { radius: radius, color: 0xff4400, alpha: 0.25 },
       { radius: radius * 0.8, color: 0xff6600, alpha: 0.2 },
       { radius: radius * 0.5, color: 0xffaa00, alpha: 0.15 },
     ];
 
-    layerConfigs.forEach((config, i) => {
-      const layer = scene.add.circle(player.x, player.y, config.radius, config.color, config.alpha);
-      layer.setDepth(17 + i);
-      infernoLayers.push(layer);
-
-      const tween = scene.tweens.add({
-        targets: layer,
-        scaleX: 1.08,
-        scaleY: 1.08,
-        alpha: config.alpha * 0.6,
-        duration: 400,
-        yoyo: true,
-        repeat: -1,
-      });
-      activeTweens.push(tween);
+    const effect = effectPools.inferno.acquireWithConfig({
+      x: player.x,
+      y: player.y,
+      radius: radius,
+      duration: duration,
+      layerConfigs: layerConfigs,
     });
 
-    // 火焰粒子系统
-    const fireParticles = scene.add.particles(player.x, player.y, 'particle_fire_core', {
-      speed: { min: 30, max: 80 },
-      angle: { min: 0, max: 360 },
-      scale: { start: 0.6, end: 0 },
-      alpha: { start: 0.7, end: 0 },
-      tint: [0xff4400, 0xff6600, 0xffaa00, 0xffff00],
-      lifespan: 1200,
-      frequency: 60,
-      quantity: 3,
-      emitZone: {
-        type: 'random' as const,
-        source: new Phaser.Geom.Circle(0, 0, radius * 0.9) as Phaser.Types.GameObjects.Particles.RandomZoneSource,
-      },
-    });
-    fireParticles.setDepth(22);
-
-    // 死亡事件监听
+    // 死亡事件监听（燃烧扩散机制）
     const deathHandler = (enemy: Enemy) => {
       if (!this.activeInfernos.has(instanceId)) return;
 
@@ -238,28 +205,7 @@ export class InfernoStrategy implements SkillStrategy {
 
     scene.events.on('enemyKilled', deathHandler);
 
-    // 添加备用清理机制，确保视觉效果一定会被清理
-    const backupCleanupTime = duration + 1000;
-    scene.time.delayedCall(backupCleanupTime, () => {
-      if (this.activeInfernos.has(instanceId)) {
-        this.activeInfernos.delete(instanceId);
-        scene.events.off('enemyKilled', deathHandler);
-        activeTweens.forEach(tween => {
-          if (tween && tween.isPlaying()) {
-            tween.stop();
-          }
-        });
-        infernoLayers.forEach(l => {
-          if (l && l.active) {
-            l.destroy();
-          }
-        });
-        if (fireParticles && fireParticles.active) {
-          fireParticles.destroy();
-        }
-      }
-    });
-
+    // 伤害计时器
     let elapsed = 0;
     const infernoTimer = scene.time.addEvent({
       delay: tickInterval,
@@ -269,14 +215,7 @@ export class InfernoStrategy implements SkillStrategy {
           infernoTimer.destroy();
           this.activeInfernos.delete(instanceId);
           scene.events.off('enemyKilled', deathHandler);
-          // 停止所有无限重复的 tweens
-          activeTweens.forEach(tween => {
-            if (tween && tween.isPlaying()) {
-              tween.stop();
-            }
-          });
-          infernoLayers.forEach(l => l.destroy());
-          fireParticles.destroy();
+          // 对象池会自动回收效果
           return;
         }
 
@@ -302,6 +241,8 @@ export class InfernoVisualStrategy implements VisualEffectStrategy {
 
 /**
  * 深渊漩涡策略 - 持续吸引
+ *
+ * 使用对象池管理视觉效果
  */
 export class AbyssVortexStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
@@ -312,48 +253,48 @@ export class AbyssVortexStrategy implements SkillStrategy {
     const duration = 3000;
     const tickInterval = 200;
 
-    // 存储需要清理的 tweens
-    const activeTweens: Phaser.Tweens.Tween[] = [];
+    // 从对象池获取效果
+    const effectPools = (scene as any).effectPools as EffectPoolManager;
 
-    // 多层漩涡视觉效果
-    const vortex = scene.add.container(centerX, centerY);
-    vortex.setDepth(18);
-
+    // 配置旋转环
+    const ringConfigs: AbyssVortexEffectConfig['ringConfigs'] = [];
     for (let i = 0; i < 5; i++) {
-      const ring = scene.add.graphics();
-      ring.lineStyle(4 - i * 0.5, 0x4488ff, 0.5 - i * 0.08);
-      ring.strokeCircle(0, 0, radius * (0.3 + i * 0.18));
-      vortex.add(ring);
-
-      const tween = scene.tweens.add({
-        targets: ring,
-        angle: 360 * (i % 2 === 0 ? 1 : -1),
-        duration: 800 + i * 200,
-        repeat: -1,
+      ringConfigs.push({
+        lineWidth: 4 - i * 0.5,
+        color: 0x4488ff,
+        alpha: 0.5 - i * 0.08,
+        radiusMultiplier: 0.3 + i * 0.18,
+        rotationDuration: 800 + i * 200,
+        direction: i % 2 === 0 ? 1 : -1,
       });
-      activeTweens.push(tween);
     }
 
-    // 中心深渊
-    const abyssOuter = scene.add.circle(centerX, centerY, 40, 0x2244aa, 0.6);
-    const abyssMid = scene.add.circle(centerX, centerY, 28, 0x3366cc, 0.75);
-    const abyssInner = scene.add.circle(centerX, centerY, 16, 0x4488ff, 0.9);
-    abyssOuter.setDepth(19);
-    abyssMid.setDepth(20);
-    abyssInner.setDepth(21);
+    // 配置深渊圆
+    const abyssConfigs: AbyssVortexEffectConfig['abyssConfigs'] = [
+      { radius: 40, color: 0x2244aa, alpha: 0.6 },
+      { radius: 28, color: 0x3366cc, alpha: 0.75 },
+      { radius: 16, color: 0x4488ff, alpha: 0.9 },
+    ];
 
-    // 吸入粒子
-    const pullParticles = scene.add.particles(centerX, centerY, 'particle_glow', {
-      speed: { min: 50, max: 120 },
-      angle: { min: 0, max: 360 },
-      scale: { start: 0.5, end: 0 },
-      alpha: { start: 0.6, end: 0 },
-      tint: [0x4488ff, 0x66aaff],
+    // 配置粒子
+    const particleConfig: AbyssVortexEffectConfig['particleConfig'] = {
+      speedMin: 50,
+      speedMax: 120,
       lifespan: 600,
       frequency: 40,
       quantity: 2,
+      colors: [0x4488ff, 0x66aaff],
+    };
+
+    const effect = effectPools.abyssVortex.acquireWithConfig({
+      x: centerX,
+      y: centerY,
+      radius: radius,
+      duration: duration,
+      ringConfigs: ringConfigs,
+      abyssConfigs: abyssConfigs,
+      particleConfig: particleConfig,
     });
-    pullParticles.setDepth(17);
 
     let elapsed = 0;
     const vortexTimer = scene.time.addEvent({
@@ -362,17 +303,7 @@ export class AbyssVortexStrategy implements SkillStrategy {
         elapsed += tickInterval;
         if (elapsed >= duration) {
           vortexTimer.destroy();
-          // 停止所有无限循环的 tweens
-          activeTweens.forEach(tween => {
-            if (tween && tween.isPlaying()) {
-              tween.stop();
-            }
-          });
-          vortex.destroy();
-          abyssOuter.destroy();
-          abyssMid.destroy();
-          abyssInner.destroy();
-          pullParticles.destroy();
+          // 对象池会自动回收效果
           return;
         }
 
@@ -408,6 +339,8 @@ export class AbyssVortexVisualStrategy implements VisualEffectStrategy {
 
 /**
  * 冰封领域策略 - 持续冻结
+ *
+ * 使用对象池管理视觉效果
  */
 export class FrozenDomainStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
@@ -416,74 +349,43 @@ export class FrozenDomainStrategy implements SkillStrategy {
     const duration = 4000;
     const tickInterval = 500;
 
-    // 存储需要清理的 tweens
-    const activeTweens: Phaser.Tweens.Tween[] = [];
+    // 从对象池获取效果
+    const effectPools = (scene as any).effectPools as EffectPoolManager;
 
-    // 多层冰封领域
-    const domainLayers: Phaser.GameObjects.Arc[] = [];
-    const layerConfigs = [
+    // 配置 4 层冰封区域
+    const layerConfigs: FrozenDomainEffectConfig['layerConfigs'] = [
       { radius: radius * 1.1, color: 0x66ccff, alpha: 0.12 },
       { radius: radius, color: 0x88ddff, alpha: 0.2 },
       { radius: radius * 0.8, color: 0xaaeeff, alpha: 0.18 },
       { radius: radius * 0.5, color: 0xccffff, alpha: 0.15 },
     ];
 
-    layerConfigs.forEach((config, i) => {
-      const layer = scene.add.circle(player.x, player.y, config.radius, config.color, config.alpha);
-      layer.setDepth(17 + i);
-      domainLayers.push(layer);
+    // 配置 3 个旋转冰环
+    const ringConfigs: FrozenDomainEffectConfig['ringConfigs'] = [
+      { lineWidth: 2, color: 0xaaeeff, alpha: 0.5, radiusMultiplier: 0.4, rotationDuration: 1500, direction: 1 },
+      { lineWidth: 2, color: 0xaaeeff, alpha: 0.5, radiusMultiplier: 0.65, rotationDuration: 1800, direction: -1 },
+      { lineWidth: 2, color: 0xaaeeff, alpha: 0.5, radiusMultiplier: 0.9, rotationDuration: 2100, direction: 1 },
+    ];
 
-      const tween = scene.tweens.add({
-        targets: layer,
-        scaleX: 1.06,
-        scaleY: 1.06,
-        alpha: config.alpha * 0.6,
-        duration: 500,
-        yoyo: true,
-        repeat: -1,
-      });
-      activeTweens.push(tween);
-    });
-
-    // 霜冻粒子
-    const frostParticles = scene.add.particles(player.x, player.y, 'particle_ice_crystal', {
-      speed: { min: 20, max: 50 },
-      angle: { min: 0, max: 360 },
-      scale: { start: 0.5, end: 0 },
-      alpha: { start: 0.6, end: 0 },
-      tint: [0x88ddff, 0xaaeeff, 0xffffff],
+    // 配置粒子
+    const particleConfig: FrozenDomainEffectConfig['particleConfig'] = {
+      speedMin: 20,
+      speedMax: 50,
       lifespan: 1200,
       frequency: 70,
       quantity: 2,
-      emitZone: {
-        type: 'random' as const,
-        source: new Phaser.Geom.Circle(0, 0, radius * 0.9) as Phaser.Types.GameObjects.Particles.RandomZoneSource,
-      },
+      colors: [0x88ddff, 0xaaeeff, 0xffffff],
+    };
+
+    const effect = effectPools.frozenDomain.acquireWithConfig({
+      x: player.x,
+      y: player.y,
+      radius: radius,
+      duration: duration,
+      layerConfigs: layerConfigs,
+      ringConfigs: ringConfigs,
+      particleConfig: particleConfig,
     });
-    frostParticles.setDepth(22);
-
-    // 旋转冰环
-    const iceRings = scene.add.container(player.x, player.y);
-    iceRings.setDepth(18);
-    for (let i = 0; i < 3; i++) {
-      const ring = scene.add.graphics();
-      ring.lineStyle(2, 0xaaeeff, 0.5);
-      ring.strokeCircle(0, 0, radius * (0.4 + i * 0.25));
-      iceRings.add(ring);
-
-      // 存储无限旋转 tween 以便清理
-      const ringTween = scene.tweens.add({
-        targets: ring,
-        angle: 360 * (i % 2 === 0 ? 1 : -1),
-        duration: 1500 + i * 300,
-        repeat: -1,
-      });
-      // 在容器上存储 tween 引用以便清理
-      if (!(iceRings as any).activeTweens) {
-        (iceRings as any).activeTweens = [];
-      }
-      (iceRings as any).activeTweens.push(ringTween);
-    }
 
     let elapsed = 0;
     const domainTimer = scene.time.addEvent({
@@ -492,23 +394,7 @@ export class FrozenDomainStrategy implements SkillStrategy {
         elapsed += tickInterval;
         if (elapsed >= duration) {
           domainTimer.destroy();
-          // 停止所有无限循环的 tweens
-          activeTweens.forEach(tween => {
-            if (tween && tween.isPlaying()) {
-              tween.stop();
-            }
-          });
-          // 停止旋转冰环的 tweens
-          if ((iceRings as any).activeTweens) {
-            (iceRings as any).activeTweens.forEach((t: Phaser.Tweens.Tween) => {
-              if (t && t.isPlaying()) {
-                t.stop();
-              }
-            });
-          }
-          domainLayers.forEach(l => l.destroy());
-          frostParticles.destroy();
-          iceRings.destroy();
+          // 对象池会自动回收效果
           return;
         }
 
@@ -627,125 +513,34 @@ export class AbsoluteZeroVisualStrategy implements VisualEffectStrategy {
 
 /**
  * 雷霆万钧策略 - 全屏连锁雷击
+ *
+ * 使用对象池管理视觉效果
  */
 export class ThunderApocalypseStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
     const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const strikeCount = 12;
     const strikeInterval = 200;
-    let currentStrike = 0;
 
-    // 多层雷云
-    const cloudLayers: Phaser.GameObjects.Arc[] = [];
-    for (let i = 0; i < 3; i++) {
-      const cloud = scene.add.circle(player.x, player.y - 80, skill.rangeValue * (0.6 + i * 0.15), 0x333355, 0.25 - i * 0.05);
-      cloud.setDepth(15 + i);
-      cloudLayers.push(cloud);
-    }
+    // 从对象池获取效果
+    const effectPools = (scene as any).effectPools as EffectPoolManager;
 
     // 屏幕震动
     VisualEffectUtils.screenShake(scene, { intensity: 0.01, duration: strikeCount * strikeInterval });
 
-    // 添加备用清理机制，确保云层一定会被销毁
-    const totalDuration = (strikeCount + 1) * strikeInterval + 500;
-    scene.time.delayedCall(totalDuration, () => {
-      // 如果云层还存在，强制销毁
-      cloudLayers.forEach(c => {
-        if (c && c.active) {
-          c.destroy();
-        }
-      });
-    });
-
-    const strikeTimer = scene.time.addEvent({
-      delay: strikeInterval,
-      callback: () => {
-        currentStrike++;
-        if (currentStrike > strikeCount) {
-          strikeTimer.destroy();
-          // 云层淡出动画
-          scene.tweens.add({
-            targets: cloudLayers,
-            alpha: 0,
-            duration: 300,
-            onComplete: () => {
-              cloudLayers.forEach(c => c.destroy());
-            },
-          });
-          return;
-        }
-
-        // 确保云层存在（防止重复执行时已被销毁）
-        if (cloudLayers.length === 0 || !cloudLayers[0].active) {
-          return;
-        }
-
-        const angle = Math.random() * Math.PI * 2;
-        const dist = Math.random() * skill.rangeValue * 0.8;
-        const strikeX = player.x + Math.cos(angle) * dist;
-        const strikeY = player.y + Math.sin(angle) * dist;
-
-        // 多层闪电
-        const lightningOuter = scene.add.graphics();
-        lightningOuter.lineStyle(12, 0xffff00, 0.3);
-        lightningOuter.lineBetween(strikeX, strikeY - 150, strikeX, strikeY);
-        lightningOuter.setDepth(98);
-
-        const lightningMid = scene.add.graphics();
-        lightningMid.lineStyle(5, 0xffff00, 0.7);
-        lightningMid.lineBetween(strikeX, strikeY - 140, strikeX, strikeY);
-        lightningMid.setDepth(99);
-
-        const lightningCore = scene.add.graphics();
-        lightningCore.lineStyle(2, 0xffffff, 1);
-        lightningCore.lineBetween(strikeX, strikeY - 130, strikeX, strikeY);
-        lightningCore.setDepth(100);
-
-        // 击中点闪光
-        const flashOuter = scene.add.circle(strikeX, strikeY, 50, 0xffff00, 0.5);
-        const flashInner = scene.add.circle(strikeX, strikeY, 25, 0xffffff, 0.9);
-        flashOuter.setDepth(101);
-        flashInner.setDepth(102);
-
-        // 粒子爆发
-        VisualEffectUtils.createParticleBurst(scene, strikeX, strikeY, {
-          count: 15,
-          color: 0xffff00,
-          speed: { min: 80, max: 180 },
-          scale: { start: 0.5, end: 0 },
-          lifespan: 250,
-          texture: 'particle_lightning_arc',
-        });
-
-        const enemies = findEnemiesInRange(strikeX, strikeY, 60);
-        for (const enemy of enemies) {
-          applyDamageToEnemy(enemy, damage, skill);
-
-          // 应用眩晕效果
-          if (applyEffects && skill.effects) {
-            const stunEffect = skill.effects.find(e => e.type === 'stun');
-            if (stunEffect) {
-              applyEffects(enemy, [stunEffect]);
-            }
-          }
-        }
-
-        // 消失动画
-        scene.tweens.add({
-          targets: [lightningOuter, lightningMid, lightningCore, flashOuter, flashInner],
-          alpha: 0,
-          duration: 180,
-          onComplete: () => {
-            lightningOuter.destroy();
-            lightningMid.destroy();
-            lightningCore.destroy();
-            flashOuter.destroy();
-            flashInner.destroy();
-          },
-        });
-      },
-      repeat: strikeCount - 1,
-    });
+    // 使用对象池创建雷霆万钧效果
+    effectPools.thunderApocalypse.acquireWithConfig({
+      x: player.x,
+      y: player.y,
+      rangeValue: skill.rangeValue,
+      strikeCount: strikeCount,
+      strikeInterval: strikeInterval,
+      skill: skill,
+      damage: damage,
+      findEnemiesInRange: findEnemiesInRange,
+      applyDamageToEnemy: applyDamageToEnemy,
+      applyEffects: applyEffects,
+    } as ThunderApocalypseEffectConfig);
   }
 }
 
