@@ -624,6 +624,17 @@ export class ThunderApocalypseStrategy implements SkillStrategy {
     // 屏幕震动
     VisualEffectUtils.screenShake(scene, { intensity: 0.01, duration: strikeCount * strikeInterval });
 
+    // 添加备用清理机制，确保云层一定会被销毁
+    const totalDuration = (strikeCount + 1) * strikeInterval + 500;
+    scene.time.delayedCall(totalDuration, () => {
+      // 如果云层还存在，强制销毁
+      cloudLayers.forEach(c => {
+        if (c && c.active) {
+          c.destroy();
+        }
+      });
+    });
+
     const strikeTimer = scene.time.addEvent({
       delay: strikeInterval,
       callback: () => {
@@ -639,6 +650,11 @@ export class ThunderApocalypseStrategy implements SkillStrategy {
               cloudLayers.forEach(c => c.destroy());
             },
           });
+          return;
+        }
+
+        // 确保云层存在（防止重复执行时已被销毁）
+        if (cloudLayers.length === 0 || !cloudLayers[0].active) {
           return;
         }
 
@@ -713,35 +729,8 @@ export class ThunderApocalypseStrategy implements SkillStrategy {
 
 export class ThunderApocalypseVisualStrategy implements VisualEffectStrategy {
   createEffect(scene: Phaser.Scene, x: number, y: number, radius: number, _element?: string): void {
-    // 云层已由 ThunderApocalypseStrategy 创建和管理，这里只创建雷击效果
-    for (let i = 0; i < 10; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const dist = Math.random() * radius * 0.7;
-      const strikeX = x + Math.cos(angle) * dist;
-      const strikeY = y + Math.sin(angle) * dist;
-
-      // 多层闪电
-      const lightningMid = scene.add.graphics();
-      lightningMid.lineStyle(4, 0xffff00, 0.8);
-      lightningMid.lineBetween(strikeX, strikeY - 80, strikeX, strikeY);
-      lightningMid.setDepth(98);
-
-      const lightningCore = scene.add.graphics();
-      lightningCore.lineStyle(1, 0xffffff, 1);
-      lightningCore.lineBetween(strikeX, strikeY - 75, strikeX, strikeY);
-      lightningCore.setDepth(99);
-
-      scene.tweens.add({
-        targets: [lightningMid, lightningCore],
-        alpha: 0,
-        delay: i * 80,
-        duration: 150,
-        onComplete: () => {
-          lightningMid.destroy();
-          lightningCore.destroy();
-        },
-      });
-    }
+    // 云层和雷击效果已由 ThunderApocalypseStrategy 创建和管理
+    // 这里不创建任何视觉效果，避免重复
   }
 }
 
