@@ -548,7 +548,9 @@ export class SkillEffects {
 
   /**
    * 雷霆万钧效果 - 全屏连锁雷击
+   * @deprecated 已被 ThunderApocalypseStrategy 替代
    */
+  /* DISABLED: Replaced by ThunderApocalypseStrategy
   private createThunderApocalypseEffect(x: number, y: number, radius: number): void {
     // 风暴云
     const cloud = this.scene.add.circle(x, y, radius, 0x333355, 0.3);
@@ -582,6 +584,7 @@ export class SkillEffects {
       cloud.destroy();
     });
   }
+  */
 
   /**
    * 炎龙吐息效果 - 扇形火焰
@@ -637,7 +640,9 @@ export class SkillEffects {
 
   /**
    * 烈焰风暴效果 - 持续燃烧区域
+   * @deprecated 已被 InfernoStrategy 替代
    */
+  /* DISABLED: Replaced by InfernoStrategy
   private createInfernoEffect(x: number, y: number, radius: number): void {
     // 火焰区域
     const inferno = this.scene.add.circle(x, y, radius, 0xff4400, 0.3);
@@ -668,10 +673,13 @@ export class SkillEffects {
       });
     });
   }
+  */
 
   /**
    * 深渊漩涡效果 - 持续吸引
+   * @deprecated 已被 AbyssVortexStrategy 替代
    */
+  /* DISABLED: Replaced by AbyssVortexStrategy
   private createAbyssVortexEffect(x: number, y: number, radius: number): void {
     // 漩涡核心
     const vortex = this.scene.add.circle(x, y, 30, 0x2266cc, 1);
@@ -706,10 +714,13 @@ export class SkillEffects {
       });
     });
   }
+  */
 
   /**
    * 冰封领域效果 - 持续冻结
+   * @deprecated 已被 FrozenDomainStrategy 替代
    */
+  /* DISABLED: Replaced by FrozenDomainStrategy
   private createFrozenDomainEffect(x: number, y: number, radius: number): void {
     // 冰霜区域
     const domain = this.scene.add.circle(x, y, radius, 0x88ddff, 0.3);
@@ -740,6 +751,7 @@ export class SkillEffects {
       });
     });
   }
+  */
 
   /**
    * 绝对零度效果 - 极寒爆发
@@ -781,7 +793,9 @@ export class SkillEffects {
 
   /**
    * 审判之光效果 - 圣光审判
+   * @deprecated 已被 JudgmentLightStrategy 替代
    */
+  /* DISABLED: Replaced by JudgmentLightStrategy
   private createJudgmentLightEffect(x: number, y: number, radius: number): void {
     // 圣光柱
     const beam = this.scene.add.rectangle(x, y, 80, radius * 2, 0xffcc00, 0.6);
@@ -820,10 +834,13 @@ export class SkillEffects {
       },
     });
   }
+  */
 
   /**
    * 暗影降临效果 - 暗影笼罩
+   * @deprecated 已被 ShadowDescentStrategy 替代
    */
+  /* DISABLED: Replaced by ShadowDescentStrategy
   private createShadowDescentEffect(x: number, y: number, radius: number): void {
     // 暗影区域
     const shadow = this.scene.add.circle(x, y, radius, 0x440066, 0.5);
@@ -854,6 +871,7 @@ export class SkillEffects {
       });
     });
   }
+  */
 
   /**
    * 死亡凋零效果 - 死亡气息

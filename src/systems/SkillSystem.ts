@@ -1582,7 +1582,9 @@ export class SkillSystem {
 
   /**
    * 雷霆万钧 - 全屏连锁雷击
+   * @deprecated 已被 ThunderApocalypseStrategy 替代
    */
+  /* DISABLED: Replaced by ThunderApocalypseStrategy
   private castThunderApocalypse(skill: Skill, damage: number): void {
     const strikeCount = 12;
     const strikeInterval = 200;
@@ -1622,10 +1624,13 @@ export class SkillSystem {
       repeat: strikeCount - 1,
     });
   }
+  */
 
   /**
    * 审判之光 - 伤害+治疗（带能量流动）
+   * @deprecated 已被 JudgmentLightStrategy 替代
    */
+  /* DISABLED: Replaced by JudgmentLightStrategy
   private castJudgmentLight(skill: Skill, damage: number): void {
     const radius = skill.rangeValue;
     const healAmount = skill.effects.find(e => e.type === 'heal')?.value || 30;
@@ -1666,10 +1671,13 @@ export class SkillSystem {
       });
     }
   }
+  */
 
   /**
    * 暗影降临 - 降防+持续伤害
+   * @deprecated 已被 ShadowDescentStrategy 替代
    */
+  /* DISABLED: Replaced by ShadowDescentStrategy
   private castShadowDescent(skill: Skill, damage: number): void {
     const radius = skill.rangeValue;
     const duration = 4000;
@@ -1704,6 +1712,7 @@ export class SkillSystem {
       this.applyDamageToEnemy(enemy, damage, skill);
     }
   }
+  */
 
   /**
    * 死亡凋零 - 持续吸血（带能量流动）
