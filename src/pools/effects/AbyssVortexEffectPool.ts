@@ -118,6 +118,7 @@ export class AbyssVortexEffectPool extends VisualEffectPool<AbyssVortexEffectCon
     // 预创建漩涡中心精灵
     const vortexCenter = this.scene.add.image(0, 0, 'vortex_center');
     vortexCenter.setName('vortex_center');
+    vortexCenter.setScale(1.5); // 增大漩涡中心尺寸
     vortexCenter.setDepth(25);
     container.add(vortexCenter);
 
@@ -209,15 +210,15 @@ export class AbyssVortexEffectPool extends VisualEffectPool<AbyssVortexEffectCon
     const vortexCenter = container.getByName('vortex_center') as Phaser.GameObjects.Image;
     if (vortexCenter) {
       vortexCenter.setPosition(0, 0);
-      vortexCenter.setScale(1.0);
+      vortexCenter.setScale(1.5); // 增大漩涡中心尺寸
       vortexCenter.setAlpha(0.9);
       vortexCenter.setDepth(25);
       vortexCenter.setAngle(0);
 
-      // 脉动效果 (scale: 1.0 → 1.2 → 1.0)
+      // 脉动效果 (scale: 1.5 → 1.8 → 1.5)
       const pulseTween = this.scene.tweens.add({
         targets: vortexCenter,
-        scale: 1.2,
+        scale: 1.8,
         duration: 600,
         yoyo: true,
         repeat: -1,

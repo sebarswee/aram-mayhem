@@ -76,7 +76,7 @@ export class MeteorEffectPool extends VisualEffectPool<MeteorEffectConfig> {
     const meteorSprite = this.scene.add.image(0, 0, 'meteor_falling');
     meteorSprite.setName('meteor_sprite');
     meteorSprite.setVisible(false); // 初始隐藏，在预警阶段显示
-    meteorSprite.setScale(0.8); // 适当缩放
+    meteorSprite.setScale(1.2); // 增大陨石尺寸
     container.add(meteorSprite);
 
     // 预创建 3 层预警圆
@@ -182,16 +182,16 @@ export class MeteorEffectPool extends VisualEffectPool<MeteorEffectConfig> {
         meteorSprite.setVisible(true);
         meteorSprite.setPosition(0, -radius * 3); // 从上方开始
         meteorSprite.setAlpha(1);
-        meteorSprite.setScale(0.8);
+        meteorSprite.setScale(1.0); // 初始缩放
         meteorSprite.setAngle(0);
         meteorSprite.setDepth(94);
 
-        // 陨石下落动画
+        // 陨石下落动画（下落过程中逐渐变大）
         const fallTween = this.scene.tweens.add({
           targets: meteorSprite,
           y: 0,
           angle: 360,
-          scale: 1.2,
+          scale: 1.5, // 落地时更大
           duration: warningDuration,
           ease: 'Quad.easeIn',
         });

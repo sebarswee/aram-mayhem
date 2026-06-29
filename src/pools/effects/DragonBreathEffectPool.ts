@@ -77,7 +77,7 @@ export class DragonBreathEffectPool extends VisualEffectPool<DragonBreathEffectC
     // 创建龙头精灵
     const dragonHead = this.scene.add.image(0, 0, 'dragon_head');
     dragonHead.setName('dragon_head_sprite');
-    dragonHead.setScale(0.8, 0.8);
+    dragonHead.setScale(1.5, 1.5); // 增大龙头尺寸
     dragonHead.setOrigin(0.5, 0.5);
     dragonHead.setDepth(44);
     container.add(dragonHead);
@@ -158,7 +158,7 @@ export class DragonBreathEffectPool extends VisualEffectPool<DragonBreathEffectC
       dragonHead.setPosition(0, 0);
       dragonHead.setRotation(playerAngle + Math.PI / 2);
       dragonHead.setAlpha(1);
-      dragonHead.setScale(0.8, 0.8);
+      dragonHead.setScale(1.5, 1.5);
       dragonHead.setVisible(true);
     }
 
