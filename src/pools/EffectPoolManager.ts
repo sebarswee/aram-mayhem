@@ -4,6 +4,13 @@ import { DragonBreathEffectPool } from './effects/DragonBreathEffectPool';
 import { AbyssVortexEffectPool } from './effects/AbyssVortexEffectPool';
 import { FrozenDomainEffectPool } from './effects/FrozenDomainEffectPool';
 import { ThunderApocalypseEffectPool } from './effects/ThunderApocalypseEffectPool';
+import { ShadowRealmEffectPool } from './effects/ShadowRealmEffectPool';
+import { DeathDecayEffectPool } from './effects/DeathDecayEffectPool';
+import { EarthGuardianEffectPool } from './effects/EarthGuardianEffectPool';
+import { VoidRiftEffectPool } from './effects/VoidRiftEffectPool';
+import { BlackHoleEffectPool } from './effects/BlackHoleEffectPool';
+import { SanctuaryEffectPool } from './effects/SanctuaryEffectPool';
+import { HolyJudgmentEffectPool } from './effects/HolyJudgmentEffectPool';
 
 /**
  * 效果池管理器
@@ -18,6 +25,13 @@ export class EffectPoolManager {
   public abyssVortex: AbyssVortexEffectPool;
   public frozenDomain: FrozenDomainEffectPool;
   public thunderApocalypse: ThunderApocalypseEffectPool;
+  public shadowRealm: ShadowRealmEffectPool;
+  public deathDecay: DeathDecayEffectPool;
+  public earthGuardian: EarthGuardianEffectPool;
+  public voidRift: VoidRiftEffectPool;
+  public blackHole: BlackHoleEffectPool;
+  public sanctuary: SanctuaryEffectPool;
+  public holyJudgment: HolyJudgmentEffectPool;
   // public thunder: ThunderEffectPool;
   // public blizzard: BlizzardEffectPool;
 
@@ -35,6 +49,13 @@ export class EffectPoolManager {
     this.abyssVortex = new AbyssVortexEffectPool(scene, 3);
     this.frozenDomain = new FrozenDomainEffectPool(scene, 3);
     this.thunderApocalypse = new ThunderApocalypseEffectPool(scene, 3);
+    this.shadowRealm = new ShadowRealmEffectPool(scene, 3);
+    this.deathDecay = new DeathDecayEffectPool(scene, 3);
+    this.earthGuardian = new EarthGuardianEffectPool(scene, 3);
+    this.voidRift = new VoidRiftEffectPool(scene, 3);
+    this.blackHole = new BlackHoleEffectPool(scene, 3);
+    this.sanctuary = new SanctuaryEffectPool(scene, 3);
+    this.holyJudgment = new HolyJudgmentEffectPool(scene, 3);
     // this.thunder = new ThunderEffectPool(scene, 3);
     // this.blizzard = new BlizzardEffectPool(scene, 3);
 
@@ -57,6 +78,13 @@ export class EffectPoolManager {
     this.abyssVortex.clear();
     this.frozenDomain.clear();
     this.thunderApocalypse.clear();
+    this.shadowRealm.clear();
+    this.deathDecay.clear();
+    this.earthGuardian.clear();
+    this.voidRift.clear();
+    this.blackHole.clear();
+    this.sanctuary.clear();
+    this.holyJudgment.clear();
     // this.thunder.clear();
     // this.blizzard.clear();
     // this.poisonCloud.clear();
@@ -77,6 +105,13 @@ export class EffectPoolManager {
     stats.abyssVortex = this.abyssVortex.getStats();
     stats.frozenDomain = this.frozenDomain.getStats();
     stats.thunderApocalypse = this.thunderApocalypse.getStats();
+    stats.shadowRealm = this.shadowRealm.getStats();
+    stats.deathDecay = this.deathDecay.getStats();
+    stats.earthGuardian = this.earthGuardian.getStats();
+    stats.voidRift = this.voidRift.getStats();
+    stats.blackHole = this.blackHole.getStats();
+    stats.sanctuary = this.sanctuary.getStats();
+    stats.holyJudgment = this.holyJudgment.getStats();
     // stats.thunder = this.thunder.getStats();
     // stats.blizzard = this.blizzard.getStats();
 

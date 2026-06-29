@@ -5,7 +5,7 @@ import { VisualEffectUtils } from '@/graphics/VisualEffectUtils';
 import Phaser from 'phaser';
 import { createBurnVisualModifier } from '@/modifiers/visual/VisualModifiers';
 import { StatusEffectType } from '@/modifiers/modifiers/StatusEffectModifier';
-import { EffectPoolManager, InfernoEffectConfig, DragonBreathEffectConfig, AbyssVortexEffectConfig, FrozenDomainEffectConfig, ThunderApocalypseEffectConfig } from '@/pools';
+import { EffectPoolManager, InfernoEffectConfig, DragonBreathEffectConfig, AbyssVortexEffectConfig, FrozenDomainEffectConfig, ThunderApocalypseEffectConfig, ShadowRealmEffectConfig, DeathDecayEffectConfig, EarthGuardianEffectConfig, VoidRiftEffectConfig, BlackHoleEffectConfig, SanctuaryEffectConfig, HolyJudgmentEffectConfig } from '@/pools';
 
 /**
  * 炎龙吐息策略 - 扇形持续火焰
@@ -688,6 +688,8 @@ export class JudgmentLightVisualStrategy implements VisualEffectStrategy {
 
 /**
  * 暗影降临策略 - 降防+持续伤害
+ *
+ * 使用对象池管理视觉效果
  */
 export class ShadowDescentStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
@@ -696,69 +698,43 @@ export class ShadowDescentStrategy implements SkillStrategy {
     const duration = 4000;
     const tickInterval = 500;
 
-    // 存储需要清理的 tweens
-    const activeTweens: Phaser.Tweens.Tween[] = [];
+    // 从对象池获取效果
+    const effectPools = (scene as any).effectPools as EffectPoolManager;
 
-    // 多层暗影区域
-    const shadowLayers: Phaser.GameObjects.Arc[] = [];
-    const layerConfigs = [
+    // 配置暗影图层
+    const layerConfigs: ShadowRealmEffectConfig['layerConfigs'] = [
       { radius: radius * 1.1, color: 0x220044, alpha: 0.2 },
       { radius: radius, color: 0x440066, alpha: 0.35 },
       { radius: radius * 0.8, color: 0x660088, alpha: 0.3 },
       { radius: radius * 0.5, color: 0x8800aa, alpha: 0.25 },
     ];
 
-    layerConfigs.forEach((config, i) => {
-      const layer = scene.add.circle(player.x, player.y, config.radius, config.color, config.alpha);
-      layer.setDepth(17 + i);
-      shadowLayers.push(layer);
+    // 配置漩涡环
+    const vortexConfigs: ShadowRealmEffectConfig['vortexConfigs'] = [
+      { lineWidth: 2, color: 0x8800ff, alpha: 0.4, radiusMultiplier: 0.4, rotationDuration: 1500, direction: 1 },
+      { lineWidth: 2, color: 0x8800ff, alpha: 0.4, radiusMultiplier: 0.65, rotationDuration: 1800, direction: -1 },
+      { lineWidth: 2, color: 0x8800ff, alpha: 0.4, radiusMultiplier: 0.9, rotationDuration: 2100, direction: 1 },
+    ];
 
-      const tween = scene.tweens.add({
-        targets: layer,
-        scaleX: 1.08,
-        scaleY: 1.08,
-        alpha: config.alpha * 0.6,
-        duration: 450,
-        yoyo: true,
-        repeat: -1,
-      });
-      activeTweens.push(tween);
-    });
-
-    // 暗影粒子
-    const shadowParticles = scene.add.particles(player.x, player.y, 'particle_glow', {
-      speed: { min: 20, max: 50 },
-      angle: { min: 0, max: 360 },
-      scale: { start: 0.5, end: 0 },
-      alpha: { start: 0.6, end: 0 },
-      tint: [0x660088, 0x8800aa, 0xaa00cc],
+    // 配置粒子
+    const particleConfig: ShadowRealmEffectConfig['particleConfig'] = {
+      speedMin: 20,
+      speedMax: 50,
       lifespan: 1200,
       frequency: 60,
       quantity: 3,
-      emitZone: {
-        type: 'random' as const,
-        source: new Phaser.Geom.Circle(0, 0, radius * 0.9) as Phaser.Types.GameObjects.Particles.RandomZoneSource,
-      },
+      colors: [0x660088, 0x8800aa, 0xaa00cc],
+    };
+
+    const effect = effectPools.shadowRealm.acquireWithConfig({
+      x: player.x,
+      y: player.y,
+      radius: radius,
+      duration: duration,
+      layerConfigs: layerConfigs,
+      vortexConfigs: vortexConfigs,
+      particleConfig: particleConfig,
     });
-    shadowParticles.setDepth(22);
-
-    // 暗影漩涡
-    const vortex = scene.add.container(player.x, player.y);
-    vortex.setDepth(18);
-    for (let i = 0; i < 3; i++) {
-      const ring = scene.add.graphics();
-      ring.lineStyle(2, 0x8800ff, 0.4);
-      ring.strokeCircle(0, 0, radius * (0.4 + i * 0.25));
-      vortex.add(ring);
-
-      const tween = scene.tweens.add({
-        targets: ring,
-        angle: 360 * (i % 2 === 0 ? 1 : -1),
-        duration: 1500 + i * 300,
-        repeat: -1,
-      });
-      activeTweens.push(tween);
-    }
 
     let elapsed = 0;
     const shadowTimer = scene.time.addEvent({
@@ -767,15 +743,7 @@ export class ShadowDescentStrategy implements SkillStrategy {
         elapsed += tickInterval;
         if (elapsed >= duration) {
           shadowTimer.destroy();
-          // 停止所有无限循环的 tweens
-          activeTweens.forEach(tween => {
-            if (tween && tween.isPlaying()) {
-              tween.stop();
-            }
-          });
-          shadowLayers.forEach(l => l.destroy());
-          shadowParticles.destroy();
-          vortex.destroy();
+          // 对象池会自动回收效果
           return;
         }
 
@@ -823,6 +791,8 @@ export class ShadowDescentVisualStrategy implements VisualEffectStrategy {
 
 /**
  * 死亡凋零策略 - 持续吸血
+ *
+ * 使用对象池管理视觉效果
  */
 export class DeathDecayStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
@@ -832,51 +802,35 @@ export class DeathDecayStrategy implements SkillStrategy {
     const tickInterval = 400;
     const lifestealPercent = 0.3;
 
-    // 存储需要清理的 tweens
-    const activeTweens: Phaser.Tweens.Tween[] = [];
+    // 从对象池获取效果
+    const effectPools = (scene as any).effectPools as EffectPoolManager;
 
-    // 多层死亡凋零区域
-    const decayLayers: Phaser.GameObjects.Arc[] = [];
-    const layerConfigs = [
+    // 配置凋零图层
+    const layerConfigs: DeathDecayEffectConfig['layerConfigs'] = [
       { radius: radius * 1.1, color: 0x220022, alpha: 0.2 },
       { radius: radius, color: 0x440044, alpha: 0.35 },
       { radius: radius * 0.8, color: 0x660066, alpha: 0.3 },
       { radius: radius * 0.5, color: 0x880088, alpha: 0.25 },
     ];
 
-    layerConfigs.forEach((config, i) => {
-      const layer = scene.add.circle(player.x, player.y, config.radius, config.color, config.alpha);
-      layer.setDepth(17 + i);
-      decayLayers.push(layer);
-
-      const tween = scene.tweens.add({
-        targets: layer,
-        scaleX: 1.06,
-        scaleY: 1.06,
-        alpha: config.alpha * 0.6,
-        duration: 400,
-        yoyo: true,
-        repeat: -1,
-      });
-      activeTweens.push(tween);
-    });
-
-    // 死亡粒子
-    const deathParticles = scene.add.particles(player.x, player.y, 'particle_glow', {
-      speed: { min: 15, max: 45 },
-      angle: { min: 0, max: 360 },
-      scale: { start: 0.45, end: 0 },
-      alpha: { start: 0.55, end: 0 },
-      tint: [0x660066, 0x880088, 0xaa00aa],
+    // 配置粒子
+    const particleConfig: DeathDecayEffectConfig['particleConfig'] = {
+      speedMin: 15,
+      speedMax: 45,
       lifespan: 1400,
       frequency: 70,
       quantity: 2,
-      emitZone: {
-        type: 'random' as const,
-        source: new Phaser.Geom.Circle(0, 0, radius * 0.9) as Phaser.Types.GameObjects.Particles.RandomZoneSource,
-      },
+      colors: [0x660066, 0x880088, 0xaa00aa],
+    };
+
+    const effect = effectPools.deathDecay.acquireWithConfig({
+      x: player.x,
+      y: player.y,
+      radius: radius,
+      duration: duration,
+      layerConfigs: layerConfigs,
+      particleConfig: particleConfig,
     });
-    deathParticles.setDepth(22);
 
     let elapsed = 0;
     const decayTimer = scene.time.addEvent({
@@ -885,14 +839,7 @@ export class DeathDecayStrategy implements SkillStrategy {
         elapsed += tickInterval;
         if (elapsed >= duration) {
           decayTimer.destroy();
-          // 停止所有无限循环的 tweens
-          activeTweens.forEach(tween => {
-            if (tween && tween.isPlaying()) {
-              tween.stop();
-            }
-          });
-          decayLayers.forEach(l => l.destroy());
-          deathParticles.destroy();
+          // 对象池会自动回收效果
           return;
         }
 
@@ -1585,6 +1532,8 @@ export class ForestRageVisualStrategy implements VisualEffectStrategy {
 
 /**
  * 虚空裂隙策略 - 持续吸引+伤害
+ *
+ * 使用对象池管理视觉效果
  */
 export class VoidRiftStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
@@ -1595,47 +1544,40 @@ export class VoidRiftStrategy implements SkillStrategy {
     const duration = 3000;
     const tickInterval = 300;
 
-    // 存储需要清理的 tweens
-    const activeTweens: Phaser.Tweens.Tween[] = [];
+    // 从对象池获取效果
+    const effectPools = (scene as any).effectPools as EffectPoolManager;
 
-    // 多层虚空裂隙核心
-    const riftOuter = scene.add.circle(centerX, centerY, 50, 0x4400aa, 0.5);
-    const riftMid = scene.add.circle(centerX, centerY, 35, 0x6600cc, 0.7);
-    const riftInner = scene.add.circle(centerX, centerY, 20, 0x8800ff, 0.9);
-    riftOuter.setDepth(20);
-    riftMid.setDepth(21);
-    riftInner.setDepth(22);
-
-    // 多层虚空环
-    const voidRings = scene.add.container(centerX, centerY);
-    voidRings.setDepth(18);
+    // 配置虚空环
+    const ringConfigs: VoidRiftEffectConfig['ringConfigs'] = [];
     for (let i = 0; i < 5; i++) {
-      const ring = scene.add.graphics();
-      ring.lineStyle(4 - i * 0.5, 0x8800ff, 0.45 - i * 0.06);
-      ring.strokeCircle(0, 0, radius * (0.25 + i * 0.2));
-      voidRings.add(ring);
-
-      const tween = scene.tweens.add({
-        targets: ring,
-        angle: 360 * (i % 2 === 0 ? 1 : -1),
-        duration: 700 + i * 150,
-        repeat: -1,
+      ringConfigs.push({
+        lineWidth: 4 - i * 0.5,
+        color: 0x8800ff,
+        alpha: 0.45 - i * 0.06,
+        radiusMultiplier: 0.25 + i * 0.2,
+        rotationDuration: 700 + i * 150,
+        direction: i % 2 === 0 ? 1 : -1,
       });
-      activeTweens.push(tween);
     }
 
-    // 吸入粒子
-    const pullParticles = scene.add.particles(centerX, centerY, 'particle_glow', {
-      speed: { min: 40, max: 100 },
-      angle: { min: 0, max: 360 },
-      scale: { start: 0.45, end: 0 },
-      alpha: { start: 0.55, end: 0 },
-      tint: [0x6600aa, 0x8800cc, 0xaa00ff],
+    // 配置粒子
+    const particleConfig: VoidRiftEffectConfig['particleConfig'] = {
+      speedMin: 40,
+      speedMax: 100,
       lifespan: 700,
       frequency: 45,
       quantity: 2,
+      colors: [0x6600aa, 0x8800cc, 0xaa00ff],
+    };
+
+    const effect = effectPools.voidRift.acquireWithConfig({
+      x: centerX,
+      y: centerY,
+      radius: radius,
+      duration: duration,
+      ringConfigs: ringConfigs,
+      particleConfig: particleConfig,
     });
-    pullParticles.setDepth(17);
 
     let elapsed = 0;
     const riftTimer = scene.time.addEvent({
@@ -1644,17 +1586,7 @@ export class VoidRiftStrategy implements SkillStrategy {
         elapsed += tickInterval;
         if (elapsed >= duration) {
           riftTimer.destroy();
-          // 停止所有无限循环的 tweens
-          activeTweens.forEach(tween => {
-            if (tween && tween.isPlaying()) {
-              tween.stop();
-            }
-          });
-          riftOuter.destroy();
-          riftMid.destroy();
-          riftInner.destroy();
-          voidRings.destroy();
-          pullParticles.destroy();
+          // 对象池会自动回收效果
           return;
         }
 
@@ -1690,6 +1622,8 @@ export class VoidRiftVisualStrategy implements VisualEffectStrategy {
 
 /**
  * 黑洞策略 - 持续吸引+伤害
+ *
+ * 使用对象池管理视觉效果
  */
 export class BlackHoleStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
@@ -1701,47 +1635,40 @@ export class BlackHoleStrategy implements SkillStrategy {
     const tickInterval = 300;
     let elapsed = 0;
 
-    // 存储需要清理的 tweens
-    const activeTweens: Phaser.Tweens.Tween[] = [];
+    // 从对象池获取效果
+    const effectPools = (scene as any).effectPools as EffectPoolManager;
 
-    // 多层黑洞核心
-    const blackHoleOuter = scene.add.circle(centerX, centerY, 55, 0x220066, 0.6);
-    const blackHoleMid = scene.add.circle(centerX, centerY, 40, 0x330088, 0.75);
-    const blackHoleInner = scene.add.circle(centerX, centerY, 25, 0x4400aa, 0.9);
-    blackHoleOuter.setDepth(20);
-    blackHoleMid.setDepth(21);
-    blackHoleInner.setDepth(22);
-
-    // 多层引力环
-    const gravityRings = scene.add.container(centerX, centerY);
-    gravityRings.setDepth(18);
+    // 配置引力环
+    const ringConfigs: BlackHoleEffectConfig['ringConfigs'] = [];
     for (let i = 0; i < 6; i++) {
-      const ring = scene.add.graphics();
-      ring.lineStyle(4 - i * 0.5, 0x6600cc, 0.4 - i * 0.05);
-      ring.strokeCircle(0, 0, radius * (0.2 + i * 0.15));
-      gravityRings.add(ring);
-
-      const tween = scene.tweens.add({
-        targets: ring,
-        angle: 360 * (i % 2 === 0 ? 1 : -1),
-        duration: 600 + i * 100,
-        repeat: -1,
+      ringConfigs.push({
+        lineWidth: 4 - i * 0.5,
+        color: 0x6600cc,
+        alpha: 0.4 - i * 0.05,
+        radiusMultiplier: 0.2 + i * 0.15,
+        rotationDuration: 600 + i * 100,
+        direction: i % 2 === 0 ? 1 : -1,
       });
-      activeTweens.push(tween);
     }
 
-    // 吸入粒子
-    const pullParticles = scene.add.particles(centerX, centerY, 'particle_glow', {
-      speed: { min: 50, max: 120 },
-      angle: { min: 0, max: 360 },
-      scale: { start: 0.5, end: 0 },
-      alpha: { start: 0.6, end: 0 },
-      tint: [0x6600cc, 0x8800ee, 0xaa00ff],
+    // 配置粒子
+    const particleConfig: BlackHoleEffectConfig['particleConfig'] = {
+      speedMin: 50,
+      speedMax: 120,
       lifespan: 550,
       frequency: 35,
       quantity: 2,
+      colors: [0x6600cc, 0x8800ee, 0xaa00ff],
+    };
+
+    const effect = effectPools.blackHole.acquireWithConfig({
+      x: centerX,
+      y: centerY,
+      radius: radius,
+      duration: duration,
+      ringConfigs: ringConfigs,
+      particleConfig: particleConfig,
     });
-    pullParticles.setDepth(17);
 
     const damageTimer = scene.time.addEvent({
       delay: tickInterval,
@@ -1749,17 +1676,7 @@ export class BlackHoleStrategy implements SkillStrategy {
         elapsed += tickInterval;
         if (elapsed >= duration) {
           damageTimer.destroy();
-          // 停止所有无限循环的 tweens
-          activeTweens.forEach(tween => {
-            if (tween && tween.isPlaying()) {
-              tween.stop();
-            }
-          });
-          blackHoleOuter.destroy();
-          blackHoleMid.destroy();
-          blackHoleInner.destroy();
-          gravityRings.destroy();
-          pullParticles.destroy();
+          // 对象池会自动回收效果
           return;
         }
 
@@ -1937,6 +1854,8 @@ export class ThunderStrikeVisualStrategy implements VisualEffectStrategy {
 
 /**
  * 神圣审判策略 - 光柱审判
+ *
+ * 使用对象池管理视觉效果
  */
 export class HolyJudgmentStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
@@ -1944,33 +1863,20 @@ export class HolyJudgmentStrategy implements SkillStrategy {
     const radius = skill.rangeValue;
     const enemies = findEnemiesInRange(player.x, player.y, radius);
 
+    // 从对象池获取效果
+    const effectPools = (scene as any).effectPools as EffectPoolManager;
+
     for (const enemy of enemies) {
       applyDamageToEnemy(enemy, damage, skill);
 
-      // 多层光柱视觉效果
-      const pillarOuter = scene.add.rectangle(enemy.x, enemy.y - 100, 50, 200, 0xffcc00, 0.3);
-      const pillarMid = scene.add.rectangle(enemy.x, enemy.y - 100, 35, 200, 0xffdd44, 0.5);
-      const pillarInner = scene.add.rectangle(enemy.x, enemy.y - 100, 18, 200, 0xffffff, 0.75);
-      pillarOuter.setDepth(48);
-      pillarMid.setDepth(49);
-      pillarInner.setDepth(50);
-
-      // 击中闪光
-      const flash = scene.add.circle(enemy.x, enemy.y, 25, 0xffffff, 0.8);
-      flash.setDepth(51);
-
-      scene.tweens.add({
-        targets: [pillarOuter, pillarMid, pillarInner, flash],
-        alpha: 0,
-        scaleX: 2.2,
+      // 从对象池获取神圣审判效果
+      const effect = effectPools.holyJudgment.acquireWithConfig({
+        x: enemy.x,
+        y: enemy.y,
+        targetX: enemy.x,
+        targetY: enemy.y,
         duration: 550,
-        onComplete: () => {
-          pillarOuter.destroy();
-          pillarMid.destroy();
-          pillarInner.destroy();
-          flash.destroy();
-        },
-      });
+      } as HolyJudgmentEffectConfig);
     }
   }
 }
@@ -2002,6 +1908,8 @@ export class HolyJudgmentVisualStrategy implements VisualEffectStrategy {
 
 /**
  * 圣域策略 - 持续治疗+护盾
+ *
+ * 使用对象池管理视觉效果
  */
 export class SanctuaryStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
@@ -2010,59 +1918,43 @@ export class SanctuaryStrategy implements SkillStrategy {
     const duration = 5000;
     const tickInterval = 500;
 
-    // 存储需要清理的 tweens
-    const activeTweens: Phaser.Tweens.Tween[] = [];
+    // 从对象池获取效果
+    const effectPools = (scene as any).effectPools as EffectPoolManager;
 
-    // 多层圣域区域
-    const sanctuaryLayers: Phaser.GameObjects.Arc[] = [];
-    const layerConfigs = [
+    // 配置圣域图层
+    const layerConfigs: SanctuaryEffectConfig['layerConfigs'] = [
       { radius: radius * 1.1, color: 0xffcc00, alpha: 0.12 },
       { radius: radius, color: 0xffdd44, alpha: 0.2 },
       { radius: radius * 0.8, color: 0xffee88, alpha: 0.18 },
       { radius: radius * 0.5, color: 0xffffaa, alpha: 0.15 },
     ];
 
-    layerConfigs.forEach((config, i) => {
-      const layer = scene.add.circle(player.x, player.y, config.radius, config.color, config.alpha);
-      layer.setStrokeStyle(2, 0xffcc00, 0.5);
-      layer.setDepth(17 + i);
-      sanctuaryLayers.push(layer);
-    });
+    // 配置旋转光环
+    const ringConfigs: SanctuaryEffectConfig['ringConfigs'] = [
+      { lineWidth: 2, color: 0xffdd44, alpha: 0.45, radiusMultiplier: 0.4, rotationDuration: 2000 },
+      { lineWidth: 2, color: 0xffdd44, alpha: 0.45, radiusMultiplier: 0.65, rotationDuration: 2400 },
+      { lineWidth: 2, color: 0xffdd44, alpha: 0.45, radiusMultiplier: 0.9, rotationDuration: 2800 },
+    ];
 
-    // 神圣粒子
-    const holyParticles = scene.add.particles(player.x, player.y, 'particle_glow', {
-      speed: { min: 15, max: 40 },
-      angle: { min: 250, max: 290 },
-      scale: { start: 0.4, end: 0 },
-      alpha: { start: 0.5, end: 0 },
-      tint: [0xffcc00, 0xffdd44, 0xffffff],
+    // 配置粒子
+    const particleConfig: SanctuaryEffectConfig['particleConfig'] = {
+      speedMin: 15,
+      speedMax: 40,
       lifespan: 1400,
       frequency: 80,
       quantity: 2,
-      emitZone: {
-        type: 'random' as const,
-        source: new Phaser.Geom.Circle(0, 0, radius * 0.9) as Phaser.Types.GameObjects.Particles.RandomZoneSource,
-      },
+      colors: [0xffcc00, 0xffdd44, 0xffffff],
+    };
+
+    const effect = effectPools.sanctuary.acquireWithConfig({
+      x: player.x,
+      y: player.y,
+      radius: radius,
+      duration: duration,
+      layerConfigs: layerConfigs,
+      ringConfigs: ringConfigs,
+      particleConfig: particleConfig,
     });
-    holyParticles.setDepth(22);
-
-    // 旋转光环
-    const sanctuaryRings = scene.add.container(player.x, player.y);
-    sanctuaryRings.setDepth(18);
-    for (let i = 0; i < 3; i++) {
-      const ring = scene.add.graphics();
-      ring.lineStyle(2, 0xffdd44, 0.45);
-      ring.strokeCircle(0, 0, radius * (0.4 + i * 0.25));
-      sanctuaryRings.add(ring);
-
-      const tween = scene.tweens.add({
-        targets: ring,
-        angle: 360,
-        duration: 2000 + i * 400,
-        repeat: -1,
-      });
-      activeTweens.push(tween);
-    }
 
     let elapsed = 0;
     const healTimer = scene.time.addEvent({
@@ -2071,15 +1963,7 @@ export class SanctuaryStrategy implements SkillStrategy {
         elapsed += tickInterval;
         if (elapsed >= duration) {
           healTimer.destroy();
-          // 停止所有无限循环的 tweens
-          activeTweens.forEach(tween => {
-            if (tween && tween.isPlaying()) {
-              tween.stop();
-            }
-          });
-          sanctuaryLayers.forEach(l => l.destroy());
-          holyParticles.destroy();
-          sanctuaryRings.destroy();
+          // 对象池会自动回收效果
           return;
         }
 
@@ -2235,6 +2119,8 @@ export class ForceOfNatureVisualStrategy implements VisualEffectStrategy {
 
 /**
  * 大地守护策略 - 大幅提升防御
+ *
+ * 使用对象池管理视觉效果
  */
 export class EarthGuardianStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
@@ -2250,61 +2136,19 @@ export class EarthGuardianStrategy implements SkillStrategy {
       player.addShield(shieldEffect.value);
     }
 
-    // 多层石像护盾视觉效果
-    const shieldOuter = scene.add.circle(player.x, player.y, 55, 0x665544, 0.25);
-    const shieldMid = scene.add.circle(player.x, player.y, 45, 0x776655, 0.4);
-    const shieldInner = scene.add.circle(player.x, player.y, 35, 0x887766, 0.55);
-    shieldOuter.setStrokeStyle(5, 0xaa8866, 0.65);
-    shieldMid.setStrokeStyle(3, 0xaa8866, 0.8);
-    shieldInner.setStrokeStyle(2, 0xaa8866, 0.9);
-    shieldOuter.setDepth(46);
-    shieldMid.setDepth(47);
-    shieldInner.setDepth(48);
+    // 从对象池获取效果
+    const effectPools = (scene as any).effectPools as EffectPoolManager;
 
-    // 岩石碎片环绕
-    const rocks: Phaser.GameObjects.Graphics[] = [];
-    const rockTweens: Phaser.Tweens.Tween[] = [];
-    for (let i = 0; i < 8; i++) {
-      const rock = scene.add.graphics();
-      rock.fillStyle(0x665544, 0.9);
-      rock.fillRoundedRect(-10, -10, 20, 20, 5);
-      rock.fillStyle(0x887766, 0.7);
-      rock.fillRoundedRect(-6, -6, 12, 12, 3);
-      rock.setPosition(player.x, player.y);
-      rock.setDepth(45);
-      rocks.push(rock);
-
-      const orbitAngle = (i / 8) * Math.PI * 2;
-      const orbitTween = scene.tweens.add({
-        targets: rock,
-        x: player.x + Math.cos(orbitAngle) * 50,
-        y: player.y + Math.sin(orbitAngle) * 50,
-        angle: 360,
-        duration: 3000,
-        repeat: -1,
-      });
-      rockTweens.push(orbitTween);
-    }
+    const effect = effectPools.earthGuardian.acquireWithConfig({
+      x: player.x,
+      y: player.y,
+      radius: 50,
+      duration: duration,
+    } as EarthGuardianEffectConfig);
 
     scene.time.delayedCall(duration, () => {
       (player.stats as any).defense = originalDefense;
-      // 停止所有无限循环的轨道 tweens
-      rockTweens.forEach(t => {
-        if (t && t.isPlaying()) {
-          t.stop();
-        }
-      });
-      scene.tweens.add({
-        targets: [shieldOuter, shieldMid, shieldInner, ...rocks],
-        alpha: 0,
-        duration: 350,
-        onComplete: () => {
-          shieldOuter.destroy();
-          shieldMid.destroy();
-          shieldInner.destroy();
-          rocks.forEach(r => r.destroy());
-        },
-      });
+      // 对象池会自动回收效果
     });
   }
 }
