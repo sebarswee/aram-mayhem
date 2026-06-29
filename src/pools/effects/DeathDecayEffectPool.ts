@@ -157,16 +157,9 @@ export class DeathDecayEffectPool extends VisualEffectPool<DeathDecayEffectConfi
     });
 
     // 重置死亡粒子发射器
-    const deathParticles = container.getByName('death_particles') as Phaser.GameObjects.Particles.ParticleEmitter;
-    if (deathParticles) {
-      // 更新粒子配置
-      (deathParticles as any).speed = { min: particleConfig.speedMin, max: particleConfig.speedMax };
-      (deathParticles as any).lifespan = particleConfig.lifespan;
-      (deathParticles as any).frequency = particleConfig.frequency;
-      (deathParticles as any).quantity = particleConfig.quantity;
-      (deathParticles as any).tint = particleConfig.colors;
-      deathParticles.setPosition(0, 0);
-      deathParticles.setDepth(22);
+    const particlesObj = container.getByName('death_particles');
+    if (particlesObj && particlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+      const deathParticles = particlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
 
       // 设置发射区域
       const circle = new Phaser.Geom.Circle(0, 0, radius * 0.9);
@@ -175,6 +168,7 @@ export class DeathDecayEffectPool extends VisualEffectPool<DeathDecayEffectConfi
       );
       deathParticles.setEmitZone(randomZone);
       deathParticles.start();
+      deathParticles.setDepth(22);
 
       // 托管粒子发射器
       this.addManagedParticle(container, deathParticles, {
