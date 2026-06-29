@@ -73,7 +73,8 @@
       "Bash(sed -i '' 's/expect\\(tweens.length\\).toBeGreaterThan\\(0\\);/expect\\(mockSceneData.scene.tweens.add\\).toHaveBeenCalled\\(\\);/' src/pools/effects/__tests__/ElectricFieldEffectPool.test.ts)",
       "Bash(sed -i '' 's/expect\\(tweens.length\\).toBeGreaterThan\\(0\\);/expect\\(mockSceneData.scene.tweens.add\\).toHaveBeenCalled\\(\\);/' src/pools/effects/__tests__/IceWallEffectPool.test.ts)",
       "Bash(sed -i '' 's/expect\\(tweens.length\\).toBeGreaterThan\\(0\\);/expect\\(mockSceneData.scene.tweens.add\\).toHaveBeenCalled\\(\\);/' src/pools/effects/__tests__/PoisonCloudEffectPool.test.ts)",
-      "Bash(sed -i '' 's/expect\\(tweens.length\\).toBeGreaterThan\\(0\\);/expect\\(mockSceneData.scene.tweens.add\\).toHaveBeenCalled\\(\\);/' src/pools/effects/__tests__/SandstormEffectPool.test.ts)"
+      "Bash(sed -i '' 's/expect\\(tweens.length\\).toBeGreaterThan\\(0\\);/expect\\(mockSceneData.scene.tweens.add\\).toHaveBeenCalled\\(\\);/' src/pools/effects/__tests__/SandstormEffectPool.test.ts)",
+      "Bash(awk -F: '{sum+=$2} END {print \"Total instanceof checks:\", sum}')"
     ]
   }
 }

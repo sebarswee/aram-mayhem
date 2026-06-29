@@ -114,6 +114,8 @@ export class EarthGuardianEffectPool extends VisualEffectPool<EarthGuardianEffec
 
     // 重置 8 个岩石碎片并创建轨道动画
     const rockCount = EarthGuardianEffectPool.DEFAULT_ROCK_COUNT;
+    const orbitRadius = 50;
+
     for (let i = 0; i < rockCount; i++) {
       const rock = container.getByName(`rock_${i}`) as Phaser.GameObjects.Graphics;
       if (rock) {
@@ -126,21 +128,19 @@ export class EarthGuardianEffectPool extends VisualEffectPool<EarthGuardianEffec
         rock.fillStyle(0x887766, 0.7);
         rock.fillRoundedRect(-6, -6, 12, 12, 3);
 
-        // 重置位置和角度
-        rock.setPosition(config.x, config.y);
+        // 初始位置（相对于容器）
+        const initialAngle = (i / rockCount) * Math.PI * 2;
+        rock.setPosition(
+          Math.cos(initialAngle) * orbitRadius,
+          Math.sin(initialAngle) * orbitRadius
+        );
         rock.setAngle(0);
         rock.setAlpha(1);
         rock.setDepth(45);
 
-        // 计算轨道参数
-        const orbitAngle = (i / rockCount) * Math.PI * 2;
-        const orbitRadius = 50;
-
-        // 创建无限轨道动画 tween
+        // 创建无限旋转动画 tween - 让岩石绕容器中心旋转
         const orbitTween = this.scene.tweens.add({
           targets: rock,
-          x: config.x + Math.cos(orbitAngle) * orbitRadius,
-          y: config.y + Math.sin(orbitAngle) * orbitRadius,
           angle: 360,
           duration: 3000,
           repeat: -1, // 无限循环
