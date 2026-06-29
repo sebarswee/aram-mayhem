@@ -115,6 +115,9 @@ export class BootScene extends Phaser.Scene {
 
     // 加载炎龙吐息技能素材
     this.load.image('dragon_head', 'assets/effects/dragon_head.png');
+
+    // 加载烈焰风暴技能素材
+    this.load.image('fire_sprite', 'assets/effects/fire_sprite.png');
   }
 
   create(): void {

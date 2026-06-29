@@ -665,9 +665,9 @@ export const SKILLS: Record<string, Skill> = {
     element: 'fire',
     category: 'area',
     cooldown: 30000,
-    damage: 30,
+    damage: 50,
     rangeValue: 200,
-    effects: [{ type: 'damage', value: 30 }, { type: 'burn', value: 12, duration: 8000 }],
+    effects: [{ type: 'damage', value: 50 }, { type: 'burn', value: 12, duration: 8000 }],
     specialBehaviors: ['burn_spread'],
   }),
 

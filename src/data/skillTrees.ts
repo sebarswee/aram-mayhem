@@ -1595,6 +1595,122 @@ export const DRAGON_BREATH_UPGRADE_TREE: SkillUpgradeTree = {
 };
 
 /**
+ * 烈焰风暴升级树
+ */
+export const INFERNO_UPGRADE_TREE: SkillUpgradeTree = {
+  skillId: 'inferno',
+
+  upgradeOptions: {
+    // Lv2 二选一
+    2: [
+      {
+        id: 'inferno_lv2_damage',
+        name: '火焰增幅',
+        description: '伤害+40%',
+        level: 2,
+        modifiers: { damage: 0.4 },
+      },
+      {
+        id: 'inferno_lv2_range',
+        name: '风暴扩张',
+        description: '范围+50%',
+        level: 2,
+        modifiers: { range: 0.5 },
+      },
+    ],
+
+    // Lv3 二选一
+    3: [
+      {
+        id: 'inferno_lv3_burn',
+        name: '炽热燃烧',
+        description: '燃烧伤害+60%',
+        level: 3,
+        effectBoost: {
+          type: 'burn',
+          valueMultiplier: 1.6,
+        },
+      },
+      {
+        id: 'inferno_lv3_duration',
+        name: '持久烈焰',
+        description: '持续时间+3秒',
+        level: 3,
+        specialBehavior: 'duration_bonus:3000',
+      },
+    ],
+
+    // Lv4 二选一
+    4: [
+      {
+        id: 'inferno_lv4_burn_damage',
+        name: '净化之火',
+        description: '对燃烧敌人伤害+100%',
+        level: 4,
+        specialBehavior: 'burn_damage_bonus:1.0',
+      },
+      {
+        id: 'inferno_lv4_heal',
+        name: '火焰吞噬',
+        description: '燃烧敌人死亡时回复玩家 10 HP',
+        level: 4,
+        specialBehavior: 'burn_death_heal:10',
+      },
+    ],
+  },
+
+  evolutionBranches: [
+    // 🔥 烈焰分支 - 伤害强化
+    {
+      id: 'inferno_evo_burn_spread',
+      name: '连环烈焰',
+      description: '燃烧可扩散 2 次',
+      rarity: 'legendary',
+      modifiers: {
+        damage: 0.3,
+      },
+      specialBehavior: 'burn_spread_chain:2',
+      visualChange: {
+        particleEffect: 'inferno_chain',
+        color: 0xff4400,
+      },
+    },
+    // 🌊 范围分支
+    {
+      id: 'inferno_evo_hellfire',
+      name: '地狱火海',
+      description: '范围极大但伤害降低 30%',
+      rarity: 'epic',
+      modifiers: {
+        damage: -0.3,
+        range: 1.0,
+      },
+      specialBehavior: 'massive_aoe',
+      visualChange: {
+        scale: 1.8,
+        particleEffect: 'hellfire_aoe',
+        color: 0xff2200,
+      },
+    },
+    // 🌟 净化分支 - 火焰小精灵
+    {
+      id: 'inferno_evo_fire_sprite',
+      name: '烈焰重生',
+      description: '燃烧敌人死亡后召唤火焰小精灵',
+      rarity: 'epic',
+      modifiers: {
+        damage: 0.2,
+      },
+      specialBehavior: 'fire_sprite_summon',
+      visualChange: {
+        particleEffect: 'fire_sprite_trail',
+        color: 0xff6600,
+      },
+    },
+  ],
+};
+
+/**
  * 所有技能升级树映射
  */
 export const SKILL_UPGRADE_TREES: Record<string, SkillUpgradeTree> = {
@@ -1612,6 +1728,7 @@ export const SKILL_UPGRADE_TREES: Record<string, SkillUpgradeTree> = {
   poison_cloud: POISON_CLOUD_UPGRADE_TREE,
   rock_spike: ROCK_SPIKE_UPGRADE_TREE,
   dragon_breath: DRAGON_BREATH_UPGRADE_TREE,
+  inferno: INFERNO_UPGRADE_TREE,
 };
 
 /**
