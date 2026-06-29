@@ -107,13 +107,14 @@ export class SandstormEffectPool extends VisualEffectPool<SandstormEffectConfig>
         graphics.strokeCircle(0, 0, config.radius * (0.3 + i * 0.2));
         graphics.setAngle(0);
 
-        // 旋转动画
-        this.scene.tweens.add({
+        // 旋转动画（无限循环 tween 需要托管以便正确清理）
+        const tween = this.scene.tweens.add({
           targets: graphics,
           angle: 360 * (i % 2 === 0 ? 1 : -1),
           duration: 1500 + i * 300,
           repeat: -1,
         });
+        this.addManagedTween(container, tween, { autoStop: true, tag: 'vortex_rotation' });
       });
     }
 
@@ -147,6 +148,9 @@ export class SandstormEffectPool extends VisualEffectPool<SandstormEffectConfig>
    * 停用效果时的额外清理
    */
   protected deactivate(obj: Phaser.GameObjects.Container): void {
+    // 停止并清理托管的旋转 tween
+    this.stopTweensByTag(obj, 'vortex_rotation');
+
     // 停止粒子发射
     const particlesObj = obj.getByName('sandstorm_particles');
     if (particlesObj && particlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {

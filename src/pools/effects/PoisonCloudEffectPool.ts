@@ -81,7 +81,7 @@ export class PoisonCloudEffectPool extends VisualEffectPool<PoisonCloudEffectCon
         layer.setDepth(17 + i);
 
         // 脉动动画
-        this.scene.tweens.add({
+        const tween = this.scene.tweens.add({
           targets: layer,
           scaleX: 1.08,
           scaleY: 1.08,
@@ -90,6 +90,7 @@ export class PoisonCloudEffectPool extends VisualEffectPool<PoisonCloudEffectCon
           yoyo: true,
           repeat: -1,
         });
+        this.addManagedTween(container, tween, { autoStop: true, tag: 'pulse' });
       }
     });
 
@@ -143,6 +144,9 @@ export class PoisonCloudEffectPool extends VisualEffectPool<PoisonCloudEffectCon
    * 停用效果时的额外清理
    */
   protected deactivate(obj: Phaser.GameObjects.Container): void {
+    // 清理托管的脉动 tween
+    this.stopTweensByTag(obj, 'pulse');
+
     // 停止粒子发射
     const poisonParticlesObj = obj.getByName('poison_particles');
     if (poisonParticlesObj && poisonParticlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
