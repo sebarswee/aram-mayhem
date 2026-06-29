@@ -175,7 +175,7 @@ export class FrozenDomainEffectPool extends VisualEffectPool<FrozenDomainEffectC
       iceCrystalCore.setAngle(0);
       iceCrystalCore.setDepth(25); // 确保在最上层
 
-      // 创建脉动效果（无限 tween）
+      // 创建脉动效果（无限 tween）- 冰山只脉动，不旋转
       const pulseTween = this.scene.tweens.add({
         targets: iceCrystalCore,
         scaleX: coreScale * 1.15,
@@ -193,20 +193,7 @@ export class FrozenDomainEffectPool extends VisualEffectPool<FrozenDomainEffectC
         tag: 'ice_crystal_pulse',
       });
 
-      // 创建缓慢旋转效果（无限 tween）
-      const rotationTween = this.scene.tweens.add({
-        targets: iceCrystalCore,
-        angle: 360,
-        duration: 6000, // 6秒完成一圈
-        repeat: -1, // 无限循环
-        ease: 'Linear',
-      });
-
-      // 托管旋转 tween
-      this.addManagedTween(container, rotationTween, {
-        autoStop: true,
-        tag: 'ice_crystal_rotation',
-      });
+      // 注意：冰山不应该旋转，所以移除了旋转动画
     }
 
     // 重置 4 层冰封区域并创建脉动 tween（4 个无限 tween）
@@ -411,12 +398,9 @@ export class FrozenDomainEffectPool extends VisualEffectPool<FrozenDomainEffectC
       if (!found) return false;
     }
 
-    // 验证冰晶中心的 2 个 tween
+    // 验证冰晶中心的脉动 tween（不再有旋转）
     const pulseFound = tweens.some(t => t.tag === 'ice_crystal_pulse');
     if (!pulseFound) return false;
-
-    const rotationFound = tweens.some(t => t.tag === 'ice_crystal_rotation');
-    if (!rotationFound) return false;
 
     return true;
   }
@@ -445,7 +429,6 @@ export class FrozenDomainEffectPool extends VisualEffectPool<FrozenDomainEffectC
 
     const iceCrystalTweens = [
       { tag: 'ice_crystal_pulse', exists: tweenTags.includes('ice_crystal_pulse') },
-      { tag: 'ice_crystal_rotation', exists: tweenTags.includes('ice_crystal_rotation') },
     ];
 
     return {
