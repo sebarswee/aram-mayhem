@@ -1827,6 +1827,119 @@ export const ABYSS_VORTEX_UPGRADE_TREE: SkillUpgradeTree = {
 };
 
 /**
+ * 冰封领域升级树
+ */
+export const FROZEN_DOMAIN_UPGRADE_TREE: SkillUpgradeTree = {
+  skillId: 'frozen_domain',
+
+  upgradeOptions: {
+    // Lv2 二选一
+    2: [
+      {
+        id: 'frozen_domain_lv2_freeze_duration',
+        name: '深度冻结',
+        description: '冻结持续时间+50%',
+        level: 2,
+        specialBehavior: 'freeze_duration_bonus:0.5',
+      },
+      {
+        id: 'frozen_domain_lv2_range',
+        name: '领域扩张',
+        description: '范围+40%',
+        level: 2,
+        modifiers: { range: 0.4 },
+      },
+    ],
+
+    // Lv3 二选一
+    3: [
+      {
+        id: 'frozen_domain_lv3_frozen_damage',
+        name: '冰晶穿刺',
+        description: '对冻结敌人伤害+30%',
+        level: 3,
+        specialBehavior: 'frozen_damage_boost:0.3',
+      },
+      {
+        id: 'frozen_domain_lv3_duration',
+        name: '持久冰封',
+        description: '持续时间+2秒',
+        level: 3,
+        specialBehavior: 'duration_bonus:2000',
+      },
+    ],
+
+    // Lv4 二选一
+    4: [
+      {
+        id: 'frozen_domain_lv4_freeze_transfer',
+        name: '冰封传递',
+        description: '冻结敌人死亡时冻结周围敌人',
+        level: 4,
+        specialBehavior: 'freeze_on_death',
+      },
+      {
+        id: 'frozen_domain_lv4_slow_field',
+        name: '冰封大地',
+        description: '领域消失后留下减速区域 3秒',
+        level: 4,
+        specialBehavior: 'slow_field_after_domain:3000',
+      },
+    ],
+  },
+
+  evolutionBranches: [
+    // ❄️ 寒冰分支 - 冻结强化
+    {
+      id: 'frozen_domain_evo_ice_explosion',
+      name: '冰晶爆裂',
+      description: '冻结敌人死亡时爆炸造成范围伤害',
+      rarity: 'legendary',
+      modifiers: {
+        damage: 0.3,
+      },
+      specialBehavior: 'ice_explosion_on_death',
+      visualChange: {
+        particleEffect: 'ice_explosion',
+        color: 0x88ddff,
+      },
+    },
+    // 🌊 范围分支
+    {
+      id: 'frozen_domain_evo_heart',
+      name: '冰霜之心',
+      description: '领域内玩家每秒回复 5 HP',
+      rarity: 'epic',
+      specialBehavior: 'hp_regen_in_domain:5',
+      modifiers: {
+        damage: 0.2,
+      },
+      visualChange: {
+        particleEffect: 'frost_heart',
+        color: 0xaaeeff,
+      },
+    },
+    // 🌟 冰霜分支 - 终极形态
+    {
+      id: 'frozen_domain_evo_fullscreen',
+      name: '终极冰封',
+      description: '全屏冰封，伤害降低 50%',
+      rarity: 'epic',
+      modifiers: {
+        damage: -0.5,
+        range: 2.5,
+      },
+      specialBehavior: 'full_screen_freeze',
+      visualChange: {
+        scale: 2.0,
+        particleEffect: 'ultimate_freeze',
+        color: 0xccffff,
+      },
+    },
+  ],
+};
+
+/**
  * 所有技能升级树映射
  */
 export const SKILL_UPGRADE_TREES: Record<string, SkillUpgradeTree> = {
@@ -1846,6 +1959,7 @@ export const SKILL_UPGRADE_TREES: Record<string, SkillUpgradeTree> = {
   dragon_breath: DRAGON_BREATH_UPGRADE_TREE,
   inferno: INFERNO_UPGRADE_TREE,
   abyss_vortex: ABYSS_VORTEX_UPGRADE_TREE,
+  frozen_domain: FROZEN_DOMAIN_UPGRADE_TREE,
 };
 
 /**
