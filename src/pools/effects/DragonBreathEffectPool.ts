@@ -74,6 +74,29 @@ export class DragonBreathEffectPool extends VisualEffectPool<DragonBreathEffectC
   private createDragonBreathEffect(): Phaser.GameObjects.Container {
     const container = this.scene.add.container(0, 0);
 
+    // 创建龙头精灵
+    const dragonHead = this.scene.add.image(0, 0, 'dragon_head');
+    dragonHead.setName('dragon_head_sprite');
+    dragonHead.setScale(0.8, 0.8); // 适配效果大小
+    dragonHead.setOrigin(0.5, 0.5);
+    dragonHead.setDepth(44);
+    container.add(dragonHead);
+
+    // 创建龙眼发光粒子发射器
+    const eyeGlow = this.scene.add.particles(0, 0, 'particle_fire_core', {
+      speed: { min: 10, max: 30 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 0.3, end: 0 },
+      alpha: { start: 0.8, end: 0 },
+      tint: [0xffff00, 0xffaa00, 0xff6600],
+      lifespan: 300,
+      frequency: 100,
+      quantity: 1,
+      emitting: false, // 初始不发射
+    });
+    eyeGlow.setName('eye_glow_particles');
+    container.add(eyeGlow);
+
     // 预创建4个锥形火焰图层（使用 Graphics，因为需要绘制扇形）
     for (let i = 0; i < 4; i++) {
       const layer = this.scene.add.graphics();
@@ -128,6 +151,24 @@ export class DragonBreathEffectPool extends VisualEffectPool<DragonBreathEffectC
 
     const playerAngle = config.playerAngle;
     const angleSpread = config.angleSpread;
+
+    // 重置龙头精灵
+    const dragonHead = container.getByName('dragon_head_sprite') as Phaser.GameObjects.Image;
+    if (dragonHead) {
+      dragonHead.setPosition(0, 0);
+      // 龙头朝向喷射方向（角度转换：Phaser角度顺时针，需要调整）
+      dragonHead.setRotation(playerAngle + Math.PI / 2);
+      dragonHead.setAlpha(1);
+      dragonHead.setScale(0.8, 0.8);
+    }
+
+    // 重置龙眼发光粒子
+    const eyeGlowObj = container.getByName('eye_glow_particles');
+    if (eyeGlowObj && eyeGlowObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+      const eyeGlow = eyeGlowObj as Phaser.GameObjects.Particles.ParticleEmitter;
+      eyeGlow.setPosition(0, 0);
+      eyeGlow.start();
+    }
 
     // 重置锥形火焰图层
     config.layerConfigs.forEach((layerConfig, i) => {
@@ -216,6 +257,19 @@ export class DragonBreathEffectPool extends VisualEffectPool<DragonBreathEffectC
   ): void {
     container.setPosition(x, y);
 
+    // 更新龙头位置和旋转
+    const dragonHead = container.getByName('dragon_head_sprite') as Phaser.GameObjects.Image;
+    if (dragonHead) {
+      dragonHead.setRotation(playerAngle + Math.PI / 2);
+    }
+
+    // 更新龙眼发光位置
+    const eyeGlowObj = container.getByName('eye_glow_particles');
+    if (eyeGlowObj && eyeGlowObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+      const eyeGlow = eyeGlowObj as Phaser.GameObjects.Particles.ParticleEmitter;
+      eyeGlow.setPosition(0, 0);
+    }
+
     // 重绘锥形火焰图层
     layerConfigs.forEach((layerConfig, i) => {
       const layer = container.getByName(`breath_layer_${i}`) as Phaser.GameObjects.Graphics;
@@ -251,17 +305,32 @@ export class DragonBreathEffectPool extends VisualEffectPool<DragonBreathEffectC
    * 停用效果时的额外清理
    */
   protected deactivate(obj: Phaser.GameObjects.Container): void {
-    // 停止粒子发射
+    // 停止火焰粒子发射
     const fireParticlesObj = obj.getByName('fire_particles');
     if (fireParticlesObj && fireParticlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
       const fireParticles = fireParticlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
       fireParticles.stop();
     }
 
+    // 停止火花粒子发射
     const sparkParticlesObj = obj.getByName('spark_particles');
     if (sparkParticlesObj && sparkParticlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
       const sparkParticles = sparkParticlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
       sparkParticles.stop();
+    }
+
+    // 停止龙眼发光粒子
+    const eyeGlowObj = obj.getByName('eye_glow_particles');
+    if (eyeGlowObj && eyeGlowObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+      const eyeGlow = eyeGlowObj as Phaser.GameObjects.Particles.ParticleEmitter;
+      eyeGlow.stop();
+    }
+
+    // 重置龙头精灵
+    const dragonHead = obj.getByName('dragon_head_sprite') as Phaser.GameObjects.Image;
+    if (dragonHead) {
+      dragonHead.setAlpha(0);
+      dragonHead.setRotation(0);
     }
 
     // 清除所有 Graphics 的绘制

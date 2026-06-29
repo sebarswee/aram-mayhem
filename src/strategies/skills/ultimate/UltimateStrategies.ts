@@ -65,8 +65,38 @@ export class DragonBreathStrategy implements SkillStrategy {
       sparkParticleConfig: sparkParticleConfig,
     });
 
+    // 如果效果获取失败，提前返回
+    if (!effect) {
+      console.warn('[DragonBreathStrategy] Failed to acquire effect from pool');
+      return;
+    }
+
     // 屏幕震动
     VisualEffectUtils.screenShake(scene, { intensity: 0.008, duration: 300 });
+
+    // 创建跟随更新事件（每50ms更新一次效果位置和角度）
+    const updateInterval = 50;
+    const updateEvent = scene.time.addEvent({
+      delay: updateInterval,
+      callback: () => {
+        // 获取最新玩家位置和朝向
+        const currentNearest = findNearestEnemy(player.x, player.y, range + 100);
+        const currentAngle = currentNearest
+          ? Phaser.Math.Angle.Between(player.x, player.y, currentNearest.x, currentNearest.y)
+          : playerAngle;
+
+        // 更新效果位置和角度
+        effectPools.dragonBreath.updateEffectTransform(
+          effect,
+          player.x,
+          player.y,
+          currentAngle,
+          angleSpread,
+          layerConfigs
+        );
+      },
+      repeat: Math.floor(duration / updateInterval) - 1,
+    });
 
     let elapsed = 0;
     const breathTimer = scene.time.addEvent({
@@ -75,14 +105,21 @@ export class DragonBreathStrategy implements SkillStrategy {
         elapsed += tickInterval;
         if (elapsed >= duration) {
           breathTimer.destroy();
+          updateEvent.destroy();
           // 对象池会自动回收效果
           return;
         }
 
+        // 获取当前角度用于伤害判定
+        const currentNearest = findNearestEnemy(player.x, player.y, range + 100);
+        const currentAngle = currentNearest
+          ? Phaser.Math.Angle.Between(player.x, player.y, currentNearest.x, currentNearest.y)
+          : playerAngle;
+
         const enemies = findEnemiesInRange(player.x, player.y, range);
         for (const enemy of enemies) {
           const enemyAngle = Phaser.Math.Angle.Between(player.x, player.y, enemy.x, enemy.y);
-          const angleDiff = Math.abs(Phaser.Math.Angle.Wrap(enemyAngle - playerAngle));
+          const angleDiff = Math.abs(Phaser.Math.Angle.Wrap(enemyAngle - currentAngle));
           if (angleDiff < angleSpread / 2) {
             applyDamageToEnemy(enemy, Math.floor(damage * 0.3), skill);
 
@@ -129,7 +166,7 @@ export class DragonBreathVisualStrategy implements VisualEffectStrategy {
 }
 
 /**
- * 烈焰风暴策略 - 持续燃烧区域 + 燃烧扩散机制
+ * 烈焰风暴策略 - 持续燃烧区域 + 燃烧扩散机制 + 火焰小精灵召唤
  *
  * 使用对象池管理视觉效果
  */
@@ -138,7 +175,7 @@ export class InfernoStrategy implements SkillStrategy {
   private activeInfernos: Set<string> = new Set();
 
   execute(skill: Skill, context: SkillExecutionContext): void {
-    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
+    const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects, findNearestEnemy } = context;
     const radius = skill.rangeValue;
     const duration = 5000;
     const tickInterval = 300;
@@ -166,13 +203,14 @@ export class InfernoStrategy implements SkillStrategy {
       layerConfigs: layerConfigs,
     });
 
-    // 死亡事件监听（燃烧扩散机制）
+    // 死亡事件监听（燃烧扩散机制 + 火焰小精灵召唤）
     const deathHandler = (enemy: Enemy) => {
       if (!this.activeInfernos.has(instanceId)) return;
 
       const hasInfernoBurn = enemy.modifierStack.hasStatusEffect(StatusEffectType.BURN);
 
       if (hasInfernoBurn) {
+        // 燃烧扩散机制
         const nearbyEnemies = findEnemiesInRange(enemy.x, enemy.y, this.burnSpreadRadius);
 
         for (const nearbyEnemy of nearbyEnemies) {
@@ -200,6 +238,9 @@ export class InfernoStrategy implements SkillStrategy {
             spreadInner.destroy();
           },
         });
+
+        // 火焰小精灵召唤
+        this.spawnFireSprite(scene, enemy.x, enemy.y, skill, damage, findNearestEnemy, findEnemiesInRange, applyDamageToEnemy, applyEffects);
       }
     };
 
@@ -228,6 +269,171 @@ export class InfernoStrategy implements SkillStrategy {
         }
       },
       repeat: Math.floor(duration / tickInterval) - 1,
+    });
+  }
+
+  /**
+   * 召唤火焰小精灵
+   */
+  private spawnFireSprite(
+    scene: Phaser.Scene,
+    x: number,
+    y: number,
+    skill: Skill,
+    damage: number,
+    findNearestEnemy: (x: number, y: number, range: number) => Enemy | null,
+    findEnemiesInRange: (x: number, y: number, range: number) => Enemy[],
+    applyDamageToEnemy: (enemy: Enemy, damage: number, skill: Skill) => void,
+    applyEffects: ((enemy: Enemy, effects: Skill['effects']) => void) | undefined
+  ): void {
+    const fireSpriteDuration = 5000;
+    const updateInterval = 100;
+    const attackInterval = 500;
+    const moveSpeed = 12; // 每次更新的移动距离 (120像素/秒 / 10次更新)
+    const attackRange = 30;
+    const chaseRange = 150;
+    const spriteDamage = 15;
+
+    // 创建火焰小精灵精灵
+    const fireSprite = scene.add.sprite(x, y, 'fire_sprite');
+    fireSprite.setDepth(50);
+    fireSprite.setScale(0.8);
+
+    // 添加脉动效果
+    scene.tweens.add({
+      targets: fireSprite,
+      scale: 1.0,
+      alpha: 0.85,
+      duration: 300,
+      yoyo: true,
+      repeat: -1,
+    });
+
+    // 添加拖尾粒子效果
+    const trailParticles: Phaser.GameObjects.Arc[] = [];
+    const createTrailParticle = () => {
+      const trail = scene.add.circle(
+        fireSprite.x + (Math.random() - 0.5) * 10,
+        fireSprite.y + (Math.random() - 0.5) * 10,
+        4 + Math.random() * 4,
+        0xff6600,
+        0.6
+      );
+      trail.setDepth(49);
+      trailParticles.push(trail);
+
+      scene.tweens.add({
+        targets: trail,
+        alpha: 0,
+        scale: 0.3,
+        duration: 300,
+        onComplete: () => {
+          trail.destroy();
+          const idx = trailParticles.indexOf(trail);
+          if (idx > -1) trailParticles.splice(idx, 1);
+        },
+      });
+    };
+
+    // 攻击冷却计时
+    let attackCooldown = 0;
+    let targetEnemy: Enemy | null = null;
+
+    // 更新事件
+    const updateEvent = scene.time.addEvent({
+      delay: updateInterval,
+      callback: () => {
+        // 寻找最近的敌人作为目标
+        targetEnemy = findNearestEnemy(fireSprite.x, fireSprite.y, chaseRange);
+
+        if (targetEnemy && targetEnemy.active) {
+          // 移动向敌人
+          const angle = Phaser.Math.Angle.Between(
+            fireSprite.x,
+            fireSprite.y,
+            targetEnemy.x,
+            targetEnemy.y
+          );
+          fireSprite.x += Math.cos(angle) * moveSpeed;
+          fireSprite.y += Math.sin(angle) * moveSpeed;
+
+          // 创建拖尾粒子
+          if (Math.random() < 0.3) {
+            createTrailParticle();
+          }
+
+          // 攻击逻辑
+          attackCooldown += updateInterval;
+          const distanceToTarget = Phaser.Math.Distance.Between(
+            fireSprite.x,
+            fireSprite.y,
+            targetEnemy.x,
+            targetEnemy.y
+          );
+
+          if (attackCooldown >= attackInterval && distanceToTarget < attackRange) {
+            // 造成伤害
+            applyDamageToEnemy(targetEnemy, spriteDamage, skill);
+
+            // 应用燃烧效果
+            if (applyEffects && skill.effects) {
+              const burnEffect = skill.effects.find(e => e.type === 'burn');
+              if (burnEffect) {
+                applyEffects(targetEnemy, [burnEffect]);
+              }
+            }
+
+            attackCooldown = 0;
+
+            // 攻击视觉效果
+            const hitFx = scene.add.circle(targetEnemy.x, targetEnemy.y, 10, 0xff6600, 0.8);
+            hitFx.setDepth(100);
+            scene.tweens.add({
+              targets: hitFx,
+              scale: 1.5,
+              alpha: 0,
+              duration: 150,
+              onComplete: () => hitFx.destroy(),
+            });
+
+            // 攻击闪光
+            scene.tweens.add({
+              targets: fireSprite,
+              alpha: 1,
+              duration: 50,
+              yoyo: true,
+            });
+          }
+        } else {
+          // 无目标时，原地漂浮动画
+          fireSprite.y += Math.sin(Date.now() / 200) * 0.5;
+
+          // 原地粒子效果
+          if (Math.random() < 0.2) {
+            createTrailParticle();
+          }
+        }
+      },
+      repeat: Math.floor(fireSpriteDuration / updateInterval) - 1,
+    });
+
+    // 5秒后销毁火焰小精灵
+    scene.time.delayedCall(fireSpriteDuration, () => {
+      updateEvent.destroy();
+
+      // 清理剩余拖尾粒子
+      trailParticles.forEach(p => {
+        if (p.active) p.destroy();
+      });
+
+      // 销毁动画
+      scene.tweens.add({
+        targets: fireSprite,
+        alpha: 0,
+        scale: 0.5,
+        duration: 200,
+        onComplete: () => fireSprite.destroy(),
+      });
     });
   }
 }

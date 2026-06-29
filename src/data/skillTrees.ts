@@ -1477,6 +1477,240 @@ export const ROCK_SPIKE_UPGRADE_TREE: SkillUpgradeTree = {
 };
 
 /**
+ * 炎龙吐息升级树
+ */
+export const DRAGON_BREATH_UPGRADE_TREE: SkillUpgradeTree = {
+  skillId: 'dragon_breath',
+
+  upgradeOptions: {
+    // Lv2 二选一
+    2: [
+      {
+        id: 'dragon_breath_lv2_damage',
+        name: '炎龙之怒',
+        description: '伤害+30%',
+        level: 2,
+        modifiers: { damage: 0.3 },
+      },
+      {
+        id: 'dragon_breath_lv2_spread',
+        name: '龙息扩展',
+        description: '扇形角度 60° → 90°',
+        level: 2,
+        specialBehavior: 'angle_spread:1.5',
+      },
+    ],
+
+    // Lv3 二选一
+    3: [
+      {
+        id: 'dragon_breath_lv3_burn',
+        name: '燃烧之心',
+        description: '燃烧伤害+50%',
+        level: 3,
+        effectBoost: {
+          type: 'burn',
+          valueMultiplier: 1.5,
+        },
+      },
+      {
+        id: 'dragon_breath_lv3_range',
+        name: '深渊吐息',
+        description: '距离+40%',
+        level: 3,
+        modifiers: { range: 0.4 },
+      },
+    ],
+
+    // Lv4 二选一
+    4: [
+      {
+        id: 'dragon_breath_lv4_slow',
+        name: '龙威',
+        description: '被吐息击中的敌人减速 30%',
+        level: 4,
+        effectAdd: {
+          type: 'slow' as const,
+          value: 0.3,
+          duration: 2000,
+        },
+      },
+      {
+        id: 'dragon_breath_lv4_defense',
+        name: '龙鳞',
+        description: '施法期间获得 30% 减伤',
+        level: 4,
+        specialBehavior: 'damage_reduction_while_casting:0.3',
+      },
+    ],
+  },
+
+  evolutionBranches: [
+    // 🔥 烈焰分支 - 伤害强化
+    {
+      id: 'dragon_breath_evo_inferno',
+      name: '炎龙噬魂',
+      description: '燃烧敌人死亡时爆炸，对周围敌人造成伤害',
+      rarity: 'legendary',
+      modifiers: {
+        damage: 0.5,
+      },
+      specialBehavior: 'burn_death_explosion',
+      visualChange: {
+        particleEffect: 'dragon_inferno',
+        color: 0xff4400,
+      },
+    },
+    // 🌊 巨颚分支 - 范围扩展
+    {
+      id: 'dragon_breath_evo_dual',
+      name: '双重吐息',
+      description: '前后双向喷射，伤害-20%',
+      rarity: 'epic',
+      modifiers: {
+        damage: -0.2,
+      },
+      specialBehavior: 'dual_breath',
+      visualChange: {
+        particleEffect: 'dual_dragon_breath',
+      },
+    },
+    // 🌟 天龙分支 - 终极形态
+    {
+      id: 'dragon_breath_evo_omni',
+      name: '全屏吐息',
+      description: '360° 环绕火焰，伤害降低 40%',
+      rarity: 'epic',
+      modifiers: {
+        damage: -0.4,
+      },
+      specialBehavior: 'omni_breath',
+      visualChange: {
+        scale: 1.5,
+        particleEffect: 'omni_dragon_breath',
+        color: 0xffaa00,
+      },
+    },
+  ],
+};
+
+/**
+ * 烈焰风暴升级树
+ */
+export const INFERNO_UPGRADE_TREE: SkillUpgradeTree = {
+  skillId: 'inferno',
+
+  upgradeOptions: {
+    // Lv2 二选一
+    2: [
+      {
+        id: 'inferno_lv2_damage',
+        name: '火焰增幅',
+        description: '伤害+40%',
+        level: 2,
+        modifiers: { damage: 0.4 },
+      },
+      {
+        id: 'inferno_lv2_range',
+        name: '风暴扩张',
+        description: '范围+50%',
+        level: 2,
+        modifiers: { range: 0.5 },
+      },
+    ],
+
+    // Lv3 二选一
+    3: [
+      {
+        id: 'inferno_lv3_burn',
+        name: '炽热燃烧',
+        description: '燃烧伤害+60%',
+        level: 3,
+        effectBoost: {
+          type: 'burn',
+          valueMultiplier: 1.6,
+        },
+      },
+      {
+        id: 'inferno_lv3_duration',
+        name: '持久烈焰',
+        description: '持续时间+3秒',
+        level: 3,
+        specialBehavior: 'duration_bonus:3000',
+      },
+    ],
+
+    // Lv4 二选一
+    4: [
+      {
+        id: 'inferno_lv4_burn_damage',
+        name: '净化之火',
+        description: '对燃烧敌人伤害+100%',
+        level: 4,
+        specialBehavior: 'burn_damage_bonus:1.0',
+      },
+      {
+        id: 'inferno_lv4_heal',
+        name: '火焰吞噬',
+        description: '燃烧敌人死亡时回复玩家 10 HP',
+        level: 4,
+        specialBehavior: 'burn_death_heal:10',
+      },
+    ],
+  },
+
+  evolutionBranches: [
+    // 🔥 烈焰分支 - 伤害强化
+    {
+      id: 'inferno_evo_burn_spread',
+      name: '连环烈焰',
+      description: '燃烧可扩散 2 次',
+      rarity: 'legendary',
+      modifiers: {
+        damage: 0.3,
+      },
+      specialBehavior: 'burn_spread_chain:2',
+      visualChange: {
+        particleEffect: 'inferno_chain',
+        color: 0xff4400,
+      },
+    },
+    // 🌊 范围分支
+    {
+      id: 'inferno_evo_hellfire',
+      name: '地狱火海',
+      description: '范围极大但伤害降低 30%',
+      rarity: 'epic',
+      modifiers: {
+        damage: -0.3,
+        range: 1.0,
+      },
+      specialBehavior: 'massive_aoe',
+      visualChange: {
+        scale: 1.8,
+        particleEffect: 'hellfire_aoe',
+        color: 0xff2200,
+      },
+    },
+    // 🌟 净化分支 - 火焰小精灵
+    {
+      id: 'inferno_evo_fire_sprite',
+      name: '烈焰重生',
+      description: '燃烧敌人死亡后召唤火焰小精灵',
+      rarity: 'epic',
+      modifiers: {
+        damage: 0.2,
+      },
+      specialBehavior: 'fire_sprite_summon',
+      visualChange: {
+        particleEffect: 'fire_sprite_trail',
+        color: 0xff6600,
+      },
+    },
+  ],
+};
+
+/**
  * 所有技能升级树映射
  */
 export const SKILL_UPGRADE_TREES: Record<string, SkillUpgradeTree> = {
@@ -1493,6 +1727,8 @@ export const SKILL_UPGRADE_TREES: Record<string, SkillUpgradeTree> = {
   holy_light: HOLY_LIGHT_UPGRADE_TREE,
   poison_cloud: POISON_CLOUD_UPGRADE_TREE,
   rock_spike: ROCK_SPIKE_UPGRADE_TREE,
+  dragon_breath: DRAGON_BREATH_UPGRADE_TREE,
+  inferno: INFERNO_UPGRADE_TREE,
 };
 
 /**
