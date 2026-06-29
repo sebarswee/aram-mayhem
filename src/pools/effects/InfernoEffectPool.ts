@@ -107,8 +107,9 @@ export class InfernoEffectPool extends VisualEffectPool<InfernoEffectConfig> {
     });
 
     // 重置粒子 - Phaser 3.60+
-    const particles = container.getByName('inferno_particles') as Phaser.GameObjects.Particles.ParticleEmitter;
-    if (particles) {
+    const particlesObj = container.getByName('inferno_particles');
+    if (particlesObj && particlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+      const particles = particlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
       // 创建新的 RandomZone 实例
       // 使用类型断言解决 Phaser 类型定义问题
       const circle = new Phaser.Geom.Circle(0, 0, config.radius * 0.9);
@@ -133,8 +134,9 @@ export class InfernoEffectPool extends VisualEffectPool<InfernoEffectConfig> {
    */
   protected deactivate(obj: Phaser.GameObjects.Container): void {
     // 停止粒子发射
-    const particles = obj.getByName('inferno_particles') as Phaser.GameObjects.Particles.ParticleEmitter;
-    if (particles) {
+    const particlesObj = obj.getByName('inferno_particles');
+    if (particlesObj && particlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+      const particles = particlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
       particles.stop();
     }
 

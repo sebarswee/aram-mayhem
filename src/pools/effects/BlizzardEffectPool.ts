@@ -181,14 +181,16 @@ export class BlizzardEffectPool extends VisualEffectPool<BlizzardEffectConfig> {
    */
   protected deactivate(obj: Phaser.GameObjects.Container): void {
     // 停止粒子发射
-    const frostParticles = obj.getByName('blizzard_frost_particles') as Phaser.GameObjects.Particles.ParticleEmitter;
-    if (frostParticles) {
+    const frostParticlesObj = obj.getByName('blizzard_frost_particles');
+    if (frostParticlesObj && frostParticlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+      const frostParticles = frostParticlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
       frostParticles.stop();
       frostParticles.destroy();
     }
 
-    const snowParticles = obj.getByName('blizzard_snow_particles') as Phaser.GameObjects.Particles.ParticleEmitter;
-    if (snowParticles) {
+    const snowParticlesObj = obj.getByName('blizzard_snow_particles');
+    if (snowParticlesObj && snowParticlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+      const snowParticles = snowParticlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
       snowParticles.stop();
       snowParticles.destroy();
     }

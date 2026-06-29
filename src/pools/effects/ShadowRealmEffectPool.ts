@@ -188,8 +188,9 @@ export class ShadowRealmEffectPool extends VisualEffectPool<ShadowRealmEffectCon
     });
 
     // 重置暗影粒子发射器
-    const shadowParticles = container.getByName('shadow_particles') as Phaser.GameObjects.Particles.ParticleEmitter;
-    if (shadowParticles) {
+    const shadowParticlesObj = container.getByName('shadow_particles');
+    if (shadowParticlesObj && shadowParticlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+      const shadowParticles = shadowParticlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
       // 更新粒子配置
       (shadowParticles as any).speed = { min: particleConfig.speedMin, max: particleConfig.speedMax };
       (shadowParticles as any).lifespan = particleConfig.lifespan;
@@ -283,8 +284,9 @@ export class ShadowRealmEffectPool extends VisualEffectPool<ShadowRealmEffectCon
     }
 
     // 停止粒子发射
-    const shadowParticles = obj.getByName('shadow_particles') as Phaser.GameObjects.Particles.ParticleEmitter;
-    if (shadowParticles) {
+    const shadowParticlesObj = obj.getByName('shadow_particles');
+    if (shadowParticlesObj && shadowParticlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+      const shadowParticles = shadowParticlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
       shadowParticles.stop();
     }
 

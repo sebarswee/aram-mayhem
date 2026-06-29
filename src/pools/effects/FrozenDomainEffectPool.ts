@@ -189,8 +189,9 @@ export class FrozenDomainEffectPool extends VisualEffectPool<FrozenDomainEffectC
     });
 
     // 重置霜冻粒子发射器
-    const frostParticles = container.getByName('frost_particles') as Phaser.GameObjects.Particles.ParticleEmitter;
-    if (frostParticles) {
+    const frostParticlesObj = container.getByName('frost_particles');
+    if (frostParticlesObj && frostParticlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+      const frostParticles = frostParticlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
       // 更新粒子配置
       (frostParticles as any).speed = { min: particleConfig.speedMin, max: particleConfig.speedMax };
       (frostParticles as any).lifespan = particleConfig.lifespan;
@@ -284,8 +285,9 @@ export class FrozenDomainEffectPool extends VisualEffectPool<FrozenDomainEffectC
     }
 
     // 停止粒子发射
-    const frostParticles = obj.getByName('frost_particles') as Phaser.GameObjects.Particles.ParticleEmitter;
-    if (frostParticles) {
+    const frostParticlesObj = obj.getByName('frost_particles');
+    if (frostParticlesObj && frostParticlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+      const frostParticles = frostParticlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
       frostParticles.stop();
     }
 

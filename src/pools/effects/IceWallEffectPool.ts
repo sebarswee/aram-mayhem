@@ -176,8 +176,9 @@ export class IceWallEffectPool extends VisualEffectPool<IceWallEffectConfig> {
    */
   protected deactivate(obj: Phaser.GameObjects.Container): void {
     // 停止粒子发射
-    const particles = obj.getByName('ice_wall_particles') as Phaser.GameObjects.Particles.ParticleEmitter;
-    if (particles) {
+    const particlesObj = obj.getByName('ice_wall_particles');
+    if (particlesObj && particlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+      const particles = particlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
       particles.stop();
       particles.destroy();
     }

@@ -155,8 +155,9 @@ export class DragonBreathEffectPool extends VisualEffectPool<DragonBreathEffectC
     });
 
     // 重置火焰粒子发射器
-    const fireParticles = container.getByName('fire_particles') as Phaser.GameObjects.Particles.ParticleEmitter;
-    if (fireParticles) {
+    const fireParticlesObj = container.getByName('fire_particles');
+    if (fireParticlesObj && fireParticlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+      const fireParticles = fireParticlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
       // 计算粒子发射角度范围（转换为度数）
       const angleMin = (playerAngle - angleSpread / 2) * 180 / Math.PI;
       const angleMax = (playerAngle + angleSpread / 2) * 180 / Math.PI;
@@ -173,8 +174,9 @@ export class DragonBreathEffectPool extends VisualEffectPool<DragonBreathEffectC
     }
 
     // 重置火花粒子发射器
-    const sparkParticles = container.getByName('spark_particles') as Phaser.GameObjects.Particles.ParticleEmitter;
-    if (sparkParticles) {
+    const sparkParticlesObj = container.getByName('spark_particles');
+    if (sparkParticlesObj && sparkParticlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+      const sparkParticles = sparkParticlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
       const angleMin = (playerAngle - angleSpread / 2) * 180 / Math.PI;
       const angleMax = (playerAngle + angleSpread / 2) * 180 / Math.PI;
 
@@ -234,13 +236,15 @@ export class DragonBreathEffectPool extends VisualEffectPool<DragonBreathEffectC
     const angleMin = (playerAngle - angleSpread / 2) * 180 / Math.PI;
     const angleMax = (playerAngle + angleSpread / 2) * 180 / Math.PI;
 
-    const fireParticles = container.getByName('fire_particles') as Phaser.GameObjects.Particles.ParticleEmitter;
-    if (fireParticles) {
+    const fireParticlesObj = container.getByName('fire_particles');
+    if (fireParticlesObj && fireParticlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+      const fireParticles = fireParticlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
       (fireParticles as any).angle = { min: angleMin, max: angleMax };
     }
 
-    const sparkParticles = container.getByName('spark_particles') as Phaser.GameObjects.Particles.ParticleEmitter;
-    if (sparkParticles) {
+    const sparkParticlesObj = container.getByName('spark_particles');
+    if (sparkParticlesObj && sparkParticlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+      const sparkParticles = sparkParticlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
       (sparkParticles as any).angle = { min: angleMin, max: angleMax };
     }
   }
@@ -250,13 +254,15 @@ export class DragonBreathEffectPool extends VisualEffectPool<DragonBreathEffectC
    */
   protected deactivate(obj: Phaser.GameObjects.Container): void {
     // 停止粒子发射
-    const fireParticles = obj.getByName('fire_particles') as Phaser.GameObjects.Particles.ParticleEmitter;
-    if (fireParticles) {
+    const fireParticlesObj = obj.getByName('fire_particles');
+    if (fireParticlesObj && fireParticlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+      const fireParticles = fireParticlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
       fireParticles.stop();
     }
 
-    const sparkParticles = obj.getByName('spark_particles') as Phaser.GameObjects.Particles.ParticleEmitter;
-    if (sparkParticles) {
+    const sparkParticlesObj = obj.getByName('spark_particles');
+    if (sparkParticlesObj && sparkParticlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+      const sparkParticles = sparkParticlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
       sparkParticles.stop();
     }
 

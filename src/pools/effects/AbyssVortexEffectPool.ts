@@ -200,8 +200,9 @@ export class AbyssVortexEffectPool extends VisualEffectPool<AbyssVortexEffectCon
     });
 
     // 重置粒子发射器
-    const pullParticles = container.getByName('pull_particles') as Phaser.GameObjects.Particles.ParticleEmitter;
-    if (pullParticles) {
+    const pullParticlesObj = container.getByName('pull_particles');
+    if (pullParticlesObj && pullParticlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+      const pullParticles = pullParticlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
       // 更新粒子配置
       (pullParticles as any).speed = { min: particleConfig.speedMin, max: particleConfig.speedMax };
       (pullParticles as any).lifespan = particleConfig.lifespan;
@@ -246,8 +247,9 @@ export class AbyssVortexEffectPool extends VisualEffectPool<AbyssVortexEffectCon
     }
 
     // 停止粒子发射
-    const pullParticles = obj.getByName('pull_particles') as Phaser.GameObjects.Particles.ParticleEmitter;
-    if (pullParticles) {
+    const pullParticlesObj = obj.getByName('pull_particles');
+    if (pullParticlesObj && pullParticlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+      const pullParticles = pullParticlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
       pullParticles.stop();
     }
 

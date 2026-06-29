@@ -212,8 +212,9 @@ export class SanctuaryEffectPool extends VisualEffectPool<SanctuaryEffectConfig>
     }
 
     // 重置神圣粒子发射器
-    const holyParticles = container.getByName('holy_particles') as Phaser.GameObjects.Particles.ParticleEmitter;
-    if (holyParticles) {
+    const holyParticlesObj = container.getByName('holy_particles');
+    if (holyParticlesObj && holyParticlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+      const holyParticles = holyParticlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
       // 更新粒子配置
       (holyParticles as any).speed = { min: particleConfig.speedMin, max: particleConfig.speedMax };
       (holyParticles as any).lifespan = particleConfig.lifespan;
@@ -265,8 +266,9 @@ export class SanctuaryEffectPool extends VisualEffectPool<SanctuaryEffectConfig>
     }
 
     // 停止粒子发射
-    const holyParticles = obj.getByName('holy_particles') as Phaser.GameObjects.Particles.ParticleEmitter;
-    if (holyParticles) {
+    const holyParticlesObj = obj.getByName('holy_particles');
+    if (holyParticlesObj && holyParticlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+      const holyParticles = holyParticlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
       holyParticles.stop();
     }
 
