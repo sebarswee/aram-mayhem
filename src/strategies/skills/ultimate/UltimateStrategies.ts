@@ -5,7 +5,7 @@ import { VisualEffectUtils } from '@/graphics/VisualEffectUtils';
 import Phaser from 'phaser';
 import { createBurnVisualModifier } from '@/modifiers/visual/VisualModifiers';
 import { StatusEffectType } from '@/modifiers/modifiers/StatusEffectModifier';
-import { EffectPoolManager, InfernoEffectConfig, DragonBreathEffectConfig, AbyssVortexEffectConfig, FrozenDomainEffectConfig, ThunderApocalypseEffectConfig, ShadowRealmEffectConfig, DeathDecayEffectConfig, EarthGuardianEffectConfig, VoidRiftEffectConfig, BlackHoleEffectConfig, SanctuaryEffectConfig, HolyJudgmentEffectConfig } from '@/pools';
+import { EffectPoolManager, InfernoEffectConfig, DragonBreathEffectConfig, AbyssVortexEffectConfig, FrozenDomainEffectConfig, ThunderApocalypseEffectConfig, ShadowRealmEffectConfig, DeathDecayEffectConfig, EarthGuardianEffectConfig, VoidRiftEffectConfig, BlackHoleEffectConfig, SanctuaryEffectConfig, HolyJudgmentEffectConfig, MeteorEffectConfig } from '@/pools';
 
 /**
  * 炎龙吐息策略 - 扇形持续火焰
@@ -999,65 +999,36 @@ export class MountainCollapseVisualStrategy implements VisualEffectStrategy {
 
 /**
  * 陨石坠落策略 - 大范围爆炸
+ *
+ * 使用对象池管理视觉效果
  */
 export class MeteorStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
     const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const radius = skill.rangeValue;
+    const warningDuration = 500;
+    const explosionDuration = 1000;
 
-    // 多层预警区域
-    const warningLayers: Phaser.GameObjects.Arc[] = [];
-    for (let i = 0; i < 3; i++) {
-      const warning = scene.add.circle(player.x, player.y, radius * (0.6 + i * 0.2), 0xff4400, 0.15 + i * 0.08);
-      warning.setDepth(18 + i);
-      warningLayers.push(warning);
-    }
+    // 从对象池获取效果
+    const effectPools = (scene as any).effectPools as EffectPoolManager;
 
-    // 预警脉动
-    scene.tweens.add({
-      targets: warningLayers,
-      scale: 1.1,
-      alpha: 0.5,
-      duration: 200,
-      yoyo: true,
-      repeat: 2,
-    });
+    // 配置预警图层
+    const warningLayerConfigs: MeteorEffectConfig['warningLayerConfigs'] = [
+      { radiusMultiplier: 0.6, color: 0xff4400, alpha: 0.15 },
+      { radiusMultiplier: 0.8, color: 0xff4400, alpha: 0.23 },
+      { radiusMultiplier: 1.0, color: 0xff4400, alpha: 0.31 },
+    ];
 
-    scene.time.delayedCall(500, () => {
-      warningLayers.forEach(w => w.destroy());
+    // 配置爆炸图层
+    const explosionLayerConfigs: MeteorEffectConfig['explosionLayerConfigs'] = [
+      { radiusMultiplier: 1.1, color: 0xff2200, alpha: 0.5 },
+      { radiusMultiplier: 1.0, color: 0xff6600, alpha: 0.7 },
+      { radiusMultiplier: 0.7, color: 0xffaa00, alpha: 0.85 },
+      { radiusMultiplier: 0.4, color: 0xffffff, alpha: 0.95 },
+    ];
 
-      // 多层爆炸
-      const explosionOuter = scene.add.circle(player.x, player.y, radius * 1.1, 0xff2200, 0.5);
-      const explosionMid = scene.add.circle(player.x, player.y, radius, 0xff6600, 0.7);
-      const explosionInner = scene.add.circle(player.x, player.y, radius * 0.7, 0xffaa00, 0.85);
-      const explosionCore = scene.add.circle(player.x, player.y, radius * 0.4, 0xffffff, 0.95);
-      explosionOuter.setDepth(95);
-      explosionMid.setDepth(96);
-      explosionInner.setDepth(97);
-      explosionCore.setDepth(98);
-
-      // 多层冲击波
-      VisualEffectUtils.createShockwave(scene, player.x, player.y, {
-        color: 0xff6600,
-        radius: radius * 1.2,
-        rings: 5,
-        duration: 450,
-      });
-
-      // 火焰粒子爆发
-      VisualEffectUtils.createParticleBurst(scene, player.x, player.y, {
-        count: 60,
-        color: 0xff6600,
-        speed: { min: 150, max: 350 },
-        scale: { start: 1, end: 0 },
-        lifespan: 550,
-        texture: 'particle_fire_core',
-      });
-
-      // 屏幕震动和闪光
-      VisualEffectUtils.screenShake(scene, { intensity: 0.025, duration: 250 });
-      VisualEffectUtils.screenFlash(scene, { color: 0xff6600, intensity: 0.5, duration: 180 });
-
+    // 伤害回调
+    const applyDamage = (bodies: Phaser.GameObjects.GameObject[]) => {
       const enemies = findEnemiesInRange(player.x, player.y, radius);
       for (const enemy of enemies) {
         applyDamageToEnemy(enemy, damage, skill);
@@ -1070,19 +1041,20 @@ export class MeteorStrategy implements SkillStrategy {
           }
         }
       }
+    };
 
-      scene.tweens.add({
-        targets: [explosionOuter, explosionMid, explosionInner, explosionCore],
-        alpha: 0,
-        scale: 1.3,
-        duration: 550,
-        onComplete: () => {
-          explosionOuter.destroy();
-          explosionMid.destroy();
-          explosionInner.destroy();
-          explosionCore.destroy();
-        },
-      });
+    const effect = effectPools.meteor.acquireWithConfig({
+      x: player.x,
+      y: player.y,
+      radius: radius,
+      damage: damage,
+      skill: skill,
+      warningDuration: warningDuration,
+      explosionDuration: explosionDuration,
+      duration: warningDuration + explosionDuration,
+      warningLayerConfigs: warningLayerConfigs,
+      explosionLayerConfigs: explosionLayerConfigs,
+      applyDamage: applyDamage,
     });
   }
 }

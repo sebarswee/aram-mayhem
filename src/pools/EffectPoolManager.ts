@@ -13,6 +13,7 @@ import { VoidRiftEffectPool } from './effects/VoidRiftEffectPool';
 import { BlackHoleEffectPool } from './effects/BlackHoleEffectPool';
 import { SanctuaryEffectPool } from './effects/SanctuaryEffectPool';
 import { HolyJudgmentEffectPool } from './effects/HolyJudgmentEffectPool';
+import { MeteorEffectPool } from './effects/MeteorEffectPool';
 
 // P1 区域持续技能效果池
 import { ElectricFieldEffectPool } from './effects/ElectricFieldEffectPool';
@@ -69,6 +70,7 @@ export class EffectPoolManager {
   public blackHole: BlackHoleEffectPool;
   public sanctuary: SanctuaryEffectPool;
   public holyJudgment: HolyJudgmentEffectPool;
+  public meteor: MeteorEffectPool;
 
   // P1 区域持续技能效果池
   public electricField: ElectricFieldEffectPool;
@@ -115,6 +117,7 @@ export class EffectPoolManager {
     this.blackHole = new BlackHoleEffectPool(scene, 3);
     this.sanctuary = new SanctuaryEffectPool(scene, 3);
     this.holyJudgment = new HolyJudgmentEffectPool(scene, 3);
+    this.meteor = new MeteorEffectPool(scene, 3);
 
     // 初始化 P1 区域持续技能效果池（初始大小 5，使用频率更高）
     this.electricField = new ElectricFieldEffectPool(scene, 5);
@@ -167,6 +170,7 @@ export class EffectPoolManager {
     this.blackHole.clear();
     this.sanctuary.clear();
     this.holyJudgment.clear();
+    this.meteor.clear();
 
     // P1 区域持续技能
     this.electricField.clear();
@@ -221,6 +225,7 @@ export class EffectPoolManager {
     stats.blackHole = this.blackHole.getStats();
     stats.sanctuary = this.sanctuary.getStats();
     stats.holyJudgment = this.holyJudgment.getStats();
+    stats.meteor = this.meteor.getStats();
 
     // P1 区域持续技能
     stats.electricField = this.electricField.getStats();
