@@ -118,6 +118,12 @@ export class BootScene extends Phaser.Scene {
 
     // 加载烈焰风暴技能素材
     this.load.image('fire_sprite', 'assets/effects/fire_sprite.png');
+
+    // 加载深渊漩涡技能素材
+    this.load.image('vortex_center', 'assets/effects/vortex_center.png');
+
+    // 加载冰封领域技能素材
+    this.load.image('ice_crystal_core', 'assets/effects/ice_crystal_core.png');
   }
 
   create(): void {

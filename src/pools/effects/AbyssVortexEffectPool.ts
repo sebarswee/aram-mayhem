@@ -115,6 +115,13 @@ export class AbyssVortexEffectPool extends VisualEffectPool<AbyssVortexEffectCon
       container.add(abyss);
     }
 
+    // 预创建漩涡中心精灵
+    const vortexCenter = this.scene.add.image(0, 0, 'vortex_center');
+    vortexCenter.setName('vortex_center');
+    vortexCenter.setScale(1.5); // 增大漩涡中心尺寸
+    vortexCenter.setDepth(25);
+    container.add(vortexCenter);
+
     // 预创建吸入粒子发射器
     const pullParticles = this.scene.add.particles(0, 0, 'particle_glow', {
       speed: { min: 50, max: 120 },
@@ -198,6 +205,47 @@ export class AbyssVortexEffectPool extends VisualEffectPool<AbyssVortexEffectCon
         abyss.setDepth(19 + i);
       }
     });
+
+    // 重置漩涡中心精灵 - 脉动和旋转效果
+    const vortexCenter = container.getByName('vortex_center') as Phaser.GameObjects.Image;
+    if (vortexCenter) {
+      // 漩涡中心尺寸与范围匹配（占半径的 120%，即直径的 60%）
+      // 素材原始尺寸 64px，scale = (radius * 1.2) / 64
+      const baseScale = (radius * 1.2) / 64;
+      vortexCenter.setPosition(0, 0);
+      vortexCenter.setScale(baseScale);
+      vortexCenter.setAlpha(0.9);
+      vortexCenter.setDepth(25);
+      vortexCenter.setAngle(0);
+
+      // 脉动效果 (scale 增加约 15%)
+      const pulseTween = this.scene.tweens.add({
+        targets: vortexCenter,
+        scale: baseScale * 1.15,
+        duration: 600,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+
+      // 旋转效果 (angle: 0 → 360)
+      const rotationTween = this.scene.tweens.add({
+        targets: vortexCenter,
+        angle: 360,
+        duration: 2000,
+        repeat: -1,
+      });
+
+      // 托管漩涡中心的 tweens
+      this.addManagedTween(container, pulseTween, {
+        autoStop: true,
+        tag: 'vortex_center_pulse',
+      });
+      this.addManagedTween(container, rotationTween, {
+        autoStop: true,
+        tag: 'vortex_center_rotation',
+      });
+    }
 
     // 重置粒子发射器
     const pullParticlesObj = container.getByName('pull_particles');

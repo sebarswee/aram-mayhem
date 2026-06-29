@@ -905,8 +905,8 @@ export class VisualEffectPool<C extends VisualEffectConfig = VisualEffectConfig>
       }
     });
 
-    // 移除所有子对象（但保留容器结构以便复用）
-    obj.removeAll(true);
+    // 注意：不要移除子对象！子对象是预创建的，应该被复用
+    // 之前的 obj.removeAll(true) 会导致子对象被销毁，无法复用
   }
 
   protected destroyObject(obj: Phaser.GameObjects.Container): void {

@@ -77,7 +77,7 @@ export class DragonBreathEffectPool extends VisualEffectPool<DragonBreathEffectC
     // 创建龙头精灵
     const dragonHead = this.scene.add.image(0, 0, 'dragon_head');
     dragonHead.setName('dragon_head_sprite');
-    dragonHead.setScale(0.8, 0.8); // 适配效果大小
+    dragonHead.setScale(1.5, 1.5); // 增大龙头尺寸
     dragonHead.setOrigin(0.5, 0.5);
     dragonHead.setDepth(44);
     container.add(dragonHead);
@@ -155,11 +155,14 @@ export class DragonBreathEffectPool extends VisualEffectPool<DragonBreathEffectC
     // 重置龙头精灵
     const dragonHead = container.getByName('dragon_head_sprite') as Phaser.GameObjects.Image;
     if (dragonHead) {
+      // 龙头尺寸与吐息范围匹配（占范围的 35%，作为喷射起点）
+      // 素材原始尺寸 64px，scale = (radius * 0.7) / 64
+      const headScale = (config.radius * 0.7) / 64;
       dragonHead.setPosition(0, 0);
-      // 龙头朝向喷射方向（角度转换：Phaser角度顺时针，需要调整）
       dragonHead.setRotation(playerAngle + Math.PI / 2);
       dragonHead.setAlpha(1);
-      dragonHead.setScale(0.8, 0.8);
+      dragonHead.setScale(headScale, headScale);
+      dragonHead.setVisible(true);
     }
 
     // 重置龙眼发光粒子

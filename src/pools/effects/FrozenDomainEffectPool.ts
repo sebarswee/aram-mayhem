@@ -103,6 +103,13 @@ export class FrozenDomainEffectPool extends VisualEffectPool<FrozenDomainEffectC
   private createFrozenDomainEffect(): Phaser.GameObjects.Container {
     const container = this.scene.add.container(0, 0);
 
+    // 预创建冰晶中心精灵
+    const iceCrystalCore = this.scene.add.image(0, 0, 'ice_crystal_core');
+    iceCrystalCore.setName('ice_crystal_core');
+    iceCrystalCore.setScale(0.8);
+    iceCrystalCore.setAlpha(0.9);
+    container.add(iceCrystalCore);
+
     // 预创建 4 层冰封区域圆
     for (let i = 0; i < 4; i++) {
       const layer = this.scene.add.circle(0, 0, 100, 0x88ddff, 0.2);
@@ -156,6 +163,39 @@ export class FrozenDomainEffectPool extends VisualEffectPool<FrozenDomainEffectC
     const layerConfigs = config.layerConfigs ?? FrozenDomainEffectPool.DEFAULT_LAYER_CONFIGS;
     const ringConfigs = config.ringConfigs ?? FrozenDomainEffectPool.DEFAULT_RING_CONFIGS;
     const particleConfig = config.particleConfig ?? FrozenDomainEffectPool.DEFAULT_PARTICLE_CONFIG;
+
+    // 重置冰晶中心精灵并添加动画效果
+    const iceCrystalCore = container.getByName('ice_crystal_core') as Phaser.GameObjects.Image;
+    if (iceCrystalCore) {
+      // 冰晶尺寸与领域范围匹配（占半径的 140%，即直径的 70%）
+      // 素材原始尺寸 64px，scale = (radius * 1.4) / 64
+      const baseScale = (radius * 1.4) / 64;
+      iceCrystalCore.setScale(baseScale);
+      iceCrystalCore.setAlpha(0.95);
+      iceCrystalCore.setPosition(0, 0);
+      iceCrystalCore.setAngle(0);
+      iceCrystalCore.setDepth(25); // 确保在最上层
+
+      // 创建脉动效果（无限 tween）- 冰山只脉动，不旋转
+      const pulseTween = this.scene.tweens.add({
+        targets: iceCrystalCore,
+        scaleX: baseScale * 1.08,
+        scaleY: baseScale * 1.08,
+        alpha: 0.85,
+        duration: 800,
+        yoyo: true,
+        repeat: -1, // 无限循环
+        ease: 'Sine.easeInOut',
+      });
+
+      // 托管脉动 tween
+      this.addManagedTween(container, pulseTween, {
+        autoStop: true,
+        tag: 'ice_crystal_pulse',
+      });
+
+      // 注意：冰山不应该旋转，所以移除了旋转动画
+    }
 
     // 重置 4 层冰封区域并创建脉动 tween（4 个无限 tween）
     layerConfigs.forEach((layerConfig, i) => {
@@ -268,10 +308,10 @@ export class FrozenDomainEffectPool extends VisualEffectPool<FrozenDomainEffectC
   /**
    * 停用效果时的额外清理
    *
-   * **重要**: 必须正确停止所有 7 个无限 tween
+   * **重要**: 必须正确停止所有 9 个无限 tween（4 个脉动 + 3 个旋转 + 1 个冰晶脉动 + 1 个冰晶旋转）
    */
   protected deactivate(obj: Phaser.GameObjects.Container): void {
-    // 停止所有托管的 tweens（包括 4 个脉动 tween 和 3 个旋转 tween）
+    // 停止所有托管的 tweens（包括冰晶和冰封层的脉动 tween 和旋转 tween）
     const tweens = this.managedTweens.get(obj);
     if (tweens) {
       tweens.forEach(managed => {
@@ -300,6 +340,14 @@ export class FrozenDomainEffectPool extends VisualEffectPool<FrozenDomainEffectC
           ring.clear();
         }
       }
+    }
+
+    // 重置冰晶中心精灵状态
+    const iceCrystalCore = obj.getByName('ice_crystal_core') as Phaser.GameObjects.Image;
+    if (iceCrystalCore) {
+      iceCrystalCore.setScale(0.8);
+      iceCrystalCore.setAngle(0);
+      iceCrystalCore.setAlpha(0.9);
     }
 
     // 调用父类方法进行基础清理
@@ -333,7 +381,7 @@ export class FrozenDomainEffectPool extends VisualEffectPool<FrozenDomainEffectC
   }
 
   /**
-   * 验证所有 7 个 tween 是否存在（用于测试）
+   * 验证所有 9 个 tween 是否存在（用于测试）
    */
   validateAllTweensExist(container: Phaser.GameObjects.Container): boolean {
     const tweens = this.managedTweens.get(container);
@@ -351,6 +399,10 @@ export class FrozenDomainEffectPool extends VisualEffectPool<FrozenDomainEffectC
       if (!found) return false;
     }
 
+    // 验证冰晶中心的脉动 tween（不再有旋转）
+    const pulseFound = tweens.some(t => t.tag === 'ice_crystal_pulse');
+    if (!pulseFound) return false;
+
     return true;
   }
 
@@ -360,6 +412,7 @@ export class FrozenDomainEffectPool extends VisualEffectPool<FrozenDomainEffectC
   getDetailedTweenStatus(container: Phaser.GameObjects.Container): {
     pulseTweens: { tag: string; exists: boolean }[];
     rotationTweens: { tag: string; exists: boolean }[];
+    iceCrystalTweens: { tag: string; exists: boolean }[];
     total: number;
   } {
     const tweens = this.managedTweens.get(container);
@@ -375,9 +428,14 @@ export class FrozenDomainEffectPool extends VisualEffectPool<FrozenDomainEffectC
       exists: tweenTags.includes(`rotation_ring_${i}`),
     }));
 
+    const iceCrystalTweens = [
+      { tag: 'ice_crystal_pulse', exists: tweenTags.includes('ice_crystal_pulse') },
+    ];
+
     return {
       pulseTweens,
       rotationTweens,
+      iceCrystalTweens,
       total: tweenTags.length,
     };
   }
