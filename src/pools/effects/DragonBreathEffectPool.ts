@@ -149,21 +149,25 @@ export class DragonBreathEffectPool extends VisualEffectPool<DragonBreathEffectC
     container: Phaser.GameObjects.Container,
     config: DragonBreathEffectConfig
   ): void {
+    console.log('[DragonBreathEffectPool] Reset called, position:', config.x, config.y);
     container.setPosition(config.x, config.y);
     container.setActive(true);
     container.setVisible(true);
+    console.log('[DragonBreathEffectPool] Container visible:', container.visible, 'active:', container.active);
 
     const playerAngle = config.playerAngle;
     const angleSpread = config.angleSpread;
 
     // 重置龙头精灵
     const dragonHead = container.getByName('dragon_head_sprite') as Phaser.GameObjects.Image;
+    console.log('[DragonBreathEffectPool] Dragon head found:', !!dragonHead);
     if (dragonHead) {
       dragonHead.setPosition(0, 0);
-      // 龙头朝向喷射方向（角度转换：Phaser角度顺时针，需要调整）
       dragonHead.setRotation(playerAngle + Math.PI / 2);
       dragonHead.setAlpha(1);
       dragonHead.setScale(0.8, 0.8);
+      dragonHead.setVisible(true);
+      console.log('[DragonBreathEffectPool] Dragon head visible:', dragonHead.visible, 'alpha:', dragonHead.alpha, 'scale:', dragonHead.scaleX);
     }
 
     // 重置龙眼发光粒子
