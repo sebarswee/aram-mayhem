@@ -1711,6 +1711,122 @@ export const INFERNO_UPGRADE_TREE: SkillUpgradeTree = {
 };
 
 /**
+ * 深渊漩涡升级树
+ */
+export const ABYSS_VORTEX_UPGRADE_TREE: SkillUpgradeTree = {
+  skillId: 'abyss_vortex',
+
+  upgradeOptions: {
+    // Lv2 二选一
+    2: [
+      {
+        id: 'abyss_vortex_lv2_pull',
+        name: '强力牵引',
+        description: '牵引速度+60%',
+        level: 2,
+        specialBehavior: 'pull_speed_bonus:1.6',
+      },
+      {
+        id: 'abyss_vortex_lv2_range',
+        name: '漩涡扩张',
+        description: '范围+50%',
+        level: 2,
+        modifiers: { range: 0.5 },
+      },
+    ],
+
+    // Lv3 二选一
+    3: [
+      {
+        id: 'abyss_vortex_lv3_center_damage',
+        name: '深渊吞噬',
+        description: '到达中心敌人受 2x 伤害',
+        level: 3,
+        specialBehavior: 'center_damage_multiplier:2.0',
+      },
+      {
+        id: 'abyss_vortex_lv3_duration',
+        name: '持久漩涡',
+        description: '持续时间+2秒',
+        level: 3,
+        specialBehavior: 'duration_bonus:2000',
+      },
+    ],
+
+    // Lv4 二选一
+    4: [
+      {
+        id: 'abyss_vortex_lv4_burst',
+        name: '黑洞之力',
+        description: '漩涡结束时爆发伤害+100%',
+        level: 4,
+        specialBehavior: 'burst_damage_bonus:1.0',
+      },
+      {
+        id: 'abyss_vortex_lv4_slow_field',
+        name: '深渊领域',
+        description: '漩涡消失后留下减速区域 3秒',
+        level: 4,
+        specialBehavior: 'slow_field_after_vortex:3000',
+      },
+    ],
+  },
+
+  evolutionBranches: [
+    // 💧 漩涡分支 - 牵引强化
+    {
+      id: 'abyss_vortex_evo_ice',
+      name: '寒冰漩涡',
+      description: '牵引敌人同时冻结 1秒',
+      rarity: 'legendary',
+      effects: [
+        { type: 'freeze' as const, value: 1, duration: 1000 },
+      ],
+      modifiers: {
+        damage: 0.3,
+      },
+      specialBehavior: 'freeze_while_pulling',
+      visualChange: {
+        particleEffect: 'ice_vortex',
+        color: 0x88ccff,
+      },
+    },
+    // 🌊 范围分支
+    {
+      id: 'abyss_vortex_evo_shield',
+      name: '漩涡护盾',
+      description: '施法期间玩家获得 30% 减伤',
+      rarity: 'epic',
+      specialBehavior: 'damage_reduction_while_casting:0.3',
+      modifiers: {
+        damage: 0.2,
+      },
+      visualChange: {
+        particleEffect: 'shield_vortex',
+        color: 0x66aaff,
+      },
+    },
+    // 🌟 深海分支 - 终极形态
+    {
+      id: 'abyss_vortex_evo_fullscreen',
+      name: '深海漩涡',
+      description: '全屏漩涡，伤害降低 40%',
+      rarity: 'epic',
+      modifiers: {
+        damage: -0.4,
+        range: 2.0,
+      },
+      specialBehavior: 'fullscreen_vortex',
+      visualChange: {
+        scale: 2.5,
+        particleEffect: 'deep_sea_vortex',
+        color: 0x2244aa,
+      },
+    },
+  ],
+};
+
+/**
  * 所有技能升级树映射
  */
 export const SKILL_UPGRADE_TREES: Record<string, SkillUpgradeTree> = {
@@ -1729,6 +1845,7 @@ export const SKILL_UPGRADE_TREES: Record<string, SkillUpgradeTree> = {
   rock_spike: ROCK_SPIKE_UPGRADE_TREE,
   dragon_breath: DRAGON_BREATH_UPGRADE_TREE,
   inferno: INFERNO_UPGRADE_TREE,
+  abyss_vortex: ABYSS_VORTEX_UPGRADE_TREE,
 };
 
 /**

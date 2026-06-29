@@ -517,8 +517,9 @@ export class AbyssVortexStrategy implements SkillStrategy {
         for (const enemy of enemies) {
           const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, centerX, centerY);
           if (enemy.active && enemy.body) {
-            enemy.x += Math.cos(angle) * 30;
-            enemy.y += Math.sin(angle) * 30;
+            // 牵引距离增加到 50 像素/tick
+            enemy.x += Math.cos(angle) * 50;
+            enemy.y += Math.sin(angle) * 50;
           }
           applyDamageToEnemy(enemy, Math.floor(damage * 0.2), skill);
 
@@ -529,9 +530,47 @@ export class AbyssVortexStrategy implements SkillStrategy {
               applyEffects(enemy, [slowEffect]);
             }
           }
+
+          // 添加减速视觉特效（冰蓝色光圈）
+          const slowAura = scene.add.circle(enemy.x, enemy.y, 20, 0x4488ff, 0.3);
+          slowAura.setDepth(5);
+          scene.tweens.add({
+            targets: slowAura,
+            alpha: 0,
+            scale: 1.5,
+            duration: 300,
+            onComplete: () => slowAura.destroy(),
+          });
         }
       },
       repeat: Math.floor(duration / tickInterval) - 1,
+    });
+
+    // 漩涡结束爆发
+    scene.time.delayedCall(duration, () => {
+      // 爆发视觉效果
+      const burstOuter = scene.add.circle(centerX, centerY, radius, 0x4488ff, 0.5);
+      const burstInner = scene.add.circle(centerX, centerY, radius * 0.6, 0x66aaff, 0.7);
+      burstOuter.setDepth(100);
+      burstInner.setDepth(101);
+
+      scene.tweens.add({
+        targets: [burstOuter, burstInner],
+        alpha: 0,
+        scale: 1.5,
+        duration: 400,
+        onComplete: () => {
+          burstOuter.destroy();
+          burstInner.destroy();
+        },
+      });
+
+      // 爆发伤害 (基础伤害的 150%)
+      const burstDamage = Math.floor(damage * 1.5);
+      const enemies = findEnemiesInRange(centerX, centerY, radius);
+      for (const enemy of enemies) {
+        applyDamageToEnemy(enemy, burstDamage, skill);
+      }
     });
   }
 }
