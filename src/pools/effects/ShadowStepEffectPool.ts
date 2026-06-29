@@ -109,7 +109,7 @@ export class ShadowStepEffectPool extends VisualEffectPool<ShadowStepEffectConfi
     }
 
     // 脉动效果
-    this.scene.tweens.add({
+    const pulseTween = this.scene.tweens.add({
       targets: container,
       alpha: 0.6,
       scale: 1.08,
@@ -117,6 +117,7 @@ export class ShadowStepEffectPool extends VisualEffectPool<ShadowStepEffectConfi
       yoyo: true,
       repeat: -1,
     });
+    this.addManagedTween(container, pulseTween, { autoStop: true, tag: 'shadowstep_pulse' });
 
     // 设置自动回收
     const duration = config.duration || 3000;
@@ -128,6 +129,19 @@ export class ShadowStepEffectPool extends VisualEffectPool<ShadowStepEffectConfi
    * 停用效果时的额外清理
    */
   protected deactivate(obj: Phaser.GameObjects.Container): void {
+    // 停止所有托管的 tweens
+    const tweens = this.managedTweens.get(obj);
+    if (tweens) {
+      tweens.forEach(managed => {
+        if (managed.autoStop && managed.tween) {
+          if (managed.tween.isPlaying()) {
+            managed.tween.stop();
+          }
+          this.scene.tweens.remove(managed.tween);
+        }
+      });
+    }
+
     // 调用父类方法进行基础清理
     super.deactivate(obj);
   }

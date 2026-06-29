@@ -97,7 +97,7 @@ export class BlizzardEffectPool extends VisualEffectPool<BlizzardEffectConfig> {
         layer.setDepth(17 + i);
 
         // 脉动动画
-        this.scene.tweens.add({
+        const pulseTween = this.scene.tweens.add({
           targets: layer,
           scaleX: 1.05,
           scaleY: 1.05,
@@ -106,6 +106,7 @@ export class BlizzardEffectPool extends VisualEffectPool<BlizzardEffectConfig> {
           yoyo: true,
           repeat: -1,
         });
+        this.addManagedTween(container, pulseTween, { autoStop: true, tag: 'pulse' });
       }
     });
 
@@ -119,12 +120,13 @@ export class BlizzardEffectPool extends VisualEffectPool<BlizzardEffectConfig> {
         graphics.strokeCircle(0, 0, config.radius * (0.4 + i * 0.2));
 
         // 旋转动画
-        this.scene.tweens.add({
+        const rotateTween = this.scene.tweens.add({
           targets: graphics,
           angle: 360 * (i % 2 === 0 ? 1 : -1),
           duration: 2000 + i * 500,
           repeat: -1,
         });
+        this.addManagedTween(container, rotateTween, { autoStop: true, tag: 'rotate' });
       });
     }
 
@@ -178,6 +180,19 @@ export class BlizzardEffectPool extends VisualEffectPool<BlizzardEffectConfig> {
    * 停用效果时的额外清理
    */
   protected deactivate(obj: Phaser.GameObjects.Container): void {
+    // 清理托管 tween
+    const tweens = this.managedTweens.get(obj);
+    if (tweens) {
+      tweens.forEach(managed => {
+        if (managed.autoStop && managed.tween) {
+          if (managed.tween.isPlaying()) {
+            managed.tween.stop();
+          }
+          this.scene.tweens.remove(managed.tween);
+        }
+      });
+    }
+
     // 停止粒子发射
     const frostParticlesObj = obj.getByName('blizzard_frost_particles');
     if (frostParticlesObj && frostParticlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {

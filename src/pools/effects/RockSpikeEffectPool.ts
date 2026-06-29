@@ -105,7 +105,7 @@ export class RockSpikeEffectPool extends VisualEffectPool<RockSpikeEffectConfig>
     }
 
     // 多层脉动动画
-    this.scene.tweens.add({
+    const outerMidPulseTween = this.scene.tweens.add({
       targets: [trapOuter, trapMid],
       scale: 1.15,
       alpha: 0.6,
@@ -113,8 +113,9 @@ export class RockSpikeEffectPool extends VisualEffectPool<RockSpikeEffectConfig>
       yoyo: true,
       repeat: -1,
     });
+    this.addManagedTween(container, outerMidPulseTween, { autoStop: true, tag: 'pulse_outer_mid' });
 
-    this.scene.tweens.add({
+    const innerPulseTween = this.scene.tweens.add({
       targets: trapInner,
       scale: 1.25,
       alpha: 0.7,
@@ -122,6 +123,7 @@ export class RockSpikeEffectPool extends VisualEffectPool<RockSpikeEffectConfig>
       yoyo: true,
       repeat: -1,
     });
+    this.addManagedTween(container, innerPulseTween, { autoStop: true, tag: 'pulse_inner' });
 
     // 重置地面裂缝
     const crack = container.getByName('rock_crack') as Phaser.GameObjects.Graphics;
@@ -146,6 +148,10 @@ export class RockSpikeEffectPool extends VisualEffectPool<RockSpikeEffectConfig>
    * 停用效果时的额外清理
    */
   protected deactivate(obj: Phaser.GameObjects.Container): void {
+    // 清理托管的无限循环 tween
+    this.stopTweensByTag(obj, 'pulse_outer_mid');
+    this.stopTweensByTag(obj, 'pulse_inner');
+
     // 清理 graphics
     const crack = obj.getByName('rock_crack') as Phaser.GameObjects.Graphics;
     if (crack) crack.clear();

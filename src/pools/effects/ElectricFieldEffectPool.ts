@@ -93,13 +93,17 @@ export class ElectricFieldEffectPool extends VisualEffectPool<ElectricFieldEffec
         layer.setAlpha(layerConfig.alpha);
         layer.setDepth(15 + i);
 
-        // 边界闪烁动画
-        this.scene.tweens.add({
+        // 托管边界闪烁动画
+        const flickerTween = this.scene.tweens.add({
           targets: layer,
           alpha: layerConfig.alpha * 1.5,
           duration: 200 + i * 50,
           yoyo: true,
           repeat: -1,
+        });
+        this.addManagedTween(container, flickerTween, {
+          autoStop: true,
+          tag: `flicker_layer_${i}`,
         });
       }
     });
@@ -115,8 +119,8 @@ export class ElectricFieldEffectPool extends VisualEffectPool<ElectricFieldEffec
         ring.setScale(1, 1);
         ring.setAlpha(0.8 - i * 0.15);
 
-        // 持续脉冲动画
-        this.scene.tweens.add({
+        // 托管持续脉冲动画
+        const pulseTween = this.scene.tweens.add({
           targets: ring,
           scale: 1.15,
           alpha: 0.4,
@@ -124,6 +128,10 @@ export class ElectricFieldEffectPool extends VisualEffectPool<ElectricFieldEffec
           yoyo: true,
           repeat: -1,
           delay: i * 80,
+        });
+        this.addManagedTween(container, pulseTween, {
+          autoStop: true,
+          tag: `pulse_ring_${i}`,
         });
       }
     });
@@ -158,6 +166,19 @@ export class ElectricFieldEffectPool extends VisualEffectPool<ElectricFieldEffec
    * 停用效果时的额外清理
    */
   protected deactivate(obj: Phaser.GameObjects.Container): void {
+    // 停止所有托管的 tweens
+    const tweens = this.managedTweens.get(obj);
+    if (tweens) {
+      tweens.forEach(managed => {
+        if (managed.autoStop && managed.tween) {
+          if (managed.tween.isPlaying()) {
+            managed.tween.stop();
+          }
+          this.scene.tweens.remove(managed.tween);
+        }
+      });
+    }
+
     // 停止粒子发射
     const particlesObj = obj.getByName('electric_charge_particles');
     if (particlesObj && particlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {

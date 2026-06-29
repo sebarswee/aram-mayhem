@@ -92,8 +92,8 @@ export class IceWallEffectPool extends VisualEffectPool<IceWallEffectConfig> {
       frostAura.setPosition(0, 0);
       frostAura.setDepth(22);
 
-      // 脉动动画
-      this.scene.tweens.add({
+      // 脉动动画（无限循环，需要托管以便清理）
+      const pulseTween = this.scene.tweens.add({
         targets: frostAura,
         scale: 1.05,
         alpha: 0.2,
@@ -101,6 +101,7 @@ export class IceWallEffectPool extends VisualEffectPool<IceWallEffectConfig> {
         yoyo: true,
         repeat: -1,
       });
+      this.addManagedTween(container, pulseTween, { autoStop: true, tag: 'frost_aura_pulse' });
     }
 
     // 重置外层冰墙
