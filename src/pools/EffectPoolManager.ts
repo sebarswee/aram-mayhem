@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+
+// P0 大招效果池
 import { InfernoEffectPool } from './effects/InfernoEffectPool';
 import { DragonBreathEffectPool } from './effects/DragonBreathEffectPool';
 import { AbyssVortexEffectPool } from './effects/AbyssVortexEffectPool';
@@ -12,6 +14,23 @@ import { BlackHoleEffectPool } from './effects/BlackHoleEffectPool';
 import { SanctuaryEffectPool } from './effects/SanctuaryEffectPool';
 import { HolyJudgmentEffectPool } from './effects/HolyJudgmentEffectPool';
 
+// P1 区域持续技能效果池
+import { ElectricFieldEffectPool } from './effects/ElectricFieldEffectPool';
+import { BlizzardEffectPool } from './effects/BlizzardEffectPool';
+import { PoisonCloudEffectPool } from './effects/PoisonCloudEffectPool';
+import { IceWallEffectPool } from './effects/IceWallEffectPool';
+import { RockSpikeEffectPool } from './effects/RockSpikeEffectPool';
+import { SandstormEffectPool } from './effects/SandstormEffectPool';
+import { ThunderStormEffectPool } from './effects/ThunderStormEffectPool';
+import { FlameWaveEffectPool } from './effects/FlameWaveEffectPool';
+import { FrostNovaEffectPool } from './effects/FrostNovaEffectPool';
+import { TidalWaveEffectPool } from './effects/TidalWaveEffectPool';
+import { ArcLightningEffectPool } from './effects/ArcLightningEffectPool';
+import { LightningFocusEffectPool } from './effects/LightningFocusEffectPool';
+import { ShadowStepEffectPool } from './effects/ShadowStepEffectPool';
+import { WaterDashEffectPool } from './effects/WaterDashEffectPool';
+import { HolyLightEffectPool } from './effects/HolyLightEffectPool';
+
 /**
  * 效果池管理器
  *
@@ -19,7 +38,7 @@ import { HolyJudgmentEffectPool } from './effects/HolyJudgmentEffectPool';
  * 提供集中式创建、获取和清理接口
  */
 export class EffectPoolManager {
-  // 大招效果池 (P0 优先级)
+  // P0 大招效果池
   public inferno: InfernoEffectPool;
   public dragonBreath: DragonBreathEffectPool;
   public abyssVortex: AbyssVortexEffectPool;
@@ -32,15 +51,23 @@ export class EffectPoolManager {
   public blackHole: BlackHoleEffectPool;
   public sanctuary: SanctuaryEffectPool;
   public holyJudgment: HolyJudgmentEffectPool;
-  // public thunder: ThunderEffectPool;
-  // public blizzard: BlizzardEffectPool;
 
-  // P1 优先级效果池
-  // public poisonCloud: PoisonCloudEffectPool;
-  // public electricField: ElectricFieldEffectPool;
-
-  // P2 优先级效果池
-  // 其他技能效果池...
+  // P1 区域持续技能效果池
+  public electricField: ElectricFieldEffectPool;
+  public blizzard: BlizzardEffectPool;
+  public poisonCloud: PoisonCloudEffectPool;
+  public iceWall: IceWallEffectPool;
+  public rockSpike: RockSpikeEffectPool;
+  public sandstorm: SandstormEffectPool;
+  public thunderStorm: ThunderStormEffectPool;
+  public flameWave: FlameWaveEffectPool;
+  public frostNova: FrostNovaEffectPool;
+  public tidalWave: TidalWaveEffectPool;
+  public arcLightning: ArcLightningEffectPool;
+  public lightningFocus: LightningFocusEffectPool;
+  public shadowStep: ShadowStepEffectPool;
+  public waterDash: WaterDashEffectPool;
+  public holyLight: HolyLightEffectPool;
 
   constructor(private scene: Phaser.Scene) {
     // 初始化 P0 大招效果池（初始大小 3，根据使用频率调整）
@@ -56,15 +83,23 @@ export class EffectPoolManager {
     this.blackHole = new BlackHoleEffectPool(scene, 3);
     this.sanctuary = new SanctuaryEffectPool(scene, 3);
     this.holyJudgment = new HolyJudgmentEffectPool(scene, 3);
-    // this.thunder = new ThunderEffectPool(scene, 3);
-    // this.blizzard = new BlizzardEffectPool(scene, 3);
 
-    // 初始化 P1 效果池
-    // this.poisonCloud = new PoisonCloudEffectPool(scene, 5);
-    // this.electricField = new ElectricFieldEffectPool(scene, 5);
-
-    // 初始化 P2 效果池
-    // ...
+    // 初始化 P1 区域持续技能效果池（初始大小 5，使用频率更高）
+    this.electricField = new ElectricFieldEffectPool(scene, 5);
+    this.blizzard = new BlizzardEffectPool(scene, 5);
+    this.poisonCloud = new PoisonCloudEffectPool(scene, 5);
+    this.iceWall = new IceWallEffectPool(scene, 5);
+    this.rockSpike = new RockSpikeEffectPool(scene, 5);
+    this.sandstorm = new SandstormEffectPool(scene, 5);
+    this.thunderStorm = new ThunderStormEffectPool(scene, 5);
+    this.flameWave = new FlameWaveEffectPool(scene, 5);
+    this.frostNova = new FrostNovaEffectPool(scene, 5);
+    this.tidalWave = new TidalWaveEffectPool(scene, 5);
+    this.arcLightning = new ArcLightningEffectPool(scene, 5);
+    this.lightningFocus = new LightningFocusEffectPool(scene, 5);
+    this.shadowStep = new ShadowStepEffectPool(scene, 5);
+    this.waterDash = new WaterDashEffectPool(scene, 5);
+    this.holyLight = new HolyLightEffectPool(scene, 5);
   }
 
   /**
@@ -73,6 +108,7 @@ export class EffectPoolManager {
    * 在场景关闭或重置时调用
    */
   clearAll(): void {
+    // P0 大招
     this.inferno.clear();
     this.dragonBreath.clear();
     this.abyssVortex.clear();
@@ -85,10 +121,23 @@ export class EffectPoolManager {
     this.blackHole.clear();
     this.sanctuary.clear();
     this.holyJudgment.clear();
-    // this.thunder.clear();
-    // this.blizzard.clear();
-    // this.poisonCloud.clear();
-    // this.electricField.clear();
+
+    // P1 区域持续技能
+    this.electricField.clear();
+    this.blizzard.clear();
+    this.poisonCloud.clear();
+    this.iceWall.clear();
+    this.rockSpike.clear();
+    this.sandstorm.clear();
+    this.thunderStorm.clear();
+    this.flameWave.clear();
+    this.frostNova.clear();
+    this.tidalWave.clear();
+    this.arcLightning.clear();
+    this.lightningFocus.clear();
+    this.shadowStep.clear();
+    this.waterDash.clear();
+    this.holyLight.clear();
   }
 
   /**
@@ -112,12 +161,23 @@ export class EffectPoolManager {
     stats.blackHole = this.blackHole.getStats();
     stats.sanctuary = this.sanctuary.getStats();
     stats.holyJudgment = this.holyJudgment.getStats();
-    // stats.thunder = this.thunder.getStats();
-    // stats.blizzard = this.blizzard.getStats();
 
-    // P1 效果
-    // stats.poisonCloud = this.poisonCloud.getStats();
-    // stats.electricField = this.electricField.getStats();
+    // P1 区域持续技能
+    stats.electricField = this.electricField.getStats();
+    stats.blizzard = this.blizzard.getStats();
+    stats.poisonCloud = this.poisonCloud.getStats();
+    stats.iceWall = this.iceWall.getStats();
+    stats.rockSpike = this.rockSpike.getStats();
+    stats.sandstorm = this.sandstorm.getStats();
+    stats.thunderStorm = this.thunderStorm.getStats();
+    stats.flameWave = this.flameWave.getStats();
+    stats.frostNova = this.frostNova.getStats();
+    stats.tidalWave = this.tidalWave.getStats();
+    stats.arcLightning = this.arcLightning.getStats();
+    stats.lightningFocus = this.lightningFocus.getStats();
+    stats.shadowStep = this.shadowStep.getStats();
+    stats.waterDash = this.waterDash.getStats();
+    stats.holyLight = this.holyLight.getStats();
 
     return stats;
   }

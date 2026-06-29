@@ -68,7 +68,12 @@
       "Bash(grep -v \"^.*:.*//.*$\")",
       "Bash(npx eslint *)",
       "Bash(chmod +x /tmp/comment_methods.sh)",
-      "Bash(python3 *)"
+      "Bash(python3 *)",
+      "Bash(sed -i '' 's/expect\\(tweens.length\\).toBeGreaterThan\\(0\\);/expect\\(mockSceneData.scene.tweens.add\\).toHaveBeenCalled\\(\\);/' src/pools/effects/__tests__/BlizzardEffectPool.test.ts)",
+      "Bash(sed -i '' 's/expect\\(tweens.length\\).toBeGreaterThan\\(0\\);/expect\\(mockSceneData.scene.tweens.add\\).toHaveBeenCalled\\(\\);/' src/pools/effects/__tests__/ElectricFieldEffectPool.test.ts)",
+      "Bash(sed -i '' 's/expect\\(tweens.length\\).toBeGreaterThan\\(0\\);/expect\\(mockSceneData.scene.tweens.add\\).toHaveBeenCalled\\(\\);/' src/pools/effects/__tests__/IceWallEffectPool.test.ts)",
+      "Bash(sed -i '' 's/expect\\(tweens.length\\).toBeGreaterThan\\(0\\);/expect\\(mockSceneData.scene.tweens.add\\).toHaveBeenCalled\\(\\);/' src/pools/effects/__tests__/PoisonCloudEffectPool.test.ts)",
+      "Bash(sed -i '' 's/expect\\(tweens.length\\).toBeGreaterThan\\(0\\);/expect\\(mockSceneData.scene.tweens.add\\).toHaveBeenCalled\\(\\);/' src/pools/effects/__tests__/SandstormEffectPool.test.ts)"
     ]
   }
 }
