@@ -2146,8 +2146,20 @@ export class EarthGuardianStrategy implements SkillStrategy {
       duration: duration,
     } as EarthGuardianEffectConfig);
 
+    // 跟随玩家移动的更新事件
+    const followEvent = scene.time.addEvent({
+      delay: 16, // ~60fps
+      callback: () => {
+        if (effect && effect.active) {
+          effect.setPosition(player.x, player.y);
+        }
+      },
+      repeat: -1,
+    });
+
     scene.time.delayedCall(duration, () => {
       (player.stats as any).defense = originalDefense;
+      followEvent.destroy();
       // 对象池会自动回收效果
     });
   }
