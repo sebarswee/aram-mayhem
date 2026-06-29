@@ -6,7 +6,7 @@ export { VisualEffectPool, type VisualEffectConfig } from './VisualEffectPool';
 // 管理器
 export { EffectPoolManager } from './EffectPoolManager';
 
-// 具体效果池
+// P0 大招效果池
 export { InfernoEffectPool, type InfernoEffectConfig } from './effects/InfernoEffectPool';
 export { DragonBreathEffectPool, type DragonBreathEffectConfig } from './effects/DragonBreathEffectPool';
 export { AbyssVortexEffectPool, type AbyssVortexEffectConfig } from './effects/AbyssVortexEffectPool';
@@ -19,3 +19,20 @@ export { VoidRiftEffectPool, type VoidRiftEffectConfig } from './effects/VoidRif
 export { BlackHoleEffectPool, type BlackHoleEffectConfig } from './effects/BlackHoleEffectPool';
 export { SanctuaryEffectPool, type SanctuaryEffectConfig } from './effects/SanctuaryEffectPool';
 export { HolyJudgmentEffectPool, type HolyJudgmentEffectConfig } from './effects/HolyJudgmentEffectPool';
+
+// P1 区域持续技能效果池
+export { ElectricFieldEffectPool, type ElectricFieldEffectConfig } from './effects/ElectricFieldEffectPool';
+export { BlizzardEffectPool, type BlizzardEffectConfig } from './effects/BlizzardEffectPool';
+export { PoisonCloudEffectPool, type PoisonCloudEffectConfig } from './effects/PoisonCloudEffectPool';
+export { IceWallEffectPool, type IceWallEffectConfig } from './effects/IceWallEffectPool';
+export { RockSpikeEffectPool, type RockSpikeEffectConfig } from './effects/RockSpikeEffectPool';
+export { SandstormEffectPool, type SandstormEffectConfig } from './effects/SandstormEffectPool';
+export { ThunderStormEffectPool, type ThunderStormEffectConfig } from './effects/ThunderStormEffectPool';
+export { FlameWaveEffectPool, type FlameWaveEffectConfig } from './effects/FlameWaveEffectPool';
+export { FrostNovaEffectPool, type FrostNovaEffectConfig } from './effects/FrostNovaEffectPool';
+export { TidalWaveEffectPool, type TidalWaveEffectConfig } from './effects/TidalWaveEffectPool';
+export { ArcLightningEffectPool, type ArcLightningEffectConfig } from './effects/ArcLightningEffectPool';
+export { LightningFocusEffectPool, type LightningFocusEffectConfig } from './effects/LightningFocusEffectPool';
+export { ShadowStepEffectPool, type ShadowStepEffectConfig } from './effects/ShadowStepEffectPool';
+export { WaterDashEffectPool, type WaterDashEffectConfig } from './effects/WaterDashEffectPool';
+export { HolyLightEffectPool, type HolyLightEffectConfig } from './effects/HolyLightEffectPool';

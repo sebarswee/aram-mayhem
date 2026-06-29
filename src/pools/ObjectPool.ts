@@ -285,6 +285,27 @@ export abstract class ObjectPool<T> {
   }
 
   /**
+   * 释放所有活跃对象
+   *
+   * 将所有活跃对象释放回池中
+   */
+  releaseAll(): void {
+    this.logDebug(`releaseAll: releasing ${this.active.size} active objects`);
+
+    // 复制活跃对象集合以避免在迭代时修改
+    const activeObjects = [...this.active];
+    for (const obj of activeObjects) {
+      this.deactivate(obj);
+      this.active.delete(obj);
+      this.pool.push(obj);
+      this.metrics.releaseCount++;
+    }
+
+    this.updateMetrics();
+    this.logDebug(`releaseAll completed: pooled=${this.pool.length}, active=${this.active.size}`);
+  }
+
+  /**
    * 清空池
    *
    * 销毁所有对象（包括活跃和池中的）
