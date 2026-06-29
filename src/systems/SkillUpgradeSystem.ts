@@ -9,6 +9,7 @@ import {
   SkillEffect
 } from '@/types';
 import {
+  SKILL_UPGRADE_TREES,
   getSkillUpgradeTree,
   hasSkillUpgradeTree
 } from '@/data/skillTrees';
@@ -25,13 +26,9 @@ export class SkillUpgradeSystem {
    * 加载所有技能升级树
    */
   private loadUpgradeTrees(): void {
-    // 从数据文件加载
-    const trees = ['fireball', 'ice_shard', 'lightning_bolt'];
-    for (const skillId of trees) {
-      const tree = getSkillUpgradeTree(skillId);
-      if (tree) {
-        this.upgradeTrees.set(skillId, tree);
-      }
+    // 自动加载所有已定义的升级树
+    for (const [skillId, tree] of Object.entries(SKILL_UPGRADE_TREES)) {
+      this.upgradeTrees.set(skillId, tree);
     }
   }
 

@@ -19,6 +19,7 @@ export { VoidRiftEffectPool, type VoidRiftEffectConfig } from './effects/VoidRif
 export { BlackHoleEffectPool, type BlackHoleEffectConfig } from './effects/BlackHoleEffectPool';
 export { SanctuaryEffectPool, type SanctuaryEffectConfig } from './effects/SanctuaryEffectPool';
 export { HolyJudgmentEffectPool, type HolyJudgmentEffectConfig } from './effects/HolyJudgmentEffectPool';
+export { MeteorEffectPool, type MeteorEffectConfig } from './effects/MeteorEffectPool';
 
 // P1 区域持续技能效果池
 export { ElectricFieldEffectPool, type ElectricFieldEffectConfig } from './effects/ElectricFieldEffectPool';
