@@ -102,9 +102,8 @@ export class LightningFocusEffectPool extends VisualEffectPool<LightningFocusEff
 
     // 设置自动回收
     const duration = config.duration || 400;
-    this.scene.time.delayedCall(duration, () => {
-      this.release(container);
-    });
+
+    this.setEffectDuration(container, duration);
   }
 
   /**

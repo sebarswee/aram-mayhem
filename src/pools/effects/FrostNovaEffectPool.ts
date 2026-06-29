@@ -167,9 +167,8 @@ export class FrostNovaEffectPool extends VisualEffectPool<FrostNovaEffectConfig>
 
     // 设置自动回收
     const duration = config.duration || 500;
-    this.scene.time.delayedCall(duration, () => {
-      this.release(container);
-    });
+
+    this.setEffectDuration(container, duration);
   }
 
   /**

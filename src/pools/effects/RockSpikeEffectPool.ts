@@ -138,9 +138,7 @@ export class RockSpikeEffectPool extends VisualEffectPool<RockSpikeEffectConfig>
 
     // 设置自动回收
     if (config.duration && config.duration > 0) {
-      this.scene.time.delayedCall(config.duration, () => {
-        this.release(container);
-      });
+      this.setEffectDuration(container, config.duration);
     }
   }
 

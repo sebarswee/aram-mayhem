@@ -178,9 +178,8 @@ export class HolyLightEffectPool extends VisualEffectPool<HolyLightEffectConfig>
 
     // 设置自动回收
     const duration = config.duration || 700;
-    this.scene.time.delayedCall(duration, () => {
-      this.release(container);
-    });
+
+    this.setEffectDuration(container, duration);
   }
 
   /**
