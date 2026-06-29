@@ -132,9 +132,8 @@ export class WaterDashEffectPool extends VisualEffectPool<WaterDashEffectConfig>
 
     // 设置自动回收
     const duration = config.duration || 2000;
-    this.scene.time.delayedCall(duration, () => {
-      this.release(container);
-    });
+
+    this.setEffectDuration(container, duration);
   }
 
   /**

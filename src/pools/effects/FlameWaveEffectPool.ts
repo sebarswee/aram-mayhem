@@ -139,9 +139,8 @@ export class FlameWaveEffectPool extends VisualEffectPool<FlameWaveEffectConfig>
 
     // 设置自动回收
     const duration = config.duration || 1500;
-    this.scene.time.delayedCall(duration, () => {
-      this.release(container);
-    });
+
+    this.setEffectDuration(container, duration);
   }
 
   /**

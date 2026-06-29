@@ -190,11 +190,9 @@ export class DragonBreathEffectPool extends VisualEffectPool<DragonBreathEffectC
       sparkParticles.start();
     }
 
-    // 设置自动回收
+    // 设置自动回收（使用托管定时器）
     if (config.duration && config.duration > 0) {
-      this.scene.time.delayedCall(config.duration, () => {
-        this.release(container);
-      });
+      this.setEffectDuration(container, config.duration);
     }
   }
 

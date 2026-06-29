@@ -93,8 +93,8 @@ export class InfernoEffectPool extends VisualEffectPool<InfernoEffectConfig> {
         layer.setAlpha(layerConfig.alpha);
         layer.setDepth(17 + i);
 
-        // 重新应用脉动 tween
-        this.scene.tweens.add({
+        // 托管无限脉动 tween
+        const pulseTween = this.scene.tweens.add({
           targets: layer,
           scaleX: 1.08,
           scaleY: 1.08,
@@ -102,6 +102,10 @@ export class InfernoEffectPool extends VisualEffectPool<InfernoEffectConfig> {
           duration: 400,
           yoyo: true,
           repeat: -1,
+        });
+        this.addManagedTween(container, pulseTween, {
+          autoStop: true,
+          tag: `pulse_layer_${i}`,
         });
       }
     });
@@ -121,11 +125,9 @@ export class InfernoEffectPool extends VisualEffectPool<InfernoEffectConfig> {
       particles.setDepth(22);
     }
 
-    // 设置自动回收
+    // 设置自动回收（使用托管定时器）
     if (config.duration && config.duration > 0) {
-      this.scene.time.delayedCall(config.duration, () => {
-        this.release(container);
-      });
+      this.setEffectDuration(container, config.duration);
     }
   }
 
@@ -133,6 +135,19 @@ export class InfernoEffectPool extends VisualEffectPool<InfernoEffectConfig> {
    * 停用效果时的额外清理
    */
   protected deactivate(obj: Phaser.GameObjects.Container): void {
+    // 停止所有托管的 tweens（包括 4 个脉动 tween）
+    const tweens = this.managedTweens.get(obj);
+    if (tweens) {
+      tweens.forEach(managed => {
+        if (managed.autoStop && managed.tween) {
+          if (managed.tween.isPlaying()) {
+            managed.tween.stop();
+          }
+          this.scene.tweens.remove(managed.tween);
+        }
+      });
+    }
+
     // 停止粒子发射
     const particlesObj = obj.getByName('inferno_particles');
     if (particlesObj && particlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {

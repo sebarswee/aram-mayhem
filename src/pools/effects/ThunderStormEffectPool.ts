@@ -82,11 +82,9 @@ export class ThunderStormEffectPool extends VisualEffectPool<ThunderStormEffectC
       repeat: 2,
     });
 
-    // 设置自动回收
+    // 设置自动回收（使用托管定时器）
     if (config.strikeDelay && config.strikeDelay > 0) {
-      this.scene.time.delayedCall(config.strikeDelay + 500, () => {
-        this.release(container);
-      });
+      this.setEffectDuration(container, config.strikeDelay + 500);
     }
   }
 
