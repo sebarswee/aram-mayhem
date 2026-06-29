@@ -1477,6 +1477,124 @@ export const ROCK_SPIKE_UPGRADE_TREE: SkillUpgradeTree = {
 };
 
 /**
+ * 炎龙吐息升级树
+ */
+export const DRAGON_BREATH_UPGRADE_TREE: SkillUpgradeTree = {
+  skillId: 'dragon_breath',
+
+  upgradeOptions: {
+    // Lv2 二选一
+    2: [
+      {
+        id: 'dragon_breath_lv2_damage',
+        name: '炎龙之怒',
+        description: '伤害+30%',
+        level: 2,
+        modifiers: { damage: 0.3 },
+      },
+      {
+        id: 'dragon_breath_lv2_spread',
+        name: '龙息扩展',
+        description: '扇形角度 60° → 90°',
+        level: 2,
+        specialBehavior: 'angle_spread:1.5',
+      },
+    ],
+
+    // Lv3 二选一
+    3: [
+      {
+        id: 'dragon_breath_lv3_burn',
+        name: '燃烧之心',
+        description: '燃烧伤害+50%',
+        level: 3,
+        effectBoost: {
+          type: 'burn',
+          valueMultiplier: 1.5,
+        },
+      },
+      {
+        id: 'dragon_breath_lv3_range',
+        name: '深渊吐息',
+        description: '距离+40%',
+        level: 3,
+        modifiers: { range: 0.4 },
+      },
+    ],
+
+    // Lv4 二选一
+    4: [
+      {
+        id: 'dragon_breath_lv4_slow',
+        name: '龙威',
+        description: '被吐息击中的敌人减速 30%',
+        level: 4,
+        effectAdd: {
+          type: 'slow' as const,
+          value: 0.3,
+          duration: 2000,
+        },
+      },
+      {
+        id: 'dragon_breath_lv4_defense',
+        name: '龙鳞',
+        description: '施法期间获得 30% 减伤',
+        level: 4,
+        specialBehavior: 'damage_reduction_while_casting:0.3',
+      },
+    ],
+  },
+
+  evolutionBranches: [
+    // 🔥 烈焰分支 - 伤害强化
+    {
+      id: 'dragon_breath_evo_inferno',
+      name: '炎龙噬魂',
+      description: '燃烧敌人死亡时爆炸，对周围敌人造成伤害',
+      rarity: 'legendary',
+      modifiers: {
+        damage: 0.5,
+      },
+      specialBehavior: 'burn_death_explosion',
+      visualChange: {
+        particleEffect: 'dragon_inferno',
+        color: 0xff4400,
+      },
+    },
+    // 🌊 巨颚分支 - 范围扩展
+    {
+      id: 'dragon_breath_evo_dual',
+      name: '双重吐息',
+      description: '前后双向喷射，伤害-20%',
+      rarity: 'epic',
+      modifiers: {
+        damage: -0.2,
+      },
+      specialBehavior: 'dual_breath',
+      visualChange: {
+        particleEffect: 'dual_dragon_breath',
+      },
+    },
+    // 🌟 天龙分支 - 终极形态
+    {
+      id: 'dragon_breath_evo_omni',
+      name: '全屏吐息',
+      description: '360° 环绕火焰，伤害降低 40%',
+      rarity: 'epic',
+      modifiers: {
+        damage: -0.4,
+      },
+      specialBehavior: 'omni_breath',
+      visualChange: {
+        scale: 1.5,
+        particleEffect: 'omni_dragon_breath',
+        color: 0xffaa00,
+      },
+    },
+  ],
+};
+
+/**
  * 所有技能升级树映射
  */
 export const SKILL_UPGRADE_TREES: Record<string, SkillUpgradeTree> = {
@@ -1493,6 +1611,7 @@ export const SKILL_UPGRADE_TREES: Record<string, SkillUpgradeTree> = {
   holy_light: HOLY_LIGHT_UPGRADE_TREE,
   poison_cloud: POISON_CLOUD_UPGRADE_TREE,
   rock_spike: ROCK_SPIKE_UPGRADE_TREE,
+  dragon_breath: DRAGON_BREATH_UPGRADE_TREE,
 };
 
 /**

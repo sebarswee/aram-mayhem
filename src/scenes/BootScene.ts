@@ -112,6 +112,9 @@ export class BootScene extends Phaser.Scene {
     this.load.image('meteor_falling', 'assets/particles/meteor_falling.png');
     this.load.image('particle_magma', 'assets/particles/particle_magma.png');
     this.load.image('particle_rock', 'assets/particles/particle_rock.png');
+
+    // 加载炎龙吐息技能素材
+    this.load.image('dragon_head', 'assets/effects/dragon_head.png');
   }
 
   create(): void {

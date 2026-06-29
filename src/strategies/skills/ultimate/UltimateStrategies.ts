@@ -65,8 +65,38 @@ export class DragonBreathStrategy implements SkillStrategy {
       sparkParticleConfig: sparkParticleConfig,
     });
 
+    // 如果效果获取失败，提前返回
+    if (!effect) {
+      console.warn('[DragonBreathStrategy] Failed to acquire effect from pool');
+      return;
+    }
+
     // 屏幕震动
     VisualEffectUtils.screenShake(scene, { intensity: 0.008, duration: 300 });
+
+    // 创建跟随更新事件（每50ms更新一次效果位置和角度）
+    const updateInterval = 50;
+    const updateEvent = scene.time.addEvent({
+      delay: updateInterval,
+      callback: () => {
+        // 获取最新玩家位置和朝向
+        const currentNearest = findNearestEnemy(player.x, player.y, range + 100);
+        const currentAngle = currentNearest
+          ? Phaser.Math.Angle.Between(player.x, player.y, currentNearest.x, currentNearest.y)
+          : playerAngle;
+
+        // 更新效果位置和角度
+        effectPools.dragonBreath.updateEffectTransform(
+          effect,
+          player.x,
+          player.y,
+          currentAngle,
+          angleSpread,
+          layerConfigs
+        );
+      },
+      repeat: Math.floor(duration / updateInterval) - 1,
+    });
 
     let elapsed = 0;
     const breathTimer = scene.time.addEvent({
@@ -75,14 +105,21 @@ export class DragonBreathStrategy implements SkillStrategy {
         elapsed += tickInterval;
         if (elapsed >= duration) {
           breathTimer.destroy();
+          updateEvent.destroy();
           // 对象池会自动回收效果
           return;
         }
 
+        // 获取当前角度用于伤害判定
+        const currentNearest = findNearestEnemy(player.x, player.y, range + 100);
+        const currentAngle = currentNearest
+          ? Phaser.Math.Angle.Between(player.x, player.y, currentNearest.x, currentNearest.y)
+          : playerAngle;
+
         const enemies = findEnemiesInRange(player.x, player.y, range);
         for (const enemy of enemies) {
           const enemyAngle = Phaser.Math.Angle.Between(player.x, player.y, enemy.x, enemy.y);
-          const angleDiff = Math.abs(Phaser.Math.Angle.Wrap(enemyAngle - playerAngle));
+          const angleDiff = Math.abs(Phaser.Math.Angle.Wrap(enemyAngle - currentAngle));
           if (angleDiff < angleSpread / 2) {
             applyDamageToEnemy(enemy, Math.floor(damage * 0.3), skill);
 
