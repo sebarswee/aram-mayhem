@@ -18,7 +18,33 @@ export class DragonBreathStrategy implements SkillStrategy {
     const duration = 2000;
     const tickInterval = 200;
     const range = skill.rangeValue;
-    const angleSpread = Math.PI / 3;
+
+    // 检查特殊行为
+    const hasAngleSpread = skill.specialBehaviors?.find(b => b.startsWith('angle_spread:'));
+    const hasDamageReduction = skill.specialBehaviors?.includes('damage_reduction_while_casting');
+    const hasBurnExplosion = skill.specialBehaviors?.includes('burn_death_explosion');
+    const hasDualBreath = skill.specialBehaviors?.includes('dual_breath');
+    const hasFullScreen = skill.specialBehaviors?.includes('full_screen_breath');
+
+    // 角度扩散
+    let angleSpreadMultiplier = 1;
+    if (hasAngleSpread) {
+      const [, value] = hasAngleSpread.split(':');
+      angleSpreadMultiplier = parseFloat(value);
+    }
+    let angleSpread = Math.PI / 3 * angleSpreadMultiplier;
+
+    // 计算实际伤害
+    let actualDamage = damage;
+    if (hasDamageReduction) {
+      actualDamage = Math.floor(damage * 0.7); // 施法时伤害降低30%
+    }
+
+    // 全屏吐息
+    if (hasFullScreen) {
+      angleSpread = Math.PI * 2;
+      actualDamage = Math.floor(actualDamage * 0.6); // 伤害降低40%
+    }
 
     const nearestEnemy = findNearestEnemy(player.x, player.y, range + 100);
     const playerAngle = nearestEnemy
@@ -121,7 +147,7 @@ export class DragonBreathStrategy implements SkillStrategy {
           const enemyAngle = Phaser.Math.Angle.Between(player.x, player.y, enemy.x, enemy.y);
           const angleDiff = Math.abs(Phaser.Math.Angle.Wrap(enemyAngle - currentAngle));
           if (angleDiff < angleSpread / 2) {
-            applyDamageToEnemy(enemy, Math.floor(damage * 0.3), skill);
+            applyDamageToEnemy(enemy, Math.floor(actualDamage * 0.3), skill);
 
             // 应用燃烧效果
             if (applyEffects && skill.effects) {
@@ -142,10 +168,66 @@ export class DragonBreathStrategy implements SkillStrategy {
               onComplete: () => hit.destroy(),
             });
           }
+
+          // 双重吐息：反向喷射（180度）
+          if (hasDualBreath) {
+            const reverseAngle = currentAngle + Math.PI;
+            const reverseAngleDiff = Math.abs(Phaser.Math.Angle.Wrap(enemyAngle - reverseAngle));
+            if (reverseAngleDiff < angleSpread / 2) {
+              applyDamageToEnemy(enemy, Math.floor(actualDamage * 0.3), skill);
+
+              // 应用燃烧效果
+              if (applyEffects && skill.effects) {
+                const burnEffect = skill.effects.find(e => e.type === 'burn');
+                if (burnEffect) {
+                  applyEffects(enemy, [burnEffect]);
+                }
+              }
+
+              // 反向火焰击中效果
+              const hit = scene.add.circle(enemy.x, enemy.y, 15, 0xff4400, 0.7);
+              hit.setDepth(100);
+              scene.tweens.add({
+                targets: hit,
+                scale: 1.5,
+                alpha: 0,
+                duration: 200,
+                onComplete: () => hit.destroy(),
+              });
+            }
+          }
         }
       },
       repeat: Math.floor(duration / tickInterval) - 1,
     });
+
+    // 燃烧死亡爆炸
+    if (hasBurnExplosion) {
+      const burnDeathHandler = (enemy: Enemy) => {
+        if (enemy.modifierStack.hasStatusEffect(StatusEffectType.BURN)) {
+          // 爆炸效果
+          const explosion = scene.add.circle(enemy.x, enemy.y, 80, 0xff6600, 0.5);
+          explosion.setDepth(100);
+          scene.tweens.add({
+            targets: explosion,
+            alpha: 0,
+            scale: 1.5,
+            duration: 300,
+            onComplete: () => explosion.destroy(),
+          });
+          // 爆炸伤害
+          const nearbyEnemies = findEnemiesInRange(enemy.x, enemy.y, 80);
+          for (const e of nearbyEnemies) {
+            applyDamageToEnemy(e, Math.floor(actualDamage * 0.5), skill);
+          }
+        }
+      };
+      scene.events.on('enemyKilled', burnDeathHandler);
+      // 在技能结束时移除监听器
+      scene.time.delayedCall(duration, () => {
+        scene.events.off('enemyKilled', burnDeathHandler);
+      });
+    }
   }
 }
 
@@ -176,15 +258,43 @@ export class InfernoStrategy implements SkillStrategy {
 
   execute(skill: Skill, context: SkillExecutionContext): void {
     const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects, findNearestEnemy } = context;
-    const radius = skill.rangeValue;
-    const duration = 5000;
+
+    // 检查特殊行为
+    const hasDurationBonus = skill.specialBehaviors?.find(b => b.startsWith('duration_bonus:'));
+    const hasBurnDamageBonus = skill.specialBehaviors?.find(b => b.startsWith('burn_damage_bonus:'));
+    const hasBurnDeathHeal = skill.specialBehaviors?.find(b => b.startsWith('burn_death_heal:'));
+    const hasBurnSpreadChain = skill.specialBehaviors?.includes('burn_spread_chain');
+    const hasMassiveAoe = skill.specialBehaviors?.includes('massive_aoe');
+
+    // 持续时间加成
+    let duration = 5000;
+    if (hasDurationBonus) {
+      const [, value] = hasDurationBonus.split(':');
+      duration += parseInt(value);
+    }
+
+    // 范围大幅扩展（地狱火海）
+    let radius = skill.rangeValue;
+    let actualDamage = damage;
+    if (hasMassiveAoe) {
+      radius *= 2;
+      actualDamage = Math.floor(damage * 0.7); // 伤害降低30%
+    }
+
     const tickInterval = 300;
 
     const instanceId = `inferno_${Date.now()}_${Math.random()}`;
     this.activeInfernos.add(instanceId);
 
-    const burnValue = 12;
+    const burnValue = hasBurnDamageBonus
+      ? parseInt(hasBurnDamageBonus.split(':')[1])
+      : 12;
     const burnDuration = 8000;
+
+    // 连环燃烧（燃烧可扩散2次）
+    if (hasBurnSpreadChain) {
+      this.burnSpreadRadius *= 1.5; // 扩大扩散范围
+    }
 
     // 从对象池获取效果
     const effectPools = (scene as any).effectPools as EffectPoolManager;
@@ -203,13 +313,20 @@ export class InfernoStrategy implements SkillStrategy {
       layerConfigs: layerConfigs,
     });
 
-    // 死亡事件监听（燃烧扩散机制 + 火焰小精灵召唤）
+    // 死亡事件监听（燃烧扩散机制 + 火焰小精灵召唤 + 燃烧死亡回血）
     const deathHandler = (enemy: Enemy) => {
       if (!this.activeInfernos.has(instanceId)) return;
 
       const hasInfernoBurn = enemy.modifierStack.hasStatusEffect(StatusEffectType.BURN);
 
       if (hasInfernoBurn) {
+        // 燃烧死亡回血
+        if (hasBurnDeathHeal) {
+          const [, value] = hasBurnDeathHeal.split(':');
+          const healAmount = parseInt(value);
+          player.stats.currentHp = Math.min(player.stats.maxHp, player.stats.currentHp + healAmount);
+        }
+
         // 燃烧扩散机制
         const nearbyEnemies = findEnemiesInRange(enemy.x, enemy.y, this.burnSpreadRadius);
 
@@ -262,7 +379,7 @@ export class InfernoStrategy implements SkillStrategy {
 
         const enemies = findEnemiesInRange(player.x, player.y, radius);
         for (const enemy of enemies) {
-          applyDamageToEnemy(enemy, Math.floor(damage * 0.15), skill);
+          applyDamageToEnemy(enemy, Math.floor(actualDamage * 0.15), skill);
           enemy.modifierStack.addModifier(
             createBurnVisualModifier(burnValue, burnDuration, 'fire')
           );
@@ -455,8 +572,51 @@ export class AbyssVortexStrategy implements SkillStrategy {
     const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
     const centerX = player.x;
     const centerY = player.y;
-    const radius = skill.rangeValue;
-    const duration = 3000;
+
+    // 检查特殊行为
+    const hasPullSpeedBonus = skill.specialBehaviors?.find(b => b.startsWith('pull_speed_bonus:'));
+    const hasCenterDamageMultiplier = skill.specialBehaviors?.find(b => b.startsWith('center_damage_multiplier:'));
+    const hasDurationBonus = skill.specialBehaviors?.find(b => b.startsWith('duration_bonus:'));
+    const hasBurstDamageBonus = skill.specialBehaviors?.find(b => b.startsWith('burst_damage_bonus:'));
+    const hasSlowFieldAfter = skill.specialBehaviors?.find(b => b.startsWith('slow_field_after_vortex:'));
+    const hasFreezeWhilePulling = skill.specialBehaviors?.includes('freeze_while_pulling');
+    const hasDamageReduction = skill.specialBehaviors?.includes('damage_reduction_while_casting');
+    const hasFullScreen = skill.specialBehaviors?.includes('full_screen_vortex');
+
+    // 牵引速度加成
+    let pullDistance = 50;
+    if (hasPullSpeedBonus) {
+      const [, value] = hasPullSpeedBonus.split(':');
+      pullDistance = Math.floor(pullDistance * parseFloat(value));
+    }
+
+    // 中心伤害加成
+    let centerDamageMultiplier = 1;
+    if (hasCenterDamageMultiplier) {
+      const [, value] = hasCenterDamageMultiplier.split(':');
+      centerDamageMultiplier = parseFloat(value);
+    }
+
+    // 持续时间加成
+    let duration = 3000;
+    if (hasDurationBonus) {
+      const [, value] = hasDurationBonus.split(':');
+      duration += parseInt(value);
+    }
+
+    // 全屏漩涡
+    let radius = skill.rangeValue;
+    let actualDamage = damage;
+    if (hasFullScreen) {
+      radius = 1000; // 全屏
+      actualDamage = Math.floor(damage * 0.5);
+    }
+
+    // 施法时伤害降低
+    if (hasDamageReduction) {
+      actualDamage = Math.floor(actualDamage * 0.7);
+    }
+
     const tickInterval = 200;
 
     // 从对象池获取效果
@@ -516,12 +676,17 @@ export class AbyssVortexStrategy implements SkillStrategy {
         const enemies = findEnemiesInRange(centerX, centerY, radius);
         for (const enemy of enemies) {
           const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, centerX, centerY);
+          const distanceToCenter = Phaser.Math.Distance.Between(enemy.x, enemy.y, centerX, centerY);
           if (enemy.active && enemy.body) {
-            // 牵引距离增加到 50 像素/tick
-            enemy.x += Math.cos(angle) * 50;
-            enemy.y += Math.sin(angle) * 50;
+            // 牵引
+            enemy.x += Math.cos(angle) * pullDistance;
+            enemy.y += Math.sin(angle) * pullDistance;
           }
-          applyDamageToEnemy(enemy, Math.floor(damage * 0.2), skill);
+
+          // 计算伤害（距离中心越近伤害越高）
+          const distanceRatio = distanceToCenter / radius;
+          const damageMultiplier = distanceRatio < 0.3 ? centerDamageMultiplier : 1;
+          applyDamageToEnemy(enemy, Math.floor(actualDamage * 0.2 * damageMultiplier), skill);
 
           // 应用减速效果
           if (applyEffects && skill.effects) {
@@ -529,6 +694,12 @@ export class AbyssVortexStrategy implements SkillStrategy {
             if (slowEffect) {
               applyEffects(enemy, [slowEffect]);
             }
+          }
+
+          // 冻结效果（寒冰漩涡）
+          if (hasFreezeWhilePulling && applyEffects && skill.effects) {
+            const freezeEffect = { type: 'freeze' as const, value: 1, duration: 1000 };
+            applyEffects(enemy, [freezeEffect]);
           }
 
           // 添加减速视觉特效（冰蓝色光圈）
@@ -565,11 +736,39 @@ export class AbyssVortexStrategy implements SkillStrategy {
         },
       });
 
-      // 爆发伤害 (基础伤害的 150%)
-      const burstDamage = Math.floor(damage * 1.5);
+      // 爆发伤害
+      let burstDamage = Math.floor(actualDamage * 1.5);
+      if (hasBurstDamageBonus) {
+        const [, value] = hasBurstDamageBonus.split(':');
+        burstDamage = Math.floor(burstDamage * parseFloat(value));
+      }
       const enemies = findEnemiesInRange(centerX, centerY, radius);
       for (const enemy of enemies) {
         applyDamageToEnemy(enemy, burstDamage, skill);
+      }
+
+      // 漩涡后减速区域
+      if (hasSlowFieldAfter) {
+        const [, value] = hasSlowFieldAfter.split(':');
+        const slowDuration = parseInt(value);
+        // 创建减速区域视觉效果
+        const slowZone = scene.add.circle(centerX, centerY, radius, 0x4488ff, 0.2);
+        slowZone.setDepth(10);
+        // 持续减速
+        const slowTimer = scene.time.addEvent({
+          delay: 500,
+          callback: () => {
+            const slowEnemies = findEnemiesInRange(centerX, centerY, radius);
+            for (const e of slowEnemies) {
+              if (applyEffects) applyEffects(e, [{ type: 'slow', value: 0.5, duration: 1000 }]);
+            }
+          },
+          repeat: Math.floor(slowDuration / 500) - 1,
+        });
+        scene.time.delayedCall(slowDuration, () => {
+          slowTimer.destroy();
+          scene.tweens.add({ targets: slowZone, alpha: 0, duration: 300, onComplete: () => slowZone.destroy() });
+        });
       }
     });
   }
@@ -590,8 +789,46 @@ export class AbyssVortexVisualStrategy implements VisualEffectStrategy {
 export class FrozenDomainStrategy implements SkillStrategy {
   execute(skill: Skill, context: SkillExecutionContext): void {
     const { scene, player, damage, findEnemiesInRange, applyDamageToEnemy, applyEffects } = context;
-    const radius = skill.rangeValue;
-    const duration = 4000;
+
+    // 检查特殊行为
+    const hasFreezeDurationBonus = skill.specialBehaviors?.find(b => b.startsWith('freeze_duration_bonus:'));
+    const hasFrozenDamageBoost = skill.specialBehaviors?.find(b => b.startsWith('frozen_damage_boost:'));
+    const hasDurationBonus = skill.specialBehaviors?.find(b => b.startsWith('duration_bonus:'));
+    const hasFreezeOnDeath = skill.specialBehaviors?.includes('freeze_on_death');
+    const hasSlowFieldAfter = skill.specialBehaviors?.find(b => b.startsWith('slow_field_after_domain:'));
+    const hasIceExplosionOnDeath = skill.specialBehaviors?.includes('ice_explosion_on_death');
+    const hasHpRegen = skill.specialBehaviors?.find(b => b.startsWith('hp_regen_in_domain:'));
+    const hasFullScreen = skill.specialBehaviors?.includes('full_screen_freeze');
+
+    // 冻结时间加成
+    let freezeDurationMultiplier = 1;
+    if (hasFreezeDurationBonus) {
+      const [, value] = hasFreezeDurationBonus.split(':');
+      freezeDurationMultiplier = 1 + parseFloat(value);
+    }
+
+    // 对冻结敌人伤害加成
+    let frozenDamageBoost = 1;
+    if (hasFrozenDamageBoost) {
+      const [, value] = hasFrozenDamageBoost.split(':');
+      frozenDamageBoost = 1 + parseFloat(value);
+    }
+
+    // 持续时间加成
+    let duration = 4000;
+    if (hasDurationBonus) {
+      const [, value] = hasDurationBonus.split(':');
+      duration += parseInt(value);
+    }
+
+    // 全屏冰封
+    let radius = skill.rangeValue;
+    let actualDamage = damage;
+    if (hasFullScreen) {
+      radius = 1000;
+      actualDamage = Math.floor(damage * 0.5);
+    }
+
     const tickInterval = 500;
 
     // 从对象池获取效果
@@ -645,13 +882,24 @@ export class FrozenDomainStrategy implements SkillStrategy {
 
         const enemies = findEnemiesInRange(player.x, player.y, radius);
         for (const enemy of enemies) {
-          applyDamageToEnemy(enemy, Math.floor(damage * 0.2), skill);
+          // 检查敌人是否冻结
+          const isFrozen = enemy.modifierStack.hasTag('freeze');
+          let enemyDamage = Math.floor(actualDamage * 0.2);
+          if (isFrozen) {
+            enemyDamage = Math.floor(enemyDamage * frozenDamageBoost);
+          }
+          applyDamageToEnemy(enemy, enemyDamage, skill);
 
           // 应用冻结效果
           if (applyEffects && skill.effects) {
             const freezeEffect = skill.effects.find(e => e.type === 'freeze');
             if (freezeEffect) {
-              applyEffects(enemy, [freezeEffect]);
+              // 应用冻结时间加成
+              const modifiedFreezeEffect = {
+                ...freezeEffect,
+                duration: freezeEffect.duration ? freezeEffect.duration * freezeDurationMultiplier : 2000 * freezeDurationMultiplier
+              };
+              applyEffects(enemy, [modifiedFreezeEffect]);
             }
           }
 
@@ -669,6 +917,71 @@ export class FrozenDomainStrategy implements SkillStrategy {
       },
       repeat: Math.floor(duration / tickInterval) - 1,
     });
+
+    // 冰晶爆裂（冻结敌人死亡时爆炸）
+    if (hasIceExplosionOnDeath) {
+      const iceExplosionHandler = (enemy: Enemy) => {
+        if (enemy.modifierStack.hasTag('freeze')) {
+          // 爆炸效果
+          const explosion = scene.add.circle(enemy.x, enemy.y, 100, 0x88ddff, 0.5);
+          explosion.setDepth(100);
+          scene.tweens.add({
+            targets: explosion,
+            alpha: 0,
+            scale: 1.5,
+            duration: 300,
+            onComplete: () => explosion.destroy(),
+          });
+          // 爆炸伤害和冻结
+          const nearbyEnemies = findEnemiesInRange(enemy.x, enemy.y, 100);
+          for (const e of nearbyEnemies) {
+            applyDamageToEnemy(e, Math.floor(actualDamage * 0.4), skill);
+            if (applyEffects) applyEffects(e, [{ type: 'freeze', value: 1, duration: 1500 }]);
+          }
+        }
+      };
+      scene.events.on('enemyKilled', iceExplosionHandler);
+      scene.time.delayedCall(duration, () => {
+        scene.events.off('enemyKilled', iceExplosionHandler);
+      });
+    }
+
+    // 领域内回复
+    if (hasHpRegen) {
+      const [, value] = hasHpRegen.split(':');
+      const regenAmount = parseInt(value);
+      const regenTimer = scene.time.addEvent({
+        delay: 1000,
+        callback: () => {
+          player.stats.currentHp = Math.min(player.stats.maxHp, player.stats.currentHp + regenAmount);
+        },
+        repeat: Math.floor(duration / 1000) - 1,
+      });
+    }
+
+    // 漩涡后减速区域
+    if (hasSlowFieldAfter) {
+      const [, value] = hasSlowFieldAfter.split(':');
+      const slowDuration = parseInt(value);
+      scene.time.delayedCall(duration, () => {
+        const slowZone = scene.add.circle(player.x, player.y, radius, 0x88ddff, 0.2);
+        slowZone.setDepth(10);
+        const slowTimer = scene.time.addEvent({
+          delay: 500,
+          callback: () => {
+            const slowEnemies = findEnemiesInRange(player.x, player.y, radius);
+            for (const e of slowEnemies) {
+              if (applyEffects) applyEffects(e, [{ type: 'slow', value: 0.5, duration: 1000 }]);
+            }
+          },
+          repeat: Math.floor(slowDuration / 500) - 1,
+        });
+        scene.time.delayedCall(slowDuration, () => {
+          slowTimer.destroy();
+          scene.tweens.add({ targets: slowZone, alpha: 0, duration: 300, onComplete: () => slowZone.destroy() });
+        });
+      });
+    }
   }
 }
 
