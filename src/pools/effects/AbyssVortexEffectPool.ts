@@ -99,6 +99,9 @@ export class AbyssVortexEffectPool extends VisualEffectPool<AbyssVortexEffectCon
    * 创建深渊漩涡效果容器
    */
   private createAbyssVortexEffect(): Phaser.GameObjects.Container {
+    // 调试：检查素材是否存在
+    console.log('[AbyssVortexEffectPool] Creating effect, vortex_center texture exists:', this.scene.textures.exists('vortex_center'));
+
     const container = this.scene.add.container(0, 0);
 
     // 预创建 5 个旋转环（使用 Graphics）
@@ -117,6 +120,7 @@ export class AbyssVortexEffectPool extends VisualEffectPool<AbyssVortexEffectCon
 
     // 预创建漩涡中心精灵
     const vortexCenter = this.scene.add.image(0, 0, 'vortex_center');
+    console.log('[AbyssVortexEffectPool] Vortex center created:', vortexCenter.width, 'x', vortexCenter.height);
     vortexCenter.setName('vortex_center');
     vortexCenter.setDepth(25);
     container.add(vortexCenter);
