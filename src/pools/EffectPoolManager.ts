@@ -31,6 +31,24 @@ import { ShadowStepEffectPool } from './effects/ShadowStepEffectPool';
 import { WaterDashEffectPool } from './effects/WaterDashEffectPool';
 import { HolyLightEffectPool } from './effects/HolyLightEffectPool';
 
+// P2 投射物技能效果池
+import {
+  ProjectileTrailPool,
+  FireballEffectPool,
+  IceSpearEffectPool,
+  LightningBoltEffectPool,
+  WaterBulletEffectPool,
+  ShadowBallEffectPool,
+} from './effects/projectile';
+
+// P3 增益技能效果池
+import {
+  ShieldEffectPool,
+  StoneSkinEffectPool,
+  BlessingEffectPool,
+  RegenerationEffectPool,
+} from './effects/buff';
+
 /**
  * 效果池管理器
  *
@@ -69,6 +87,20 @@ export class EffectPoolManager {
   public waterDash: WaterDashEffectPool;
   public holyLight: HolyLightEffectPool;
 
+  // P2 投射物技能效果池
+  public projectileTrail: ProjectileTrailPool;
+  public fireball: FireballEffectPool;
+  public iceSpear: IceSpearEffectPool;
+  public lightningBolt: LightningBoltEffectPool;
+  public waterBullet: WaterBulletEffectPool;
+  public shadowBall: ShadowBallEffectPool;
+
+  // P3 增益技能效果池
+  public shield: ShieldEffectPool;
+  public stoneSkin: StoneSkinEffectPool;
+  public blessing: BlessingEffectPool;
+  public regeneration: RegenerationEffectPool;
+
   constructor(private scene: Phaser.Scene) {
     // 初始化 P0 大招效果池（初始大小 3，根据使用频率调整）
     this.inferno = new InfernoEffectPool(scene, 3);
@@ -100,6 +132,20 @@ export class EffectPoolManager {
     this.shadowStep = new ShadowStepEffectPool(scene, 5);
     this.waterDash = new WaterDashEffectPool(scene, 5);
     this.holyLight = new HolyLightEffectPool(scene, 5);
+
+    // 初始化 P2 投射物技能效果池（初始大小 10，使用频率极高）
+    this.projectileTrail = new ProjectileTrailPool(scene, 10);
+    this.fireball = new FireballEffectPool(scene, 7);
+    this.iceSpear = new IceSpearEffectPool(scene, 7);
+    this.lightningBolt = new LightningBoltEffectPool(scene, 7);
+    this.waterBullet = new WaterBulletEffectPool(scene, 7);
+    this.shadowBall = new ShadowBallEffectPool(scene, 7);
+
+    // 初始化 P3 增益技能效果池（初始大小 3，使用频率较低）
+    this.shield = new ShieldEffectPool(scene, 3);
+    this.stoneSkin = new StoneSkinEffectPool(scene, 3);
+    this.blessing = new BlessingEffectPool(scene, 3);
+    this.regeneration = new RegenerationEffectPool(scene, 3);
   }
 
   /**
@@ -138,6 +184,20 @@ export class EffectPoolManager {
     this.shadowStep.clear();
     this.waterDash.clear();
     this.holyLight.clear();
+
+    // P2 投射物技能
+    this.projectileTrail.clear();
+    this.fireball.clear();
+    this.iceSpear.clear();
+    this.lightningBolt.clear();
+    this.waterBullet.clear();
+    this.shadowBall.clear();
+
+    // P3 增益技能
+    this.shield.clear();
+    this.stoneSkin.clear();
+    this.blessing.clear();
+    this.regeneration.clear();
   }
 
   /**
@@ -178,6 +238,20 @@ export class EffectPoolManager {
     stats.shadowStep = this.shadowStep.getStats();
     stats.waterDash = this.waterDash.getStats();
     stats.holyLight = this.holyLight.getStats();
+
+    // P2 投射物技能
+    stats.projectileTrail = this.projectileTrail.getStats();
+    stats.fireball = this.fireball.getStats();
+    stats.iceSpear = this.iceSpear.getStats();
+    stats.lightningBolt = this.lightningBolt.getStats();
+    stats.waterBullet = this.waterBullet.getStats();
+    stats.shadowBall = this.shadowBall.getStats();
+
+    // P3 增益技能
+    stats.shield = this.shield.getStats();
+    stats.stoneSkin = this.stoneSkin.getStats();
+    stats.blessing = this.blessing.getStats();
+    stats.regeneration = this.regeneration.getStats();
 
     return stats;
   }
