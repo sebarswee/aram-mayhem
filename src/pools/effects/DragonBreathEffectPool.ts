@@ -72,16 +72,12 @@ export class DragonBreathEffectPool extends VisualEffectPool<DragonBreathEffectC
    * 创建炎龙吐息效果容器
    */
   private createDragonBreathEffect(): Phaser.GameObjects.Container {
-    // 调试：检查素材是否存在
-    console.log('[DragonBreathEffectPool] Creating effect, dragon_head texture exists:', this.scene.textures.exists('dragon_head'));
-
     const container = this.scene.add.container(0, 0);
 
     // 创建龙头精灵
     const dragonHead = this.scene.add.image(0, 0, 'dragon_head');
-    console.log('[DragonBreathEffectPool] Dragon head created:', dragonHead.width, 'x', dragonHead.height);
     dragonHead.setName('dragon_head_sprite');
-    dragonHead.setScale(0.8, 0.8); // 适配效果大小
+    dragonHead.setScale(0.8, 0.8);
     dragonHead.setOrigin(0.5, 0.5);
     dragonHead.setDepth(44);
     container.add(dragonHead);
@@ -149,25 +145,21 @@ export class DragonBreathEffectPool extends VisualEffectPool<DragonBreathEffectC
     container: Phaser.GameObjects.Container,
     config: DragonBreathEffectConfig
   ): void {
-    console.log('[DragonBreathEffectPool] Reset called, position:', config.x, config.y);
     container.setPosition(config.x, config.y);
     container.setActive(true);
     container.setVisible(true);
-    console.log('[DragonBreathEffectPool] Container visible:', container.visible, 'active:', container.active);
 
     const playerAngle = config.playerAngle;
     const angleSpread = config.angleSpread;
 
     // 重置龙头精灵
     const dragonHead = container.getByName('dragon_head_sprite') as Phaser.GameObjects.Image;
-    console.log('[DragonBreathEffectPool] Dragon head found:', !!dragonHead);
     if (dragonHead) {
       dragonHead.setPosition(0, 0);
       dragonHead.setRotation(playerAngle + Math.PI / 2);
       dragonHead.setAlpha(1);
       dragonHead.setScale(0.8, 0.8);
       dragonHead.setVisible(true);
-      console.log('[DragonBreathEffectPool] Dragon head visible:', dragonHead.visible, 'alpha:', dragonHead.alpha, 'scale:', dragonHead.scaleX);
     }
 
     // 重置龙眼发光粒子

@@ -101,14 +101,10 @@ export class FrozenDomainEffectPool extends VisualEffectPool<FrozenDomainEffectC
    * 创建冰封领域效果容器
    */
   private createFrozenDomainEffect(): Phaser.GameObjects.Container {
-    // 调试：检查素材是否存在
-    console.log('[FrozenDomainEffectPool] Creating effect, ice_crystal_core texture exists:', this.scene.textures.exists('ice_crystal_core'));
-
     const container = this.scene.add.container(0, 0);
 
     // 预创建冰晶中心精灵
     const iceCrystalCore = this.scene.add.image(0, 0, 'ice_crystal_core');
-    console.log('[FrozenDomainEffectPool] Ice crystal core created:', iceCrystalCore.width, 'x', iceCrystalCore.height);
     iceCrystalCore.setName('ice_crystal_core');
     iceCrystalCore.setScale(0.8);
     iceCrystalCore.setAlpha(0.9);
