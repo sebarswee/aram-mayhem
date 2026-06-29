@@ -146,14 +146,16 @@ export class PoisonCloudEffectPool extends VisualEffectPool<PoisonCloudEffectCon
    */
   protected deactivate(obj: Phaser.GameObjects.Container): void {
     // 停止粒子发射
-    const poisonParticles = obj.getByName('poison_particles') as Phaser.GameObjects.Particles.ParticleEmitter;
-    if (poisonParticles) {
+    const poisonParticlesObj = obj.getByName('poison_particles');
+    if (poisonParticlesObj && poisonParticlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+      const poisonParticles = poisonParticlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
       poisonParticles.stop();
       poisonParticles.destroy();
     }
 
-    const risingParticles = obj.getByName('poison_rising_particles') as Phaser.GameObjects.Particles.ParticleEmitter;
-    if (risingParticles) {
+    const risingParticlesObj = obj.getByName('poison_rising_particles');
+    if (risingParticlesObj && risingParticlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+      const risingParticles = risingParticlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
       risingParticles.stop();
       risingParticles.destroy();
     }

@@ -204,8 +204,9 @@ export class DeathDecayEffectPool extends VisualEffectPool<DeathDecayEffectConfi
     }
 
     // 停止粒子发射
-    const deathParticles = obj.getByName('death_particles') as Phaser.GameObjects.Particles.ParticleEmitter;
-    if (deathParticles) {
+    const deathParticlesObj = obj.getByName('death_particles');
+    if (deathParticlesObj && deathParticlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+      const deathParticles = deathParticlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
       deathParticles.stop();
     }
 

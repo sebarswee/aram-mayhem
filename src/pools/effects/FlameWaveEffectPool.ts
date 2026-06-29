@@ -149,14 +149,16 @@ export class FlameWaveEffectPool extends VisualEffectPool<FlameWaveEffectConfig>
    */
   protected deactivate(obj: Phaser.GameObjects.Container): void {
     // 停止粒子发射
-    const fireParticles = obj.getByName('flame_fire_particles') as Phaser.GameObjects.Particles.ParticleEmitter;
-    if (fireParticles) {
+    const fireParticlesObj = obj.getByName('flame_fire_particles');
+    if (fireParticlesObj && fireParticlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+      const fireParticles = fireParticlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
       fireParticles.stop();
       fireParticles.destroy();
     }
 
-    const sparkParticles = obj.getByName('flame_spark_particles') as Phaser.GameObjects.Particles.ParticleEmitter;
-    if (sparkParticles) {
+    const sparkParticlesObj = obj.getByName('flame_spark_particles');
+    if (sparkParticlesObj && sparkParticlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+      const sparkParticles = sparkParticlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
       sparkParticles.stop();
       sparkParticles.destroy();
     }
