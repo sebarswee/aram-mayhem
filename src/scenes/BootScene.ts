@@ -107,6 +107,11 @@ export class BootScene extends Phaser.Scene {
         frameHeight: 128,
       });
     }
+
+    // 加载陨石技能素材
+    this.load.image('meteor_falling', 'assets/particles/meteor_falling.png');
+    this.load.image('particle_magma', 'assets/particles/particle_magma.png');
+    this.load.image('particle_rock', 'assets/particles/particle_rock.png');
   }
 
   create(): void {

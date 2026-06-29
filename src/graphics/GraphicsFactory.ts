@@ -610,6 +610,68 @@ export class GraphicsFactory {
 
     // 拖尾粒子
     this.createTrailParticle();
+
+    // 陨石技能粒子（如果外部素材未加载则程序化生成）
+    this.createMeteorParticles();
+  }
+
+  /**
+   * 创建陨石技能相关粒子
+   * 检查外部素材是否已加载，如未加载则程序化生成备用纹理
+   */
+  private createMeteorParticles(): void {
+    // particle_magma - 岩浆粒子
+    if (!this.scene.textures.exists('particle_magma')) {
+      const size = 20;
+      const graphics = this.scene.add.graphics();
+
+      // 外层（暗红色）
+      graphics.fillStyle(0xaa2200, 0.8);
+      graphics.fillCircle(size / 2, size / 2, 8);
+
+      // 中层（橙红色）
+      graphics.fillStyle(0xff4400, 0.9);
+      graphics.fillCircle(size / 2, size / 2, 6);
+
+      // 核心（亮黄色）
+      graphics.fillStyle(0xffcc00, 1);
+      graphics.fillCircle(size / 2, size / 2, 3);
+
+      // 高光
+      graphics.fillStyle(0xffffff, 0.8);
+      graphics.fillCircle(size / 2 - 2, size / 2 - 2, 2);
+
+      graphics.generateTexture('particle_magma', size, size);
+      graphics.destroy();
+      console.log('[GraphicsFactory] Generated fallback particle_magma texture');
+    } else {
+      console.log('[GraphicsFactory] particle_magma texture loaded from file, skipping generation');
+    }
+
+    // particle_rock - 岩石粒子
+    if (!this.scene.textures.exists('particle_rock')) {
+      const size = 16;
+      const graphics = this.scene.add.graphics();
+
+      // 不规则岩石形状
+      graphics.fillStyle(0x665544, 1);
+      graphics.fillRect(2, 4, 12, 8);
+      graphics.fillRect(4, 2, 8, 12);
+
+      // 高光
+      graphics.fillStyle(0x887766, 0.8);
+      graphics.fillRect(3, 3, 4, 4);
+
+      // 阴影纹理
+      graphics.fillStyle(0x443322, 0.6);
+      graphics.fillRect(8, 8, 4, 4);
+
+      graphics.generateTexture('particle_rock', size, size);
+      graphics.destroy();
+      console.log('[GraphicsFactory] Generated fallback particle_rock texture');
+    } else {
+      console.log('[GraphicsFactory] particle_rock texture loaded from file, skipping generation');
+    }
   }
 
   /**
@@ -664,6 +726,43 @@ export class GraphicsFactory {
     }
 
     graphics.generateTexture('particle_spark', size, size);
+    graphics.destroy();
+
+    // 创建火焰火花别名（用于 DragonBreathEffectPool, FlameWaveEffectPool, FireballEffectPool 等）
+    this.createFireSparkParticle();
+  }
+
+  /**
+   * 创建火焰火花粒子 (particle_fire_spark)
+   * 用于火焰系技能效果池
+   */
+  private createFireSparkParticle(): void {
+    const size = 16;
+    const graphics = this.scene.add.graphics();
+
+    // 中心亮点（更亮的橙黄色）
+    graphics.fillStyle(0xffff00, 1);
+    graphics.fillCircle(size / 2, size / 2, 2);
+
+    // 火花射线（橙红色渐变）
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2;
+      // 外层（橙红色）
+      graphics.lineStyle(1, 0xff6600, 0.9);
+      graphics.beginPath();
+      graphics.moveTo(size / 2, size / 2);
+      graphics.lineTo(
+        size / 2 + Math.cos(angle) * 6,
+        size / 2 + Math.sin(angle) * 6
+      );
+      graphics.strokePath();
+    }
+
+    // 内层光晕
+    graphics.fillStyle(0xff8800, 0.5);
+    graphics.fillCircle(size / 2, size / 2, 4);
+
+    graphics.generateTexture('particle_fire_spark', size, size);
     graphics.destroy();
   }
 

@@ -38,9 +38,12 @@ export interface MeteorEffectConfig extends VisualEffectConfig {
  * 管理 Meteor 技能的视觉效果复用
  *
  * 池化元素：
+ * - 陨石下落图像 (meteor_sprite)
  * - 3 层预警圆 (warning_layer_0, warning_layer_1, warning_layer_2)
  * - 4 层爆炸圆 (explosion_layer_0 到 3)
- * - 1 个火焰粒子发射器 (explosion_particles)
+ * - 岩浆粒子发射器 (magma_particles)
+ * - 岩石粒子发射器 (rock_particles)
+ * - 火焰粒子发射器 (fire_particles)
  */
 export class MeteorEffectPool extends VisualEffectPool<MeteorEffectConfig> {
   constructor(scene: Phaser.Scene, initialSize: number = 3) {
@@ -69,6 +72,13 @@ export class MeteorEffectPool extends VisualEffectPool<MeteorEffectConfig> {
   private createMeteorEffect(): Phaser.GameObjects.Container {
     const container = this.scene.add.container(0, 0);
 
+    // 陨石下落图像（使用 meteor_falling 纹理）
+    const meteorSprite = this.scene.add.image(0, 0, 'meteor_falling');
+    meteorSprite.setName('meteor_sprite');
+    meteorSprite.setVisible(false); // 初始隐藏，在预警阶段显示
+    meteorSprite.setScale(0.8); // 适当缩放
+    container.add(meteorSprite);
+
     // 预创建 3 层预警圆
     for (let i = 0; i < 3; i++) {
       const warningLayer = this.scene.add.circle(0, 0, 100, 0xff4400, 0.15);
@@ -84,8 +94,38 @@ export class MeteorEffectPool extends VisualEffectPool<MeteorEffectConfig> {
       container.add(explosionLayer);
     }
 
-    // 预创建火焰粒子发射器
-    const particles = this.scene.add.particles(0, 0, 'particle_fire_core', {
+    // 预创建岩浆粒子发射器
+    const magmaParticles = this.scene.add.particles(0, 0, 'particle_magma', {
+      speed: { min: 100, max: 280 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 0.8, end: 0 },
+      alpha: { start: 0.9, end: 0 },
+      tint: [0xff2200, 0xff4400, 0xff6600, 0xff8800],
+      lifespan: 600,
+      frequency: 25,
+      quantity: 3,
+      emitting: false,
+    });
+    magmaParticles.setName('magma_particles');
+    container.add(magmaParticles);
+
+    // 预创建岩石粒子发射器
+    const rockParticles = this.scene.add.particles(0, 0, 'particle_rock', {
+      speed: { min: 200, max: 450 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 0.6, end: 0.1 },
+      alpha: { start: 1, end: 0.3 },
+      rotate: { min: 0, max: 360 },
+      lifespan: 800,
+      frequency: 30,
+      quantity: 2,
+      emitting: false,
+    });
+    rockParticles.setName('rock_particles');
+    container.add(rockParticles);
+
+    // 预创建火焰粒子发射器（保留原有的火焰效果）
+    const fireParticles = this.scene.add.particles(0, 0, 'particle_fire_core', {
       speed: { min: 150, max: 350 },
       angle: { min: 0, max: 360 },
       scale: { start: 1, end: 0 },
@@ -96,8 +136,8 @@ export class MeteorEffectPool extends VisualEffectPool<MeteorEffectConfig> {
       quantity: 4,
       emitting: false, // 初始不发射
     });
-    particles.setName('explosion_particles');
-    container.add(particles);
+    fireParticles.setName('fire_particles');
+    container.add(fireParticles);
 
     container.setDepth(95);
     return container;
@@ -134,6 +174,36 @@ export class MeteorEffectPool extends VisualEffectPool<MeteorEffectConfig> {
       { radiusMultiplier: 0.4, color: 0xffffff, alpha: 0.95 },
     ];
 
+    // 重置陨石精灵（从上方落下）
+    const meteorSprite = container.getByName('meteor_sprite') as Phaser.GameObjects.Image;
+    if (meteorSprite) {
+      // 检查纹理是否存在
+      if (this.scene.textures.exists('meteor_falling')) {
+        meteorSprite.setVisible(true);
+        meteorSprite.setPosition(0, -radius * 3); // 从上方开始
+        meteorSprite.setAlpha(1);
+        meteorSprite.setScale(0.8);
+        meteorSprite.setAngle(0);
+        meteorSprite.setDepth(94);
+
+        // 陨石下落动画
+        const fallTween = this.scene.tweens.add({
+          targets: meteorSprite,
+          y: 0,
+          angle: 360,
+          scale: 1.2,
+          duration: warningDuration,
+          ease: 'Quad.easeIn',
+        });
+        this.addManagedTween(container, fallTween, {
+          autoStop: true,
+          tag: 'meteor_fall',
+        });
+      } else {
+        meteorSprite.setVisible(false);
+      }
+    }
+
     // 重置预警图层
     warningLayerConfigs.forEach((layerConfig, i) => {
       const layer = container.getByName(`warning_layer_${i}`) as Phaser.GameObjects.Arc;
@@ -157,12 +227,15 @@ export class MeteorEffectPool extends VisualEffectPool<MeteorEffectConfig> {
       }
     });
 
-    // 停止粒子发射
-    const particlesObj = container.getByName('explosion_particles');
-    if (particlesObj && particlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
-      const particles = particlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
-      particles.stop();
-    }
+    // 停止所有粒子发射器
+    const particleNames = ['magma_particles', 'rock_particles', 'fire_particles', 'explosion_particles'];
+    particleNames.forEach(name => {
+      const particlesObj = container.getByName(name);
+      if (particlesObj && particlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+        const particles = particlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
+        particles.stop();
+      }
+    });
 
     // 预警脉动 tween（repeat: 2，有限次数）
     const warningLayers = warningLayerConfigs.map((_, i) =>
@@ -184,6 +257,11 @@ export class MeteorEffectPool extends VisualEffectPool<MeteorEffectConfig> {
 
     // 预警结束后触发爆炸
     this.createDelayedCall(container, warningDuration, () => {
+      // 隐藏陨石精灵
+      if (meteorSprite) {
+        meteorSprite.setVisible(false);
+      }
+
       // 隐藏预警图层
       warningLayers.forEach(layer => {
         if (layer) {
@@ -217,17 +295,45 @@ export class MeteorEffectPool extends VisualEffectPool<MeteorEffectConfig> {
         duration: 450,
       });
 
-      // 启动粒子发射器
-      const particlesObj = container.getByName('explosion_particles');
-      if (particlesObj && particlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
-        const particles = particlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
-        // 设置发射区域
-        const circle = new Phaser.Geom.Circle(0, 0, radius * 0.8);
-        const randomZone = new Phaser.GameObjects.Particles.Zones.RandomZone(
-          circle as Phaser.Types.GameObjects.Particles.RandomZoneSource
-        );
+      // 设置发射区域
+      const circle = new Phaser.Geom.Circle(0, 0, radius * 0.8);
+      const randomZone = new Phaser.GameObjects.Particles.Zones.RandomZone(
+        circle as Phaser.Types.GameObjects.Particles.RandomZoneSource
+      );
+
+      // 启动岩浆粒子发射器
+      const magmaParticles = container.getByName('magma_particles');
+      if (magmaParticles && magmaParticles instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+        const particles = magmaParticles as Phaser.GameObjects.Particles.ParticleEmitter;
         particles.setEmitZone(randomZone);
-        particles.explode(60); // 爆发 60 个粒子
+        particles.explode(40);
+        particles.setDepth(100);
+      }
+
+      // 启动岩石粒子发射器
+      const rockParticles = container.getByName('rock_particles');
+      if (rockParticles && rockParticles instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+        const particles = rockParticles as Phaser.GameObjects.Particles.ParticleEmitter;
+        particles.setEmitZone(randomZone);
+        particles.explode(25);
+        particles.setDepth(101);
+      }
+
+      // 启动火焰粒子发射器
+      const fireParticles = container.getByName('fire_particles');
+      if (fireParticles && fireParticles instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+        const particles = fireParticles as Phaser.GameObjects.Particles.ParticleEmitter;
+        particles.setEmitZone(randomZone);
+        particles.explode(35);
+        particles.setDepth(99);
+      }
+
+      // 兼容旧版粒子发射器（如果存在）
+      const oldParticlesObj = container.getByName('explosion_particles');
+      if (oldParticlesObj && oldParticlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+        const particles = oldParticlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
+        particles.setEmitZone(randomZone);
+        particles.explode(60);
         particles.setDepth(100);
       }
 
@@ -265,7 +371,7 @@ export class MeteorEffectPool extends VisualEffectPool<MeteorEffectConfig> {
    * 停用效果时的额外清理
    */
   protected deactivate(obj: Phaser.GameObjects.Container): void {
-    // 停止所有托管的 tweens（包括预警脉动和爆炸消散）
+    // 停止所有托管的 tweens（包括预警脉动、陨石下落和爆炸消散）
     const tweens = this.managedTweens.get(obj);
     if (tweens) {
       tweens.forEach(managed => {
@@ -278,11 +384,20 @@ export class MeteorEffectPool extends VisualEffectPool<MeteorEffectConfig> {
       });
     }
 
-    // 停止粒子发射
-    const particlesObj = obj.getByName('explosion_particles');
-    if (particlesObj && particlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
-      const particles = particlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
-      particles.stop();
+    // 停止所有粒子发射器
+    const particleNames = ['magma_particles', 'rock_particles', 'fire_particles', 'explosion_particles'];
+    particleNames.forEach(name => {
+      const particlesObj = obj.getByName(name);
+      if (particlesObj && particlesObj instanceof Phaser.GameObjects.Particles.ParticleEmitter) {
+        const particles = particlesObj as Phaser.GameObjects.Particles.ParticleEmitter;
+        particles.stop();
+      }
+    });
+
+    // 隐藏陨石精灵
+    const meteorSprite = obj.getByName('meteor_sprite') as Phaser.GameObjects.Image;
+    if (meteorSprite) {
+      meteorSprite.setVisible(false);
     }
 
     // 隐藏所有图层
