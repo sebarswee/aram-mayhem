@@ -209,16 +209,19 @@ export class AbyssVortexEffectPool extends VisualEffectPool<AbyssVortexEffectCon
     // 重置漩涡中心精灵 - 脉动和旋转效果
     const vortexCenter = container.getByName('vortex_center') as Phaser.GameObjects.Image;
     if (vortexCenter) {
+      // 漩涡中心尺寸与范围匹配（占半径的 120%，即直径的 60%）
+      // 素材原始尺寸 64px，scale = (radius * 1.2) / 64
+      const baseScale = (radius * 1.2) / 64;
       vortexCenter.setPosition(0, 0);
-      vortexCenter.setScale(1.5); // 增大漩涡中心尺寸
+      vortexCenter.setScale(baseScale);
       vortexCenter.setAlpha(0.9);
       vortexCenter.setDepth(25);
       vortexCenter.setAngle(0);
 
-      // 脉动效果 (scale: 1.5 → 1.8 → 1.5)
+      // 脉动效果 (scale 增加约 15%)
       const pulseTween = this.scene.tweens.add({
         targets: vortexCenter,
-        scale: 1.8,
+        scale: baseScale * 1.15,
         duration: 600,
         yoyo: true,
         repeat: -1,

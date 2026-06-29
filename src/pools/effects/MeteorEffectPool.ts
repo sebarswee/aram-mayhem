@@ -179,10 +179,15 @@ export class MeteorEffectPool extends VisualEffectPool<MeteorEffectConfig> {
     if (meteorSprite) {
       // 检查纹理是否存在
       if (this.scene.textures.exists('meteor_falling')) {
+        // 陨石最终尺寸与爆炸范围匹配（占半径的 80%）
+        // 素材原始尺寸 64px，最终 scale = (radius * 1.6) / 64
+        const finalScale = (radius * 1.6) / 64;
+        const startScale = finalScale * 0.5; // 初始较小
+
         meteorSprite.setVisible(true);
         meteorSprite.setPosition(0, -radius * 3); // 从上方开始
         meteorSprite.setAlpha(1);
-        meteorSprite.setScale(1.0); // 初始缩放
+        meteorSprite.setScale(startScale); // 初始缩放
         meteorSprite.setAngle(0);
         meteorSprite.setDepth(94);
 
@@ -191,7 +196,7 @@ export class MeteorEffectPool extends VisualEffectPool<MeteorEffectConfig> {
           targets: meteorSprite,
           y: 0,
           angle: 360,
-          scale: 1.5, // 落地时更大
+          scale: finalScale, // 落地时与范围匹配
           duration: warningDuration,
           ease: 'Quad.easeIn',
         });

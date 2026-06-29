@@ -167,8 +167,9 @@ export class FrozenDomainEffectPool extends VisualEffectPool<FrozenDomainEffectC
     // 重置冰晶中心精灵并添加动画效果
     const iceCrystalCore = container.getByName('ice_crystal_core') as Phaser.GameObjects.Image;
     if (iceCrystalCore) {
-      // 根据领域半径调整冰晶大小 - 增大基础缩放让冰山更显眼
-      const baseScale = Math.max(1.0, Math.min(2.5, radius / 80)) * 1.2;
+      // 冰晶尺寸与领域范围匹配（占半径的 140%，即直径的 70%）
+      // 素材原始尺寸 64px，scale = (radius * 1.4) / 64
+      const baseScale = (radius * 1.4) / 64;
       iceCrystalCore.setScale(baseScale);
       iceCrystalCore.setAlpha(0.95);
       iceCrystalCore.setPosition(0, 0);
@@ -178,8 +179,8 @@ export class FrozenDomainEffectPool extends VisualEffectPool<FrozenDomainEffectC
       // 创建脉动效果（无限 tween）- 冰山只脉动，不旋转
       const pulseTween = this.scene.tweens.add({
         targets: iceCrystalCore,
-        scaleX: baseScale * 1.1,
-        scaleY: baseScale * 1.1,
+        scaleX: baseScale * 1.08,
+        scaleY: baseScale * 1.08,
         alpha: 0.85,
         duration: 800,
         yoyo: true,

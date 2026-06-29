@@ -155,10 +155,13 @@ export class DragonBreathEffectPool extends VisualEffectPool<DragonBreathEffectC
     // 重置龙头精灵
     const dragonHead = container.getByName('dragon_head_sprite') as Phaser.GameObjects.Image;
     if (dragonHead) {
+      // 龙头尺寸与吐息范围匹配（占范围的 35%，作为喷射起点）
+      // 素材原始尺寸 64px，scale = (radius * 0.7) / 64
+      const headScale = (config.radius * 0.7) / 64;
       dragonHead.setPosition(0, 0);
       dragonHead.setRotation(playerAngle + Math.PI / 2);
       dragonHead.setAlpha(1);
-      dragonHead.setScale(1.5, 1.5);
+      dragonHead.setScale(headScale, headScale);
       dragonHead.setVisible(true);
     }
 
